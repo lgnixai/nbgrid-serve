@@ -202,6 +202,8 @@ func SetupRoutes(router *gin.Engine, config RouterConfig) {
 			// 字段类型和验证
 			fieldGroup.GET("types", permMW.RequirePermission("table", permission.ActionFieldRead), tableHandler.GetFieldTypes)
 			fieldGroup.GET("types/:type", permMW.RequirePermission("table", permission.ActionFieldRead), tableHandler.GetFieldTypeInfo)
+			fieldGroup.GET("shortcuts", permMW.RequirePermission("table", permission.ActionFieldRead), tableHandler.GetFieldShortcuts)
+			fieldGroup.GET("shortcuts/:id", permMW.RequirePermission("table", permission.ActionFieldRead), tableHandler.GetFieldShortcut)
 			fieldGroup.POST(":field_id/validate", permMW.RequirePermission("table", permission.ActionFieldRead), tableHandler.ValidateFieldValue)
 		}
 

@@ -395,6 +395,61 @@ func (h *TableHandler) GetFieldTypeInfo(c *gin.Context) {
 	response.SuccessWithMessage(c, info, "")
 }
 
+// GetFieldShortcuts 获取字段捷径列表
+// @Summary 获取字段捷径列表
+// @Description 获取所有可用的字段捷径模板
+// @Tags 字段管理
+// @Accept json
+// @Produce json
+// @Param category query string false "分类过滤"
+// @Param tag query string false "标签过滤"
+// @Success 200 {array} table.FieldShortcut
+// @Failure 500 {object} ErrorResponse
+// @Router /api/fields/shortcuts [get]
+func (h *TableHandler) GetFieldShortcuts(c *gin.Context) {
+	category := c.Query("category")
+	tag := c.Query("tag")
+	
+	var shortcuts []table.FieldShortcut
+	
+	if category != "" {
+		shortcuts = table.GetFieldShortcutsByCategory(category)
+	} else if tag != "" {
+		shortcuts = table.GetFieldShortcutsByTag(tag)
+	} else {
+		shortcuts = table.FieldShortcuts
+	}
+	
+	response.SuccessWithMessage(c, shortcuts, "")
+}
+
+// GetFieldShortcut 获取字段捷径详情
+// @Summary 获取字段捷径详情
+// @Description 获取指定字段捷径的详细信息
+// @Tags 字段管理
+// @Accept json
+// @Produce json
+// @Param id path string true "字段捷径ID"
+// @Success 200 {object} table.FieldShortcut
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/fields/shortcuts/{id} [get]
+func (h *TableHandler) GetFieldShortcut(c *gin.Context) {
+	shortcutID := c.Param("id")
+	if shortcutID == "" {
+		response.Error(c, errors.ErrBadRequest.WithDetails("字段捷径ID不能为空"))
+		return
+	}
+
+	shortcut, err := table.GetFieldShortcutByID(shortcutID)
+	if err != nil {
+		response.Error(c, errors.ErrNotFound.WithDetails(err.Error()))
+		return
+	}
+	
+	response.SuccessWithMessage(c, shortcut, "")
+}
+
 // ValidateFieldValue 验证字段值
 // @Summary 验证字段值
 // @Description 验证字段值是否符合字段的验证规则

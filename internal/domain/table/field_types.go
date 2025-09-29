@@ -122,6 +122,11 @@ type FieldChoice struct {
 
 // GetFieldTypeInfo 获取字段类型信息
 func GetFieldTypeInfo(fieldType FieldType) FieldTypeInfo {
+	// Check virtual field types first
+	if IsVirtualField(fieldType) {
+		return GetVirtualFieldInfo(fieldType)
+	}
+	
 	infos := map[FieldType]FieldTypeInfo{
 		// 基础类型
 		FieldTypeText: {
@@ -411,6 +416,8 @@ func GetAllFieldTypes() []FieldTypeInfo {
 		FieldTypeImage, FieldTypeFile, FieldTypeAttachment, FieldTypeVideo, FieldTypeAudio,
 		// 关系类型
 		FieldTypeLink, FieldTypeLookup, FieldTypeRollup, FieldTypeFormula,
+		// 虚拟字段类型
+		FieldTypeVirtualFormula, FieldTypeVirtualLookup, FieldTypeVirtualRollup, FieldTypeVirtualAI,
 		// 特殊类型
 		FieldTypeAutoNumber, FieldTypeCreatedTime, FieldTypeLastModifiedTime, FieldTypeCreatedBy, FieldTypeLastModifiedBy,
 	}
