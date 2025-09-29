@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Button } from "@/components/ui/button";
 import { MarkdownEditor } from "./MarkdownEditor";
+import { AdvancedGlideGrid } from "./AdvancedGlideGrid";
 import {
   DndContext,
   closestCenter,
@@ -210,7 +211,7 @@ export const DraggableTabSystem = ({
           //   title={activeTabData.title}
           //   onChange={(content) => onContentChange(activeTabData.id, content)}
           // />
-          <div>222==== </div>
+          <AdvancedGlideGrid />
         )}
       </div>
     </div>

@@ -195,8 +195,11 @@ export const AdvancedGlideGrid: React.FC = () => {
   const [selectedRows, setSelectedRows] = useState<CompactSelection>(CompactSelection.empty());
   const dataEditorRef = useRef<DataEditor>(null);
 
-  // 高级列定义
-  const columns: GridColumn[] = useMemo(() => [
+  // 排序状态
+  const [sortBy, setSortBy] = useState<{ id: string | null; dir: 'asc' | 'desc' } | null>(null);
+
+  // 高级列定义（可变状态，支持列宽调整）
+  const [columns, setColumns] = useState<GridColumn[]>([
     {
       title: 'ID',
       id: 'id',
@@ -239,7 +242,7 @@ export const AdvancedGlideGrid: React.FC = () => {
       id: 'lastActive',
       width: 150,
     }
-  ], []);
+  ]);
 
   // 过滤数据
   const filteredData = useMemo(() => {
@@ -251,10 +254,29 @@ export const AdvancedGlideGrid: React.FC = () => {
     );
   }, [data, searchText]);
 
+  const displayedData = useMemo(() => {
+    if (!sortBy || !sortBy.id) return filteredData;
+    const dir = sortBy.dir === 'asc' ? 1 : -1;
+    const id = sortBy.id;
+    const sorted = [...filteredData].sort((a, b) => {
+      const av = (a as any)[id];
+      const bv = (b as any)[id];
+      if (av == null && bv == null) return 0;
+      if (av == null) return -1 * dir;
+      if (bv == null) return 1 * dir;
+      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir;
+      const as = av instanceof Date ? av.getTime() : String(av).toLowerCase();
+      const bs = bv instanceof Date ? bv.getTime() : String(bv).toLowerCase();
+      if (typeof as === 'number' && typeof bs === 'number') return (as - bs) * dir;
+      return String(as).localeCompare(String(bs)) * dir;
+    });
+    return sorted;
+  }, [filteredData, sortBy]);
+
   // 获取单元格内容
   const getCellContent = useCallback((cell: Item): GridCell => {
     const [col, row] = cell;
-    const dataRow = filteredData[row];
+    const dataRow = displayedData[row];
     
     if (!dataRow) {
       return {
@@ -294,22 +316,25 @@ export const AdvancedGlideGrid: React.FC = () => {
       
       case 'status':
         return {
-          kind: GridCellKind.Custom,
-          data: { type: 'status', status: dataRow.status },
+          kind: GridCellKind.Text,
+          data: dataRow.status,
+          displayData: dataRow.status,
           allowOverlay: true,
         };
       
       case 'progress':
         return {
-          kind: GridCellKind.Custom,
-          data: { type: 'progress', progress: dataRow.progress },
+          kind: GridCellKind.Number,
+          data: dataRow.progress,
+          displayData: `${dataRow.progress}%`,
           allowOverlay: true,
         };
       
       case 'tags':
         return {
-          kind: GridCellKind.Custom,
-          data: { type: 'tags', tags: dataRow.tags },
+          kind: GridCellKind.Text,
+          data: dataRow.tags.join(', '),
+          displayData: dataRow.tags.join(', '),
           allowOverlay: true,
         };
       
@@ -337,7 +362,7 @@ export const AdvancedGlideGrid: React.FC = () => {
           allowOverlay: false,
         };
     }
-  }, [filteredData, columns]);
+  }, [displayedData, columns]);
 
   // 单元格编辑处理
   const onCellEdited = useCallback((cell: Item, newValue: EditableGridCell) => {
@@ -408,6 +433,21 @@ export const AdvancedGlideGrid: React.FC = () => {
     setData(prev => [...prev, newRow]);
   }, [data.length]);
 
+  // 列宽调整
+  const onColumnResize = useCallback((colIndex: number, newSize: number) => {
+    setColumns(prev => prev.map((c, i) => i === colIndex ? { ...c, width: newSize } : c));
+  }, []);
+
+  // 点击表头排序
+  const onHeaderClicked = useCallback((colIndex: number) => {
+    const col = columns[colIndex];
+    if (!col) return;
+    setSortBy(prev => {
+      if (!prev || prev.id !== col.id) return { id: col.id, dir: 'asc' };
+      return { id: col.id, dir: prev.dir === 'asc' ? 'desc' : 'asc' };
+    });
+  }, [columns]);
+
   return (
     <div className="w-full h-full p-4">
       <div className="mb-4">
@@ -464,7 +504,7 @@ export const AdvancedGlideGrid: React.FC = () => {
           ref={dataEditorRef}
           getCellContent={getCellContent}
           columns={columns}
-          rows={filteredData.length}
+          rows={displayedData.length}
           
           // 编辑功能
           onCellEdited={onCellEdited}
@@ -473,15 +513,19 @@ export const AdvancedGlideGrid: React.FC = () => {
           rowSelect="multi"
           onRowSelectionChange={onRowSelectionChange}
           
-          // 自定义渲染器
-          customRenderers={[StatusCellRenderer, ProgressCellRenderer, TagsCellRenderer]}
+          // 自定义渲染器（暂时禁用）
+          // customRenderers={[StatusCellRenderer, ProgressCellRenderer, TagsCellRenderer]}
           
           // 拖拽支持
           onDragStart={onDragStart}
           
+          // 列宽调整 & 表头点击排序
+          onColumnResize={onColumnResize}
+          onHeaderClicked={onHeaderClicked}
+          
           // 搜索功能
           searchResults={searchText ? 
-            filteredData.map((_, index) => index) : 
+            displayedData.map((_, index) => index) : 
             undefined
           }
           
