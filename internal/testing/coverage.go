@@ -35,32 +35,32 @@ func NewCoverageAnalyzer(logger *zap.Logger, projectDir, outputDir string) *Cove
 
 // CoverageReport 覆盖率报告
 type CoverageReport struct {
-	Timestamp      time.Time                `json:"timestamp"`
-	OverallCoverage float64                 `json:"overall_coverage"`
+	Timestamp       time.Time                   `json:"timestamp"`
+	OverallCoverage float64                     `json:"overall_coverage"`
 	PackageCoverage map[string]*PackageCoverage `json:"package_coverage"`
-	FileCoverage   map[string]*FileCoverage    `json:"file_coverage"`
-	Summary        *CoverageSummary            `json:"summary"`
-	Thresholds     *CoverageThresholds         `json:"thresholds"`
-	Status         CoverageStatus              `json:"status"`
+	FileCoverage    map[string]*FileCoverage    `json:"file_coverage"`
+	Summary         *CoverageSummary            `json:"summary"`
+	Thresholds      *CoverageThresholds         `json:"thresholds"`
+	Status          CoverageStatus              `json:"status"`
 }
 
 // PackageCoverage 包覆盖率
 type PackageCoverage struct {
-	Package    string  `json:"package"`
-	Coverage   float64 `json:"coverage"`
-	Statements int     `json:"statements"`
-	Covered    int     `json:"covered"`
+	Package    string   `json:"package"`
+	Coverage   float64  `json:"coverage"`
+	Statements int      `json:"statements"`
+	Covered    int      `json:"covered"`
 	Files      []string `json:"files"`
 }
 
 // FileCoverage 文件覆盖率
 type FileCoverage struct {
-	File       string           `json:"file"`
-	Package    string           `json:"package"`
-	Coverage   float64          `json:"coverage"`
-	Statements int              `json:"statements"`
-	Covered    int              `json:"covered"`
-	Lines      []*LineCoverage  `json:"lines"`
+	File       string          `json:"file"`
+	Package    string          `json:"package"`
+	Coverage   float64         `json:"coverage"`
+	Statements int             `json:"statements"`
+	Covered    int             `json:"covered"`
+	Lines      []*LineCoverage `json:"lines"`
 }
 
 // LineCoverage 行覆盖率
@@ -92,69 +92,69 @@ type CoverageThresholds struct {
 type CoverageStatus string
 
 const (
-	CoverageStatusPassed CoverageStatus = "passed"
-	CoverageStatusFailed CoverageStatus = "failed"
+	CoverageStatusPassed  CoverageStatus = "passed"
+	CoverageStatusFailed  CoverageStatus = "failed"
 	CoverageStatusWarning CoverageStatus = "warning"
 )
 
 // GenerateReport 生成覆盖率报告
 func (ca *CoverageAnalyzer) GenerateReport(testPackages []string, thresholds *CoverageThresholds) (*CoverageReport, error) {
 	ca.logger.Info("Generating coverage report", zap.Strings("packages", testPackages))
-	
+
 	// 运行测试并生成覆盖率数据
 	coverageFile, err := ca.runTestsWithCoverage(testPackages)
 	if err != nil {
 		return nil, fmt.Errorf("failed to run tests with coverage: %w", err)
 	}
 	defer os.Remove(coverageFile)
-	
+
 	// 解析覆盖率数据
 	report, err := ca.parseCoverageData(coverageFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse coverage data: %w", err)
 	}
-	
+
 	// 设置阈值和状态
 	report.Thresholds = thresholds
 	report.Status = ca.evaluateCoverageStatus(report, thresholds)
 	report.Timestamp = time.Now()
-	
+
 	// 保存报告
 	if err := ca.saveReport(report); err != nil {
 		ca.logger.Warn("Failed to save coverage report", zap.Error(err))
 	}
-	
+
 	// 生成HTML报告
 	if err := ca.generateHTMLReport(report); err != nil {
 		ca.logger.Warn("Failed to generate HTML report", zap.Error(err))
 	}
-	
+
 	ca.logger.Info("Coverage report generated successfully",
 		zap.Float64("overall_coverage", report.OverallCoverage),
 		zap.String("status", string(report.Status)))
-	
+
 	return report, nil
 }
 
 // runTestsWithCoverage 运行测试并生成覆盖率数据
 func (ca *CoverageAnalyzer) runTestsWithCoverage(packages []string) (string, error) {
 	coverageFile := filepath.Join(ca.outputDir, "coverage.out")
-	
+
 	// 构建测试命令
 	args := []string{"test", "-coverprofile=" + coverageFile, "-covermode=atomic"}
 	args = append(args, packages...)
-	
+
 	cmd := exec.Command("go", args...)
 	cmd.Dir = ca.projectDir
-	
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		ca.logger.Error("Test execution failed", 
-			zap.Error(err), 
+		ca.logger.Error("Test execution failed",
+			zap.Error(err),
 			zap.String("output", string(output)))
 		return "", fmt.Errorf("test execution failed: %w", err)
 	}
-	
+
 	return coverageFile, nil
 }
 
@@ -165,37 +165,37 @@ func (ca *CoverageAnalyzer) parseCoverageData(coverageFile string) (*CoverageRep
 		return nil, fmt.Errorf("failed to open coverage file: %w", err)
 	}
 	defer file.Close()
-	
+
 	report := &CoverageReport{
 		PackageCoverage: make(map[string]*PackageCoverage),
-		FileCoverage:   make(map[string]*FileCoverage),
-		Summary:        &CoverageSummary{},
+		FileCoverage:    make(map[string]*FileCoverage),
+		Summary:         &CoverageSummary{},
 	}
-	
+
 	scanner := bufio.NewScanner(file)
-	
+
 	// 跳过第一行（mode行）
 	if scanner.Scan() {
 		// mode: atomic
 	}
-	
+
 	// 解析覆盖率数据
 	for scanner.Scan() {
 		line := scanner.Text()
 		if err := ca.parseCoverageLine(line, report); err != nil {
-			ca.logger.Warn("Failed to parse coverage line", 
-				zap.String("line", line), 
+			ca.logger.Warn("Failed to parse coverage line",
+				zap.String("line", line),
 				zap.Error(err))
 		}
 	}
-	
+
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("failed to scan coverage file: %w", err)
 	}
-	
+
 	// 计算汇总信息
 	ca.calculateSummary(report)
-	
+
 	return report, nil
 }
 
@@ -207,16 +207,16 @@ func (ca *CoverageAnalyzer) parseCoverageLine(line string, report *CoverageRepor
 	if len(matches) != 8 {
 		return fmt.Errorf("invalid coverage line format: %s", line)
 	}
-	
+
 	fileName := matches[1]
 	startLine, _ := strconv.Atoi(matches[2])
 	endLine, _ := strconv.Atoi(matches[4])
 	numStmt, _ := strconv.Atoi(matches[6])
 	count, _ := strconv.Atoi(matches[7])
-	
+
 	// 获取包名
 	packageName := ca.getPackageFromFile(fileName)
-	
+
 	// 更新文件覆盖率
 	if _, exists := report.FileCoverage[fileName]; !exists {
 		report.FileCoverage[fileName] = &FileCoverage{
@@ -225,13 +225,13 @@ func (ca *CoverageAnalyzer) parseCoverageLine(line string, report *CoverageRepor
 			Lines:   make([]*LineCoverage, 0),
 		}
 	}
-	
+
 	fileCov := report.FileCoverage[fileName]
 	fileCov.Statements += numStmt
 	if count > 0 {
 		fileCov.Covered += numStmt
 	}
-	
+
 	// 添加行覆盖率信息
 	for lineNum := startLine; lineNum <= endLine; lineNum++ {
 		fileCov.Lines = append(fileCov.Lines, &LineCoverage{
@@ -240,7 +240,7 @@ func (ca *CoverageAnalyzer) parseCoverageLine(line string, report *CoverageRepor
 			Count:      count,
 		})
 	}
-	
+
 	// 更新包覆盖率
 	if _, exists := report.PackageCoverage[packageName]; !exists {
 		report.PackageCoverage[packageName] = &PackageCoverage{
@@ -248,18 +248,18 @@ func (ca *CoverageAnalyzer) parseCoverageLine(line string, report *CoverageRepor
 			Files:   make([]string, 0),
 		}
 	}
-	
+
 	pkgCov := report.PackageCoverage[packageName]
 	pkgCov.Statements += numStmt
 	if count > 0 {
 		pkgCov.Covered += numStmt
 	}
-	
+
 	// 添加文件到包中
 	if !contains(pkgCov.Files, fileName) {
 		pkgCov.Files = append(pkgCov.Files, fileName)
 	}
-	
+
 	return nil
 }
 
@@ -267,26 +267,26 @@ func (ca *CoverageAnalyzer) parseCoverageLine(line string, report *CoverageRepor
 func (ca *CoverageAnalyzer) getPackageFromFile(fileName string) string {
 	// 移除项目根目录前缀
 	relPath := strings.TrimPrefix(fileName, ca.projectDir+"/")
-	
+
 	// 获取目录路径作为包名
 	dir := filepath.Dir(relPath)
 	if dir == "." {
 		return "main"
 	}
-	
+
 	return dir
 }
 
 // calculateSummary 计算汇总信息
 func (ca *CoverageAnalyzer) calculateSummary(report *CoverageReport) {
 	summary := report.Summary
-	
+
 	// 计算包级别覆盖率
 	for _, pkgCov := range report.PackageCoverage {
 		if pkgCov.Statements > 0 {
 			pkgCov.Coverage = float64(pkgCov.Covered) / float64(pkgCov.Statements) * 100
 		}
-		
+
 		summary.TotalPackages++
 		if pkgCov.Coverage > 0 {
 			summary.CoveredPackages++
@@ -294,24 +294,24 @@ func (ca *CoverageAnalyzer) calculateSummary(report *CoverageReport) {
 		summary.TotalStatements += pkgCov.Statements
 		summary.CoveredStatements += pkgCov.Covered
 	}
-	
+
 	// 计算文件级别覆盖率
 	for _, fileCov := range report.FileCoverage {
 		if fileCov.Statements > 0 {
 			fileCov.Coverage = float64(fileCov.Covered) / float64(fileCov.Statements) * 100
 		}
-		
+
 		summary.TotalFiles++
 		if fileCov.Coverage > 0 {
 			summary.CoveredFiles++
 		}
 	}
-	
+
 	// 计算总体覆盖率
 	if summary.TotalStatements > 0 {
 		report.OverallCoverage = float64(summary.CoveredStatements) / float64(summary.TotalStatements) * 100
 	}
-	
+
 	// 计算平均覆盖率
 	if summary.TotalPackages > 0 {
 		var totalCoverage float64
@@ -327,42 +327,42 @@ func (ca *CoverageAnalyzer) evaluateCoverageStatus(report *CoverageReport, thres
 	if thresholds == nil {
 		return CoverageStatusPassed
 	}
-	
+
 	// 检查总体覆盖率
 	if report.OverallCoverage < thresholds.Overall {
 		return CoverageStatusFailed
 	}
-	
+
 	// 检查包覆盖率
 	for _, pkgCov := range report.PackageCoverage {
 		if pkgCov.Coverage < thresholds.Package {
 			return CoverageStatusWarning
 		}
 	}
-	
+
 	// 检查文件覆盖率
 	for _, fileCov := range report.FileCoverage {
 		if fileCov.Coverage < thresholds.File {
 			return CoverageStatusWarning
 		}
 	}
-	
+
 	return CoverageStatusPassed
 }
 
 // saveReport 保存报告
 func (ca *CoverageAnalyzer) saveReport(report *CoverageReport) error {
 	reportFile := filepath.Join(ca.outputDir, "coverage-report.json")
-	
+
 	data, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal report: %w", err)
 	}
-	
+
 	if err := ioutil.WriteFile(reportFile, data, 0644); err != nil {
 		return fmt.Errorf("failed to write report file: %w", err)
 	}
-	
+
 	ca.logger.Info("Coverage report saved", zap.String("file", reportFile))
 	return nil
 }
@@ -370,13 +370,13 @@ func (ca *CoverageAnalyzer) saveReport(report *CoverageReport) error {
 // generateHTMLReport 生成HTML报告
 func (ca *CoverageAnalyzer) generateHTMLReport(report *CoverageReport) error {
 	htmlFile := filepath.Join(ca.outputDir, "coverage-report.html")
-	
+
 	html := ca.buildHTMLReport(report)
-	
+
 	if err := ioutil.WriteFile(htmlFile, []byte(html), 0644); err != nil {
 		return fmt.Errorf("failed to write HTML report: %w", err)
 	}
-	
+
 	ca.logger.Info("HTML coverage report generated", zap.String("file", htmlFile))
 	return nil
 }
@@ -384,7 +384,7 @@ func (ca *CoverageAnalyzer) generateHTMLReport(report *CoverageReport) error {
 // buildHTMLReport 构建HTML报告
 func (ca *CoverageAnalyzer) buildHTMLReport(report *CoverageReport) string {
 	var html strings.Builder
-	
+
 	html.WriteString(`<!DOCTYPE html>
 <html>
 <head>
@@ -404,7 +404,7 @@ func (ca *CoverageAnalyzer) buildHTMLReport(report *CoverageReport) string {
     </style>
 </head>
 <body>`)
-	
+
 	// 头部信息
 	html.WriteString(fmt.Sprintf(`
     <div class="header">
@@ -412,18 +412,18 @@ func (ca *CoverageAnalyzer) buildHTMLReport(report *CoverageReport) string {
         <p>Generated: %s</p>
         <p>Overall Coverage: %.2f%%</p>
         <p>Status: %s</p>
-    </div>`, 
+    </div>`,
 		report.Timestamp.Format("2006-01-02 15:04:05"),
 		report.OverallCoverage,
 		report.Status))
-	
+
 	// 摘要信息
 	html.WriteString(`
     <div class="summary">
         <h2>Summary</h2>
         <table>
             <tr><th>Metric</th><th>Value</th></tr>`)
-	
+
 	html.WriteString(fmt.Sprintf(`
             <tr><td>Total Packages</td><td>%d</td></tr>
             <tr><td>Covered Packages</td><td>%d</td></tr>
@@ -439,16 +439,16 @@ func (ca *CoverageAnalyzer) buildHTMLReport(report *CoverageReport) string {
 		report.Summary.TotalStatements,
 		report.Summary.CoveredStatements,
 		report.Summary.AverageCoverage))
-	
+
 	html.WriteString(`
         </table>
     </div>`)
-	
+
 	// 包覆盖率
 	html.WriteString(`
     <div class="packages">
         <h2>Package Coverage</h2>`)
-	
+
 	// 按覆盖率排序包
 	packages := make([]*PackageCoverage, 0, len(report.PackageCoverage))
 	for _, pkg := range report.PackageCoverage {
@@ -457,7 +457,7 @@ func (ca *CoverageAnalyzer) buildHTMLReport(report *CoverageReport) string {
 	sort.Slice(packages, func(i, j int) bool {
 		return packages[i].Coverage > packages[j].Coverage
 	})
-	
+
 	for _, pkg := range packages {
 		coverageClass := "coverage-fill"
 		if pkg.Coverage < 50 {
@@ -465,7 +465,7 @@ func (ca *CoverageAnalyzer) buildHTMLReport(report *CoverageReport) string {
 		} else if pkg.Coverage < 80 {
 			coverageClass += " medium-coverage"
 		}
-		
+
 		html.WriteString(fmt.Sprintf(`
         <div class="package">
             <h3>%s (%.2f%%)</h3>
@@ -483,14 +483,14 @@ func (ca *CoverageAnalyzer) buildHTMLReport(report *CoverageReport) string {
 			pkg.Statements,
 			len(pkg.Files)))
 	}
-	
+
 	html.WriteString(`
     </div>`)
-	
+
 	html.WriteString(`
 </body>
 </html>`)
-	
+
 	return html.String()
 }
 
@@ -533,16 +533,16 @@ func (cr *CoverageReporter) GenerateAndReport(packages []string, thresholds *Cov
 	if err != nil {
 		return fmt.Errorf("failed to generate coverage report: %w", err)
 	}
-	
+
 	// 记录覆盖率信息
 	cr.logCoverageReport(report)
-	
+
 	// 如果覆盖率不达标，返回错误
 	if report.Status == CoverageStatusFailed {
-		return fmt.Errorf("coverage below threshold: %.2f%% < %.2f%%", 
+		return fmt.Errorf("coverage below threshold: %.2f%% < %.2f%%",
 			report.OverallCoverage, thresholds.Overall)
 	}
-	
+
 	return nil
 }
 
@@ -555,7 +555,7 @@ func (cr *CoverageReporter) logCoverageReport(report *CoverageReport) {
 		zap.Int("total_files", report.Summary.TotalFiles),
 		zap.Int("total_statements", report.Summary.TotalStatements),
 		zap.Int("covered_statements", report.Summary.CoveredStatements))
-	
+
 	// 记录低覆盖率的包
 	for _, pkg := range report.PackageCoverage {
 		if pkg.Coverage < report.Thresholds.Package {

@@ -60,16 +60,12 @@ export class SpaceClient {
   /**
    * 归档空间
    */
-  public async archive(spaceId: string): Promise<Space> {
-    return this.httpClient.post<Space>(`/api/spaces/${spaceId}/archive`);
-  }
+  // 后端当前未提供对应路由，移除以对齐 API
 
   /**
    * 恢复空间
    */
-  public async restore(spaceId: string): Promise<Space> {
-    return this.httpClient.post<Space>(`/api/spaces/${spaceId}/restore`);
-  }
+  // 后端当前未提供对应路由，移除以对齐 API
 
   /**
    * 添加协作者
@@ -102,23 +98,17 @@ export class SpaceClient {
   /**
    * 接受空间邀请
    */
-  public async acceptInvitation(spaceId: string): Promise<SpaceCollaborator> {
-    return this.httpClient.post<SpaceCollaborator>(`/api/spaces/${spaceId}/accept`);
-  }
+  // 后端当前未提供对应路由，移除以对齐 API
 
   /**
    * 拒绝空间邀请
    */
-  public async rejectInvitation(spaceId: string): Promise<void> {
-    await this.httpClient.post(`/api/spaces/${spaceId}/reject`);
-  }
+  // 后端当前未提供对应路由，移除以对齐 API
 
   /**
    * 离开空间
    */
-  public async leave(spaceId: string): Promise<void> {
-    await this.httpClient.post(`/api/spaces/${spaceId}/leave`);
-  }
+  // 后端当前未提供对应路由，移除以对齐 API
 
   /**
    * 获取空间统计信息
@@ -165,28 +155,20 @@ export class SpaceClient {
   /**
    * 搜索空间
    */
-  public async search(query: string, params?: PaginationParams): Promise<PaginatedResponse<Space>> {
-    return this.httpClient.get<PaginatedResponse<Space>>('/api/spaces/search', { query, ...params });
-  }
+  // 后端当前未提供对应路由，移除以对齐 API（应使用 /api/search）
 
   /**
    * 获取用户可访问的空间列表
    */
-  public async getAccessibleSpaces(params?: PaginationParams): Promise<PaginatedResponse<Space>> {
-    return this.httpClient.get<PaginatedResponse<Space>>('/api/spaces/accessible', params);
-  }
+  // 后端当前未提供对应路由，移除以对齐 API
 
   /**
    * 检查用户对空间的权限
    */
-  public async checkPermission(spaceId: string, permission: string): Promise<{ has_permission: boolean }> {
-    return this.httpClient.get(`/api/spaces/${spaceId}/permissions/${permission}`);
-  }
+  // 后端接口为 GET /api/spaces/:id/permissions（返回权限详情），如需检查请在应用侧解析
 
   /**
    * 获取空间活动日志
    */
-  public async getActivityLog(spaceId: string, params?: PaginationParams): Promise<PaginatedResponse<any>> {
-    return this.httpClient.get<PaginatedResponse<any>>(`/api/spaces/${spaceId}/activity`, params);
-  }
+  // 后端当前未提供对应路由，移除以对齐 API
 }

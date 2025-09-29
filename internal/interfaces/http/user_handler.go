@@ -11,6 +11,7 @@ import (
 	"teable-go-backend/internal/interfaces/middleware"
 	"teable-go-backend/pkg/errors"
 	"teable-go-backend/pkg/logger"
+	"teable-go-backend/pkg/response"
 )
 
 // UserHandler 用户HTTP处理器
@@ -40,11 +41,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 	var req application.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		logger.Warn("Invalid register request", logger.ErrorField(err))
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error:   "请求参数错误",
-			Code:    "INVALID_REQUEST",
-			Details: err.Error(),
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
@@ -53,14 +50,15 @@ func (h *UserHandler) Register(c *gin.Context) {
 		UserAgent: c.GetHeader("User-Agent"),
 		DeviceID:  c.GetHeader("X-Device-ID"),
 	}
-	
-	response, err := h.userService.Register(c.Request.Context(), req, loginCtx)
+
+	responseData, err := h.userService.Register(c.Request.Context(), req, loginCtx)
 	if err != nil {
 		h.handleError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, response)
+	// 统一响应包装
+	response.Success(c, responseData, "")
 }
 
 // Login 用户登录
@@ -78,11 +76,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 	var req application.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		logger.Warn("Invalid login request", logger.ErrorField(err))
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error:   "请求参数错误",
-			Code:    "INVALID_REQUEST",
-			Details: err.Error(),
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
@@ -91,14 +85,15 @@ func (h *UserHandler) Login(c *gin.Context) {
 		UserAgent: c.GetHeader("User-Agent"),
 		DeviceID:  c.GetHeader("X-Device-ID"),
 	}
-	
-	response, err := h.userService.Login(c.Request.Context(), req, loginCtx)
+
+	responseData, err := h.userService.Login(c.Request.Context(), req, loginCtx)
 	if err != nil {
 		h.handleError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	// 统一响应包装
+	response.Success(c, responseData, "")
 }
 
 // Logout 用户登出
@@ -120,10 +115,7 @@ func (h *UserHandler) Logout(c *gin.Context) {
 
 	token := c.GetString("token")
 	if token == "" {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "令牌不能为空",
-			Code:  "MISSING_TOKEN",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("令牌不能为空"))
 		return
 	}
 
@@ -131,15 +123,13 @@ func (h *UserHandler) Logout(c *gin.Context) {
 	if sessionID == "" {
 		sessionID = "default" // fallback
 	}
-	
+
 	if err := h.userService.Logout(c.Request.Context(), userID, token, sessionID); err != nil {
 		h.handleError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, MessageResponse{
-		Message: "登出成功",
-	})
+	response.SuccessWithMessage(c, nil, "登出成功")
 }
 
 // RefreshToken 刷新访问令牌
@@ -157,21 +147,18 @@ func (h *UserHandler) RefreshToken(c *gin.Context) {
 	var req application.RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		logger.Warn("Invalid refresh token request", logger.ErrorField(err))
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error:   "请求参数错误",
-			Code:    "INVALID_REQUEST",
-			Details: err.Error(),
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
-	response, err := h.userService.RefreshToken(c.Request.Context(), req)
+	responseData, err := h.userService.RefreshToken(c.Request.Context(), req)
 	if err != nil {
 		h.handleError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	// 统一响应包装
+	response.Success(c, responseData, "")
 }
 
 // GetProfile 获取当前用户资料
@@ -222,11 +209,7 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 	var req application.UpdateProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		logger.Warn("Invalid update profile request", logger.ErrorField(err))
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error:   "请求参数错误",
-			Code:    "INVALID_REQUEST",
-			Details: err.Error(),
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
@@ -261,11 +244,7 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 	var req application.ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		logger.Warn("Invalid change password request", logger.ErrorField(err))
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error:   "请求参数错误",
-			Code:    "INVALID_REQUEST",
-			Details: err.Error(),
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
@@ -274,9 +253,7 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, MessageResponse{
-		Message: "密码修改成功",
-	})
+	response.SuccessWithMessage(c, nil, "密码修改成功")
 }
 
 // GetUser 获取用户信息(管理员功能)
@@ -296,10 +273,7 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 func (h *UserHandler) GetUser(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "用户ID不能为空",
-			Code:  "MISSING_USER_ID",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("用户ID不能为空"))
 		return
 	}
 
@@ -388,11 +362,7 @@ func (h *UserHandler) BulkUpdateUsers(c *gin.Context) {
 	var updates []userDomain.BulkUpdateRequest
 	if err := c.ShouldBindJSON(&updates); err != nil {
 		logger.Warn("Invalid bulk update request", logger.ErrorField(err))
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error:   "请求参数错误",
-			Code:    "INVALID_REQUEST",
-			Details: err.Error(),
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
@@ -401,9 +371,7 @@ func (h *UserHandler) BulkUpdateUsers(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, MessageResponse{
-		Message: "批量更新成功",
-	})
+	response.SuccessWithMessage(c, nil, "批量更新成功")
 }
 
 // BulkDeleteUsers 批量删除用户(管理员功能)
@@ -423,11 +391,7 @@ func (h *UserHandler) BulkDeleteUsers(c *gin.Context) {
 	var userIDs []string
 	if err := c.ShouldBindJSON(&userIDs); err != nil {
 		logger.Warn("Invalid bulk delete request", logger.ErrorField(err))
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error:   "请求参数错误",
-			Code:    "INVALID_REQUEST",
-			Details: err.Error(),
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
@@ -436,9 +400,7 @@ func (h *UserHandler) BulkDeleteUsers(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, MessageResponse{
-		Message: "批量删除成功",
-	})
+	response.SuccessWithMessage(c, nil, "批量删除成功")
 }
 
 // ExportUsers 导出用户数据(管理员功能)
@@ -499,11 +461,7 @@ func (h *UserHandler) ImportUsers(c *gin.Context) {
 	var userReqs []userDomain.CreateUserRequest
 	if err := c.ShouldBindJSON(&userReqs); err != nil {
 		logger.Warn("Invalid import request", logger.ErrorField(err))
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error:   "请求参数错误",
-			Code:    "INVALID_REQUEST",
-			Details: err.Error(),
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
@@ -553,10 +511,7 @@ func (h *UserHandler) GetUserStats(c *gin.Context) {
 func (h *UserHandler) GetUserActivity(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "用户ID不能为空",
-			Code:  "MISSING_USER_ID",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("用户ID不能为空"))
 		return
 	}
 
@@ -596,11 +551,7 @@ func (h *UserHandler) UpdateUserPreferences(c *gin.Context) {
 	var prefs userDomain.UserPreferences
 	if err := c.ShouldBindJSON(&prefs); err != nil {
 		logger.Warn("Invalid preferences request", logger.ErrorField(err))
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error:   "请求参数错误",
-			Code:    "INVALID_REQUEST",
-			Details: err.Error(),
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
@@ -609,9 +560,7 @@ func (h *UserHandler) UpdateUserPreferences(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, MessageResponse{
-		Message: "偏好设置更新成功",
-	})
+	response.SuccessWithMessage(c, nil, "偏好设置更新成功")
 }
 
 // GetUserPreferences 获取用户偏好设置
@@ -657,21 +606,14 @@ func (h *UserHandler) GetUserPreferences(c *gin.Context) {
 func (h *UserHandler) UpdateUser(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "用户ID不能为空",
-			Code:  "MISSING_USER_ID",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("用户ID不能为空"))
 		return
 	}
 
 	var req userDomain.UpdateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		logger.Warn("Invalid update user request", logger.ErrorField(err))
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error:   "请求参数错误",
-			Code:    "INVALID_REQUEST",
-			Details: err.Error(),
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
@@ -700,10 +642,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 func (h *UserHandler) DeleteUser(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "用户ID不能为空",
-			Code:  "MISSING_USER_ID",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("用户ID不能为空"))
 		return
 	}
 
@@ -712,9 +651,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, MessageResponse{
-		Message: "用户删除成功",
-	})
+	response.SuccessWithMessage(c, nil, "用户删除成功")
 }
 
 // PromoteToAdmin 提升用户为管理员(管理员功能)
@@ -733,10 +670,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 func (h *UserHandler) PromoteToAdmin(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "用户ID不能为空",
-			Code:  "MISSING_USER_ID",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("用户ID不能为空"))
 		return
 	}
 
@@ -745,9 +679,7 @@ func (h *UserHandler) PromoteToAdmin(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, MessageResponse{
-		Message: "用户已提升为管理员",
-	})
+	response.SuccessWithMessage(c, nil, "用户已提升为管理员")
 }
 
 // DemoteFromAdmin 撤销管理员权限(管理员功能)
@@ -766,10 +698,7 @@ func (h *UserHandler) PromoteToAdmin(c *gin.Context) {
 func (h *UserHandler) DemoteFromAdmin(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "用户ID不能为空",
-			Code:  "MISSING_USER_ID",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("用户ID不能为空"))
 		return
 	}
 
@@ -778,9 +707,7 @@ func (h *UserHandler) DemoteFromAdmin(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, MessageResponse{
-		Message: "管理员权限已撤销",
-	})
+	response.SuccessWithMessage(c, nil, "管理员权限已撤销")
 }
 
 // ActivateUser 激活用户(管理员功能)
@@ -799,10 +726,7 @@ func (h *UserHandler) DemoteFromAdmin(c *gin.Context) {
 func (h *UserHandler) ActivateUser(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "用户ID不能为空",
-			Code:  "MISSING_USER_ID",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("用户ID不能为空"))
 		return
 	}
 
@@ -811,9 +735,7 @@ func (h *UserHandler) ActivateUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, MessageResponse{
-		Message: "用户已激活",
-	})
+	response.SuccessWithMessage(c, nil, "用户已激活")
 }
 
 // DeactivateUser 停用用户(管理员功能)
@@ -832,10 +754,7 @@ func (h *UserHandler) ActivateUser(c *gin.Context) {
 func (h *UserHandler) DeactivateUser(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "用户ID不能为空",
-			Code:  "MISSING_USER_ID",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("用户ID不能为空"))
 		return
 	}
 
@@ -844,39 +763,10 @@ func (h *UserHandler) DeactivateUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, MessageResponse{
-		Message: "用户已停用",
-	})
+	response.SuccessWithMessage(c, nil, "用户已停用")
 }
 
 // handleError 统一错误处理
 func (h *UserHandler) handleError(c *gin.Context, err error) {
-	traceID := c.GetString("request_id")
-
-	if appErr, ok := errors.IsAppError(err); ok {
-		logger.Error("Application error",
-			logger.String("error", appErr.Message),
-			logger.String("code", appErr.Code),
-			logger.String("trace_id", traceID),
-		)
-
-		c.JSON(appErr.HTTPStatus, ErrorResponse{
-			Error:   appErr.Message,
-			Code:    appErr.Code,
-			Details: appErr.Details,
-			TraceID: traceID,
-		})
-		return
-	}
-
-	logger.Error("Internal server error",
-		logger.ErrorField(err),
-		logger.String("trace_id", traceID),
-	)
-
-	c.JSON(http.StatusInternalServerError, ErrorResponse{
-		Error:   "服务器内部错误",
-		Code:    "INTERNAL_SERVER_ERROR",
-		TraceID: traceID,
-	})
+	response.Error(c, err)
 }

@@ -10,28 +10,28 @@ import (
 type ViewTypeHandler interface {
 	// GetType 获取视图类型
 	GetType() ViewType
-	
+
 	// GetInfo 获取视图类型信息
 	GetInfo() ViewTypeInfo
-	
+
 	// CreateDefaultConfig 创建默认配置
 	CreateDefaultConfig() ViewConfig
-	
+
 	// ValidateConfig 验证配置
 	ValidateConfig(config ViewConfig) error
-	
+
 	// ProcessData 处理视图数据
 	ProcessData(ctx context.Context, view *View, request ViewDataRequest) (ViewDataResponse, error)
-	
+
 	// SupportsFeature 检查是否支持特定功能
 	SupportsFeature(feature string) bool
-	
+
 	// GetSupportedFeatures 获取支持的功能列表
 	GetSupportedFeatures() []string
-	
+
 	// CanTransformTo 检查是否可以转换为其他视图类型
 	CanTransformTo(targetType ViewType) bool
-	
+
 	// TransformConfig 转换配置到其他视图类型
 	TransformConfig(config ViewConfig, targetType ViewType) (ViewConfig, error)
 }
@@ -103,10 +103,10 @@ func NewViewTypeRegistry() *ViewTypeRegistry {
 	registry := &ViewTypeRegistry{
 		handlers: make(map[ViewType]ViewTypeHandler),
 	}
-	
+
 	// 注册内置视图类型处理器
 	registry.registerBuiltinHandlers()
-	
+
 	return registry
 }
 
@@ -114,12 +114,12 @@ func NewViewTypeRegistry() *ViewTypeRegistry {
 func (r *ViewTypeRegistry) RegisterHandler(handler ViewTypeHandler) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	
+
 	viewType := handler.GetType()
 	if _, exists := r.handlers[viewType]; exists {
 		return fmt.Errorf("视图类型 %s 已注册", viewType)
 	}
-	
+
 	r.handlers[viewType] = handler
 	return nil
 }
@@ -128,12 +128,12 @@ func (r *ViewTypeRegistry) RegisterHandler(handler ViewTypeHandler) error {
 func (r *ViewTypeRegistry) GetHandler(viewType ViewType) (ViewTypeHandler, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
-	
+
 	handler, exists := r.handlers[viewType]
 	if !exists {
 		return nil, fmt.Errorf("未找到视图类型 %s 的处理器", viewType)
 	}
-	
+
 	return handler, nil
 }
 
@@ -141,12 +141,12 @@ func (r *ViewTypeRegistry) GetHandler(viewType ViewType) (ViewTypeHandler, error
 func (r *ViewTypeRegistry) GetAllHandlers() map[ViewType]ViewTypeHandler {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
-	
+
 	result := make(map[ViewType]ViewTypeHandler)
 	for k, v := range r.handlers {
 		result[k] = v
 	}
-	
+
 	return result
 }
 
@@ -154,12 +154,12 @@ func (r *ViewTypeRegistry) GetAllHandlers() map[ViewType]ViewTypeHandler {
 func (r *ViewTypeRegistry) GetAllViewTypes() []ViewTypeInfo {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
-	
+
 	var infos []ViewTypeInfo
 	for _, handler := range r.handlers {
 		infos = append(infos, handler.GetInfo())
 	}
-	
+
 	return infos
 }
 
@@ -167,7 +167,7 @@ func (r *ViewTypeRegistry) GetAllViewTypes() []ViewTypeInfo {
 func (r *ViewTypeRegistry) IsSupported(viewType ViewType) bool {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
-	
+
 	_, exists := r.handlers[viewType]
 	return exists
 }
@@ -178,7 +178,7 @@ func (r *ViewTypeRegistry) ProcessViewData(ctx context.Context, view *View, requ
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return handler.ProcessData(ctx, view, request)
 }
 
@@ -278,7 +278,7 @@ func (h *GridViewHandler) ProcessData(ctx context.Context, view *View, request V
 	if !ok {
 		return nil, fmt.Errorf("请求类型不匹配")
 	}
-	
+
 	// 这里应该调用数据层获取实际数据
 	// 暂时返回模拟数据
 	data := &GridViewData{
@@ -289,7 +289,7 @@ func (h *GridViewHandler) ProcessData(ctx context.Context, view *View, request V
 		Columns:  []GridViewColumn{},
 		Config:   GridViewConfig{},
 	}
-	
+
 	return &BaseViewDataResponse{
 		Type: ViewTypeGrid,
 		Data: data,
@@ -313,7 +313,7 @@ func (h *GridViewHandler) TransformConfig(config ViewConfig, targetType ViewType
 	if !ok {
 		return nil, fmt.Errorf("配置类型不匹配")
 	}
-	
+
 	switch targetType {
 	case ViewTypeKanban:
 		return &KanbanViewConfig{
@@ -400,16 +400,16 @@ func (h *KanbanViewHandler) ProcessData(ctx context.Context, view *View, request
 	if !ok {
 		return nil, fmt.Errorf("请求类型不匹配")
 	}
-	
+
 	// 这里应该调用数据层获取实际数据
 	// 暂时返回模拟数据
 	data := &KanbanViewData{
 		Groups: []KanbanGroup{},
 		Config: KanbanViewConfig{},
 	}
-	
+
 	_ = kanbanRequest // 避免未使用变量警告
-	
+
 	return &BaseViewDataResponse{
 		Type: ViewTypeKanban,
 		Data: data,
@@ -433,7 +433,7 @@ func (h *KanbanViewHandler) TransformConfig(config ViewConfig, targetType ViewTy
 	if !ok {
 		return nil, fmt.Errorf("配置类型不匹配")
 	}
-	
+
 	switch targetType {
 	case ViewTypeGrid:
 		return &GridViewConfig{

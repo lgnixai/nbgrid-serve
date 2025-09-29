@@ -23,7 +23,7 @@ type Connection struct {
 func NewConnection(cfg config.DatabaseConfig) (*Connection, error) {
 	// 构建DSN
 	dsn := cfg.GetDSN()
-	
+
 	// 设置GORM日志级别
 	var logLevel logger.LogLevel
 	switch cfg.LogLevel {
@@ -124,16 +124,16 @@ type logWriter struct{}
 func (w *logWriter) Printf(format string, args ...interface{}) {
 	// 格式化SQL日志，使其更易读
 	message := fmt.Sprintf(format, args...)
-	
+
 	// 如果包含SQL查询，使用特殊的格式
 	if strings.Contains(message, "[rows:") {
 		// 这是SQL查询日志，使用更清晰的格式
-		appLogger.Info("🔍 SQL Query", 
+		appLogger.Info("🔍 SQL Query",
 			appLogger.String("query", message),
 		)
 	} else {
 		// 其他数据库日志
-		appLogger.Info("📊 Database", 
+		appLogger.Info("📊 Database",
 			appLogger.String("message", message),
 		)
 	}

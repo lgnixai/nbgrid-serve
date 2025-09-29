@@ -8,7 +8,7 @@ import {
   TeableConfig, 
   RequestOptions, 
   ApiResponse, 
-  ApiError,
+  // ApiError,
   TeableError,
   AuthenticationError,
   AuthorizationError,
@@ -29,7 +29,7 @@ export class HttpClient {
     this.accessToken = config.accessToken;
     this.refreshToken = config.refreshToken;
     
-    this.axiosInstance = axios.create({
+    const baseConfig: any = {
       baseURL: config.baseUrl,
       timeout: config.timeout || 30000,
       headers: {
@@ -38,7 +38,16 @@ export class HttpClient {
         ...(config.apiKey && { 'X-API-Key': config.apiKey }),
         ...(this.accessToken && { 'Authorization': `Bearer ${this.accessToken}` })
       }
-    });
+    };
+
+    // 可选禁用代理，避免本机代理劫持 localhost
+    if (config.disableProxy) {
+      baseConfig.proxy = false;
+      // axios 在 Node 环境也会读取 HTTP(S)_PROXY 环境变量；这里显式禁用
+      baseConfig.transport = undefined;
+    }
+
+    this.axiosInstance = axios.create(baseConfig);
 
     this.setupInterceptors();
   }
@@ -105,7 +114,7 @@ export class HttpClient {
   private handleError(error: AxiosError): TeableError {
     const response = error.response;
     const status = response?.status;
-    const data = response?.data as ApiError;
+    const data = response?.data as any;
 
     if (!status) {
       return new TeableError(
@@ -116,8 +125,8 @@ export class HttpClient {
       );
     }
 
-    const message = data?.error || error.message || 'Unknown error';
-    const code = data?.code || 'UNKNOWN_ERROR';
+    const message = (data?.error || data?.message || error.message || 'Unknown error');
+    const code = (data?.code !== undefined ? String(data.code) : 'UNKNOWN_ERROR');
 
     switch (status) {
       case 401:
@@ -231,7 +240,7 @@ export class HttpClient {
 
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
-        const response: AxiosResponse<ApiResponse<T>> = await this.axiosInstance.request({
+        const response: AxiosResponse<any> = await this.axiosInstance.request({
           method,
           url,
           ...axiosConfig
@@ -251,6 +260,9 @@ export class HttpClient {
                 response.data
               );
             }
+          } else if ('code' in response.data && 'data' in response.data) {
+            // 后端统一返回格式 { code, data, ... }
+            return response.data.data as T;
           } else if ('data' in response.data) {
             // 分页响应格式
             return response.data as T;

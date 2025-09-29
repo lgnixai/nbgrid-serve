@@ -16,7 +16,9 @@
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "docs": "typedoc src/index.ts",
-    "example:basic": "ts-node --transpile-only examples/basic-usage.ts"
+    "basic": "ts-node --transpile-only examples/basic-usage.ts",
+    "advanced": "ts-node --transpile-only examples/advanced-queries.ts"
+
   },
   "keywords": [
     "teable",

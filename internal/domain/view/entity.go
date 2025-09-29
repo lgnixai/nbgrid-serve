@@ -27,19 +27,19 @@ type View struct {
 	TableID          string                 `json:"table_id"`
 	Name             string                 `json:"name"`
 	Description      *string                `json:"description"`
-	Type             ViewType               `json:"type"`                // 视图类型
-	Config           map[string]interface{} `json:"config"`              // 视图配置，存储为JSON
-	IsDefault        bool                   `json:"is_default"`          // 是否为默认视图
-	IsPublic         bool                   `json:"is_public"`           // 是否为公共视图
-	ShareToken       *string                `json:"share_token"`         // 分享令牌
-	Version          int64                  `json:"version"`             // 视图版本号
+	Type             ViewType               `json:"type"`        // 视图类型
+	Config           map[string]interface{} `json:"config"`      // 视图配置，存储为JSON
+	IsDefault        bool                   `json:"is_default"`  // 是否为默认视图
+	IsPublic         bool                   `json:"is_public"`   // 是否为公共视图
+	ShareToken       *string                `json:"share_token"` // 分享令牌
+	Version          int64                  `json:"version"`     // 视图版本号
 	CreatedBy        string                 `json:"created_by"`
 	CreatedTime      time.Time              `json:"created_at"`
 	DeletedTime      *time.Time             `json:"deleted_time"`
 	LastModifiedTime *time.Time             `json:"updated_at"`
-	
+
 	// 内部字段，不序列化
-	parsedConfig     ViewConfig             `json:"-"` // 解析后的配置
+	parsedConfig ViewConfig `json:"-"` // 解析后的配置
 }
 
 // CreateViewRequest 创建视图请求
@@ -85,22 +85,22 @@ type ViewConfig interface {
 
 // BaseViewConfig 基础视图配置
 type BaseViewConfig struct {
-	Type        ViewType               `json:"type"`
-	Filters     []ViewFilter           `json:"filters,omitempty"`     // 过滤条件
-	Sorts       []ViewSort             `json:"sorts,omitempty"`       // 排序条件
-	Groups      []ViewGroup            `json:"groups,omitempty"`      // 分组条件
-	VisibleFields []string             `json:"visible_fields,omitempty"` // 可见字段
-	HiddenFields  []string             `json:"hidden_fields,omitempty"`  // 隐藏字段
-	CustomFields  map[string]interface{} `json:"custom_fields,omitempty"` // 自定义字段配置
+	Type          ViewType               `json:"type"`
+	Filters       []ViewFilter           `json:"filters,omitempty"`        // 过滤条件
+	Sorts         []ViewSort             `json:"sorts,omitempty"`          // 排序条件
+	Groups        []ViewGroup            `json:"groups,omitempty"`         // 分组条件
+	VisibleFields []string               `json:"visible_fields,omitempty"` // 可见字段
+	HiddenFields  []string               `json:"hidden_fields,omitempty"`  // 隐藏字段
+	CustomFields  map[string]interface{} `json:"custom_fields,omitempty"`  // 自定义字段配置
 }
 
 // ViewFilter 视图过滤条件
 type ViewFilter struct {
-	FieldID   string      `json:"field_id"`
-	Operator  string      `json:"operator"` // eq, ne, gt, gte, lt, lte, like, in, not_in, between, is_empty, is_not_empty
-	Value     interface{} `json:"value"`
-	Logic     string      `json:"logic"`    // and, or
-	GroupID   *string     `json:"group_id,omitempty"` // 过滤组ID
+	FieldID  string      `json:"field_id"`
+	Operator string      `json:"operator"` // eq, ne, gt, gte, lt, lte, like, in, not_in, between, is_empty, is_not_empty
+	Value    interface{} `json:"value"`
+	Logic    string      `json:"logic"`              // and, or
+	GroupID  *string     `json:"group_id,omitempty"` // 过滤组ID
 }
 
 // ViewSort 视图排序条件
@@ -134,15 +134,15 @@ func NewView(req CreateViewRequest) *View {
 		CreatedTime:      now,
 		LastModifiedTime: &now,
 	}
-	
+
 	// 设置配置
 	if req.Config != nil {
 		view.Config = req.Config
 	}
-	
+
 	// 解析配置
 	view.parseConfig()
-	
+
 	return view
 }
 
@@ -216,11 +216,11 @@ func GetViewTypeInfo(viewType ViewType) map[string]interface{} {
 			"features":    []string{"filter", "date_field", "milestone", "duration"},
 		},
 	}
-	
+
 	if info, exists := typeInfos[viewType]; exists {
 		return info
 	}
-	
+
 	return map[string]interface{}{
 		"name":        "未知视图",
 		"description": "未知的视图类型",
@@ -234,16 +234,16 @@ func (v *View) ValidateConfig() error {
 	if v.parsedConfig != nil {
 		return v.parsedConfig.Validate()
 	}
-	
+
 	// 基础验证
 	if v.Type == "" {
 		return fmt.Errorf("视图类型不能为空")
 	}
-	
+
 	if !IsValidViewType(string(v.Type)) {
 		return fmt.Errorf("不支持的视图类型: %s", v.Type)
 	}
-	
+
 	return nil
 }
 
@@ -261,14 +261,14 @@ func (v *View) parseConfig() error {
 		v.Config = defaultConfig.ToMap()
 		return nil
 	}
-	
+
 	// 使用配置管理器解析配置
 	configManager := GetGlobalConfigManager()
 	parsedConfig, err := configManager.ParseConfig(v.Type, v.Config)
 	if err != nil {
 		return err
 	}
-	
+
 	v.parsedConfig = parsedConfig
 	return nil
 }
@@ -291,18 +291,18 @@ func (v *View) GetParsedConfig() ViewConfig {
 func (v *View) UpdateConfig(config map[string]interface{}) error {
 	// 使用配置管理器验证和解析配置
 	configManager := GetGlobalConfigManager()
-	
+
 	// 解析新配置
 	newParsedConfig, err := configManager.ParseConfig(v.Type, config)
 	if err != nil {
 		return err
 	}
-	
+
 	// 验证配置
 	if err := configManager.ValidateConfig(newParsedConfig); err != nil {
 		return err
 	}
-	
+
 	// 更新配置
 	v.Config = config
 	v.parsedConfig = newParsedConfig
@@ -353,13 +353,13 @@ func (v *View) CanBeShared() bool {
 // Clone 克隆视图
 func (v *View) Clone(newName string, createdBy string) *View {
 	now := time.Now()
-	
+
 	// 深拷贝配置
 	configCopy := make(map[string]interface{})
 	for k, val := range v.Config {
 		configCopy[k] = val
 	}
-	
+
 	cloned := &View{
 		ID:               utils.GenerateViewID(),
 		TableID:          v.TableID,
@@ -375,10 +375,10 @@ func (v *View) Clone(newName string, createdBy string) *View {
 		CreatedTime:      now,
 		LastModifiedTime: &now,
 	}
-	
+
 	// 解析配置
 	cloned.parseConfig()
-	
+
 	return cloned
 }
 
@@ -405,7 +405,7 @@ func (v *View) Update(req UpdateViewRequest) error {
 	if req.IsDefault != nil {
 		v.IsDefault = *req.IsDefault
 	}
-	
+
 	v.incrementVersion()
 	return nil
 }
@@ -655,18 +655,18 @@ func (c *GalleryViewConfig) Validate() error {
 	if !isValid {
 		return fmt.Errorf("无效的卡片大小: %s", c.CardSize)
 	}
-	
+
 	if c.Columns <= 0 {
 		c.Columns = 4 // 默认4列
 	}
 	if c.Columns > 12 {
 		return fmt.Errorf("列数不能超过12")
 	}
-	
+
 	if c.AspectRatio == "" {
 		c.AspectRatio = "4:3" // 默认宽高比
 	}
-	
+
 	return nil
 }
 
@@ -718,14 +718,14 @@ func (c *FormViewConfig) Validate() error {
 	if !isValid {
 		return fmt.Errorf("无效的布局类型: %s", c.Layout)
 	}
-	
+
 	if c.ColumnCount <= 0 {
 		c.ColumnCount = 1 // 默认1列
 	}
 	if c.ColumnCount > 4 {
 		return fmt.Errorf("列数不能超过4")
 	}
-	
+
 	return nil
 }
 

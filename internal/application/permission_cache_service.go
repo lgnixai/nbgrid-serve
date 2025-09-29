@@ -34,17 +34,17 @@ func NewPermissionCacheService(
 
 // CacheWarmupConfig 缓存预热配置
 type CacheWarmupConfig struct {
-	UserIDs       []string `json:"user_ids"`
-	ResourceTypes []string `json:"resource_types"`
+	UserIDs       []string            `json:"user_ids"`
+	ResourceTypes []string            `json:"resource_types"`
 	CommonActions []permission.Action `json:"common_actions"`
-	BatchSize     int      `json:"batch_size"`
+	BatchSize     int                 `json:"batch_size"`
 }
 
 // Start 启动缓存预热服务
 func (s *PermissionCacheService) Start(ctx context.Context) {
 	s.wg.Add(1)
 	go s.warmupWorker(ctx)
-	
+
 	logger.Info("Permission cache service started",
 		logger.Duration("warmup_interval", s.warmupInterval),
 	)
@@ -54,7 +54,7 @@ func (s *PermissionCacheService) Start(ctx context.Context) {
 func (s *PermissionCacheService) Stop() {
 	close(s.stopChan)
 	s.wg.Wait()
-	
+
 	logger.Info("Permission cache service stopped")
 }
 
@@ -180,12 +180,12 @@ func (s *PermissionCacheService) GetCacheStats(ctx context.Context) (*CacheStats
 	}
 
 	return &CacheStats{
-		PermissionKeys:         permissionKeys,
-		UserResourceKeys:       userResourceKeys,
-		UserPermissionKeys:     userPermissionKeys,
-		TotalKeys:              permissionKeys + userResourceKeys + userPermissionKeys,
-		LastWarmupTime:         time.Now(), // 这里应该记录实际的预热时间
-		CacheHitRate:           0.0,        // 这里应该从缓存服务获取命中率
+		PermissionKeys:     permissionKeys,
+		UserResourceKeys:   userResourceKeys,
+		UserPermissionKeys: userPermissionKeys,
+		TotalKeys:          permissionKeys + userResourceKeys + userPermissionKeys,
+		LastWarmupTime:     time.Now(), // 这里应该记录实际的预热时间
+		CacheHitRate:       0.0,        // 这里应该从缓存服务获取命中率
 	}, nil
 }
 
@@ -264,7 +264,7 @@ func (s *PermissionCacheService) warmupUserBatch(ctx context.Context, userIDs []
 		wg.Add(1)
 		go func(uid string) {
 			defer wg.Done()
-			
+
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
 

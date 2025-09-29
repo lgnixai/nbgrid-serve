@@ -1,7 +1,6 @@
 package http
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -9,7 +8,7 @@ import (
 
 	"teable-go-backend/internal/domain/websocket"
 	"teable-go-backend/pkg/errors"
-	"teable-go-backend/pkg/logger"
+	"teable-go-backend/pkg/response"
 )
 
 // CollaborationHandler 协作功能HTTP处理器
@@ -68,7 +67,7 @@ func (h *CollaborationHandler) UpdatePresence(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // RemovePresence 移除用户在线状态
@@ -106,7 +105,7 @@ func (h *CollaborationHandler) RemovePresence(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // GetPresence 获取在线状态
@@ -129,7 +128,7 @@ func (h *CollaborationHandler) GetPresence(c *gin.Context) {
 	// 获取在线状态
 	presence := h.collaborationService.GetPresenceInfo(collection)
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: presence})
+	response.SuccessWithMessage(c, presence, "")
 }
 
 // UpdateCursorRequest 更新光标位置请求
@@ -185,7 +184,7 @@ func (h *CollaborationHandler) UpdateCursor(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // RemoveCursor 移除用户光标
@@ -225,7 +224,7 @@ func (h *CollaborationHandler) RemoveCursor(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // GetCursors 获取光标信息
@@ -248,7 +247,7 @@ func (h *CollaborationHandler) GetCursors(c *gin.Context) {
 	// 获取光标信息
 	cursors := h.collaborationService.GetCursorInfo(collection)
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: cursors})
+	response.SuccessWithMessage(c, cursors, "")
 }
 
 // SendNotificationRequest 发送通知请求
@@ -283,7 +282,7 @@ func (h *CollaborationHandler) SendNotification(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // GetCollaborationStats 获取协作统计信息
@@ -303,36 +302,9 @@ func (h *CollaborationHandler) GetCollaborationStats(c *gin.Context) {
 		"timestamp":          time.Now().Format(time.RFC3339),
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: stats})
+	response.SuccessWithMessage(c, stats, "")
 }
 
 func (h *CollaborationHandler) handleError(c *gin.Context, err error) {
-	traceID := c.GetString("request_id")
-
-	if appErr, ok := errors.IsAppError(err); ok {
-		logger.Error("Application error",
-			logger.String("error", appErr.Message),
-			logger.String("code", appErr.Code),
-			logger.String("trace_id", traceID),
-		)
-
-		c.JSON(appErr.HTTPStatus, ErrorResponse{
-			Error:   appErr.Message,
-			Code:    appErr.Code,
-			Details: appErr.Details,
-			TraceID: traceID,
-		})
-		return
-	}
-
-	logger.Error("Internal server error",
-		logger.ErrorField(err),
-		logger.String("trace_id", traceID),
-	)
-
-	c.JSON(http.StatusInternalServerError, ErrorResponse{
-		Error:   "服务器内部错误",
-		Code:    "INTERNAL_SERVER_ERROR",
-		TraceID: traceID,
-	})
+	response.Error(c, err)
 }

@@ -27,7 +27,6 @@ func (Permission) TableName() string {
 	return "permissions"
 }
 
-
 // BaseCollaborator 基础表协作者模型
 type BaseCollaborator struct {
 	ID        string     `gorm:"primaryKey;type:varchar(30)" json:"id"`
@@ -50,4 +49,3 @@ type BaseCollaborator struct {
 func (BaseCollaborator) TableName() string {
 	return "base_collaborators"
 }
-

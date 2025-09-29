@@ -29,7 +29,7 @@ func (h *BaseFieldHandler) ValidateOptions(options *FieldOptions) error {
 	if options == nil {
 		return nil
 	}
-	
+
 	// 验证通用选项
 	if options.MinLength < 0 {
 		return fmt.Errorf("最小长度不能为负数")
@@ -40,7 +40,7 @@ func (h *BaseFieldHandler) ValidateOptions(options *FieldOptions) error {
 	if options.MinLength > 0 && options.MaxLength > 0 && options.MinLength > options.MaxLength {
 		return fmt.Errorf("最小长度不能大于最大长度")
 	}
-	
+
 	return nil
 }
 
@@ -57,7 +57,7 @@ func (h *BaseFieldHandler) RequiresOptions() bool {
 // GetValidationRules 获取验证规则 - 默认实现
 func (h *BaseFieldHandler) GetValidationRules(options *FieldOptions) []FieldValidationRule {
 	var rules []FieldValidationRule
-	
+
 	if options != nil {
 		if options.MinLength > 0 {
 			rules = append(rules, FieldValidationRule{
@@ -74,7 +74,7 @@ func (h *BaseFieldHandler) GetValidationRules(options *FieldOptions) []FieldVali
 			})
 		}
 	}
-	
+
 	return rules
 }
 
@@ -101,7 +101,7 @@ func (h *BaseFieldHandler) ConvertValue(value interface{}, targetType FieldType,
 	if h.IsCompatibleWith(targetType) {
 		return value, nil
 	}
-	
+
 	return nil, fmt.Errorf("不支持从 %s 到 %s 的值转换", h.fieldType, targetType)
 }
 
@@ -132,12 +132,12 @@ func (h *TextFieldHandler) ValidateValue(value interface{}, options *FieldOption
 	if value == nil || value == "" {
 		return nil
 	}
-	
+
 	str, ok := value.(string)
 	if !ok {
 		return fmt.Errorf("文本字段值必须是字符串")
 	}
-	
+
 	if options != nil {
 		if options.MinLength > 0 && len(str) < options.MinLength {
 			return fmt.Errorf("文本长度不能少于 %d 个字符", options.MinLength)
@@ -155,7 +155,7 @@ func (h *TextFieldHandler) ValidateValue(value interface{}, options *FieldOption
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -172,7 +172,7 @@ func (h *TextFieldHandler) IsCompatibleWith(targetType FieldType) bool {
 		FieldTypeText, FieldTypeEmail, FieldTypeURL, FieldTypePhone,
 		FieldTypeSelect, FieldTypeMultiSelect,
 	}
-	
+
 	for _, t := range compatibleTypes {
 		if t == targetType {
 			return true
@@ -186,12 +186,12 @@ func (h *TextFieldHandler) ConvertValue(value interface{}, targetType FieldType,
 	if value == nil {
 		return nil, nil
 	}
-	
+
 	str, ok := value.(string)
 	if !ok {
 		return nil, fmt.Errorf("无法转换非字符串值")
 	}
-	
+
 	switch targetType {
 	case FieldTypeText, FieldTypeEmail, FieldTypeURL, FieldTypePhone:
 		return str, nil
@@ -241,7 +241,7 @@ func (h *NumberFieldHandler) ValidateValue(value interface{}, options *FieldOpti
 	if value == nil || value == "" {
 		return nil
 	}
-	
+
 	var num float64
 	switch v := value.(type) {
 	case float64:
@@ -257,7 +257,7 @@ func (h *NumberFieldHandler) ValidateValue(value interface{}, options *FieldOpti
 	default:
 		return fmt.Errorf("数字字段值必须是数字")
 	}
-	
+
 	if options != nil {
 		if options.MinValue != nil && num < *options.MinValue {
 			return fmt.Errorf("数字不能小于 %v", *options.MinValue)
@@ -266,7 +266,7 @@ func (h *NumberFieldHandler) ValidateValue(value interface{}, options *FieldOpti
 			return fmt.Errorf("数字不能大于 %v", *options.MaxValue)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -280,10 +280,10 @@ func (h *NumberFieldHandler) GetDefaultOptions() *FieldOptions {
 // IsCompatibleWith 检查兼容性
 func (h *NumberFieldHandler) IsCompatibleWith(targetType FieldType) bool {
 	compatibleTypes := []FieldType{
-		FieldTypeNumber, FieldTypeCurrency, FieldTypePercent, 
+		FieldTypeNumber, FieldTypeCurrency, FieldTypePercent,
 		FieldTypeRating, FieldTypeProgress,
 	}
-	
+
 	for _, t := range compatibleTypes {
 		if t == targetType {
 			return true
@@ -297,7 +297,7 @@ func (h *NumberFieldHandler) ConvertValue(value interface{}, targetType FieldTyp
 	if value == nil {
 		return nil, nil
 	}
-	
+
 	var num float64
 	switch v := value.(type) {
 	case float64:
@@ -313,7 +313,7 @@ func (h *NumberFieldHandler) ConvertValue(value interface{}, targetType FieldTyp
 	default:
 		return nil, fmt.Errorf("无法转换非数字值")
 	}
-	
+
 	switch targetType {
 	case FieldTypeNumber, FieldTypeCurrency:
 		return num, nil
@@ -368,23 +368,23 @@ func (h *SelectFieldHandler) ValidateValue(value interface{}, options *FieldOpti
 	if value == nil || value == "" {
 		return nil
 	}
-	
+
 	str, ok := value.(string)
 	if !ok {
 		return fmt.Errorf("选择字段值必须是字符串")
 	}
-	
+
 	if options == nil || len(options.Choices) == 0 {
 		return fmt.Errorf("选择字段必须配置选项")
 	}
-	
+
 	// 检查值是否在选项中
 	for _, choice := range options.Choices {
 		if choice.Value == str {
 			return nil
 		}
 	}
-	
+
 	return fmt.Errorf("选择的值不在有效选项中")
 }
 
@@ -393,11 +393,11 @@ func (h *SelectFieldHandler) ValidateOptions(options *FieldOptions) error {
 	if err := h.BaseFieldHandler.ValidateOptions(options); err != nil {
 		return err
 	}
-	
+
 	if options == nil || len(options.Choices) == 0 {
 		return fmt.Errorf("选择字段必须配置至少一个选项")
 	}
-	
+
 	// 检查选项值的唯一性
 	valueMap := make(map[string]bool)
 	for _, choice := range options.Choices {
@@ -409,7 +409,7 @@ func (h *SelectFieldHandler) ValidateOptions(options *FieldOptions) error {
 		}
 		valueMap[choice.Value] = true
 	}
-	
+
 	return nil
 }
 
@@ -433,7 +433,7 @@ func (h *SelectFieldHandler) IsCompatibleWith(targetType FieldType) bool {
 	compatibleTypes := []FieldType{
 		FieldTypeSelect, FieldTypeMultiSelect, FieldTypeRadio, FieldTypeText,
 	}
-	
+
 	for _, t := range compatibleTypes {
 		if t == targetType {
 			return true
@@ -447,12 +447,12 @@ func (h *SelectFieldHandler) ConvertValue(value interface{}, targetType FieldTyp
 	if value == nil {
 		return nil, nil
 	}
-	
+
 	str, ok := value.(string)
 	if !ok {
 		return nil, fmt.Errorf("无法转换非字符串值")
 	}
-	
+
 	switch targetType {
 	case FieldTypeSelect, FieldTypeRadio, FieldTypeText:
 		return str, nil
@@ -491,17 +491,17 @@ func (h *EmailFieldHandler) ValidateValue(value interface{}, options *FieldOptio
 	if value == nil || value == "" {
 		return nil
 	}
-	
+
 	str, ok := value.(string)
 	if !ok {
 		return fmt.Errorf("邮箱字段值必须是字符串")
 	}
-	
+
 	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 	if !emailRegex.MatchString(str) {
 		return fmt.Errorf("邮箱格式不正确")
 	}
-	
+
 	return nil
 }
 
@@ -515,7 +515,7 @@ func (h *EmailFieldHandler) IsCompatibleWith(targetType FieldType) bool {
 	compatibleTypes := []FieldType{
 		FieldTypeEmail, FieldTypeText, FieldTypeURL,
 	}
-	
+
 	for _, t := range compatibleTypes {
 		if t == targetType {
 			return true
@@ -551,22 +551,22 @@ func (h *DateFieldHandler) ValidateValue(value interface{}, options *FieldOption
 	if value == nil || value == "" {
 		return nil
 	}
-	
+
 	str, ok := value.(string)
 	if !ok {
 		return fmt.Errorf("日期字段值必须是字符串")
 	}
-	
+
 	format := "2006-01-02"
 	if options != nil && options.DateFormat != "" {
 		format = options.DateFormat
 	}
-	
+
 	_, err := time.Parse(format, str)
 	if err != nil {
 		return fmt.Errorf("日期格式不正确，期望格式: %s", format)
 	}
-	
+
 	return nil
 }
 
@@ -582,7 +582,7 @@ func (h *DateFieldHandler) IsCompatibleWith(targetType FieldType) bool {
 	compatibleTypes := []FieldType{
 		FieldTypeDate, FieldTypeDateTime, FieldTypeText,
 	}
-	
+
 	for _, t := range compatibleTypes {
 		if t == targetType {
 			return true
@@ -596,19 +596,19 @@ func (h *DateFieldHandler) ConvertValue(value interface{}, targetType FieldType,
 	if value == nil {
 		return nil, nil
 	}
-	
+
 	str, ok := value.(string)
 	if !ok {
 		return nil, fmt.Errorf("无法转换非字符串值")
 	}
-	
+
 	// 解析当前日期
 	currentFormat := "2006-01-02"
 	date, err := time.Parse(currentFormat, str)
 	if err != nil {
 		return nil, fmt.Errorf("无法解析日期: %v", err)
 	}
-	
+
 	switch targetType {
 	case FieldTypeDate:
 		return date.Format("2006-01-02"), nil

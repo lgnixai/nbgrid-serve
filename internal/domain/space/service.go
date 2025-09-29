@@ -42,7 +42,7 @@ type ServiceImpl struct {
 func NewService(repo Repository) Service {
 	memberService := NewMemberService()
 	accessControlService := NewAccessControlService(memberService)
-	
+
 	return &ServiceImpl{
 		repo:                 repo,
 		memberService:        memberService,
@@ -94,10 +94,10 @@ func (s *ServiceImpl) CreateSpace(ctx context.Context, req CreateSpaceRequest) (
 	if err != nil {
 		return nil, err
 	}
-	
+
 	space.Description = req.Description
 	space.Icon = req.Icon
-	
+
 	if err := s.repo.Create(ctx, space); err != nil {
 		return nil, err
 	}
@@ -154,24 +154,24 @@ func (s *ServiceImpl) AddCollaborator(ctx context.Context, spaceID, userID, role
 	if err != nil {
 		return err
 	}
-	
+
 	// 验证角色
 	collaboratorRole := CollaboratorRole(role)
 	if !collaboratorRole.IsValid() {
 		return ErrInvalidRole
 	}
-	
+
 	// 验证邀请（这里简化处理，实际需要获取邀请者信息）
 	if err := s.memberService.ValidateInvitation(space, space.CreatedBy, userID, collaboratorRole); err != nil {
 		return err
 	}
-	
+
 	// 创建协作者
 	collaborator, err := NewSpaceCollaborator(spaceID, userID, collaboratorRole, space.CreatedBy)
 	if err != nil {
 		return err
 	}
-	
+
 	return s.repo.AddCollaborator(ctx, collaborator)
 }
 
@@ -226,7 +226,7 @@ func (s *ServiceImpl) CheckUserPermission(ctx context.Context, spaceID, userID, 
 		if err != nil {
 			return false, err
 		}
-		
+
 		for _, collab := range collaborators {
 			if collab.UserID == userID {
 				collaborator = collab
@@ -264,13 +264,13 @@ func (s *ServiceImpl) GetSpaceStats(ctx context.Context, spaceID string) (*Space
 func (s *ServiceImpl) GetUserDeletedSpaces(ctx context.Context, userID string, filter ListFilter) ([]*Space, int64, error) {
 	// 设置过滤条件为当前用户的已删除空间
 	filter.CreatedBy = &userID
-	
+
 	// 获取已删除的空间（需要在仓储层实现专门的查询方法）
 	spaces, err := s.repo.ListDeleted(ctx, filter)
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	// 统计总数
 	countFilter := CountFilter{
 		Name:      filter.Name,
@@ -281,7 +281,7 @@ func (s *ServiceImpl) GetUserDeletedSpaces(ctx context.Context, userID string, f
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	return spaces, total, nil
 }
 

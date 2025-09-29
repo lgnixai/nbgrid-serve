@@ -69,11 +69,11 @@ type JWTConfig struct {
 
 // StorageConfig 存储配置
 type StorageConfig struct {
-	Type      string      `mapstructure:"type"` // local, s3, minio
-	Local     LocalConfig `mapstructure:"local"`
-	S3        S3Config    `mapstructure:"s3"`
-	CDNDomain string      `mapstructure:"cdn_domain"`
-	UploadPath string     `mapstructure:"upload_path"` // 兼容性字段
+	Type       string      `mapstructure:"type"` // local, s3, minio
+	Local      LocalConfig `mapstructure:"local"`
+	S3         S3Config    `mapstructure:"s3"`
+	CDNDomain  string      `mapstructure:"cdn_domain"`
+	UploadPath string      `mapstructure:"upload_path"` // 兼容性字段
 }
 
 type LocalConfig struct {
@@ -129,7 +129,7 @@ func Load() (*Config, error) {
 	// 设置环境变量前缀
 	viper.SetEnvPrefix("TEABLE")
 	viper.AutomaticEnv()
-	
+
 	// 设置环境变量键替换规则，避免系统环境变量干扰
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 

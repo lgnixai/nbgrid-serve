@@ -1,7 +1,6 @@
 package http
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -9,7 +8,7 @@ import (
 
 	"teable-go-backend/internal/domain/share"
 	"teable-go-backend/pkg/errors"
-	"teable-go-backend/pkg/logger"
+	"teable-go-backend/pkg/response"
 )
 
 // ShareHandler 分享HTTP处理器
@@ -49,7 +48,7 @@ func (h *ShareHandler) CreateShareView(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: shareView})
+	response.SuccessWithMessage(c, shareView, "")
 }
 
 // GetShareView 获取分享视图
@@ -71,7 +70,7 @@ func (h *ShareHandler) GetShareView(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: shareInfo})
+	response.SuccessWithMessage(c, shareInfo, "")
 }
 
 // EnableShareView 启用分享视图
@@ -101,7 +100,7 @@ func (h *ShareHandler) EnableShareView(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // DisableShareView 禁用分享视图
@@ -123,7 +122,7 @@ func (h *ShareHandler) DisableShareView(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // UpdateShareMeta 更新分享元数据
@@ -153,7 +152,7 @@ func (h *ShareHandler) UpdateShareMeta(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // ShareAuth 分享认证
@@ -182,12 +181,12 @@ func (h *ShareHandler) ShareAuth(c *gin.Context) {
 
 	// 生成临时token（这里简化处理，实际应该使用JWT）
 	token := "temp_share_token_" + req.ShareID
-	response := &share.ShareAuthResponse{
+	authResp := &share.ShareAuthResponse{
 		Token:   token,
 		Expires: time.Now().Add(24 * time.Hour).Unix(),
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: response})
+	response.SuccessWithMessage(c, authResp, "")
 }
 
 // SubmitForm 提交表单
@@ -211,13 +210,13 @@ func (h *ShareHandler) SubmitForm(c *gin.Context) {
 		return
 	}
 
-	response, err := h.shareService.SubmitForm(c.Request.Context(), shareID, &req)
+	formResp, err := h.shareService.SubmitForm(c.Request.Context(), shareID, &req)
 	if err != nil {
 		h.handleError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: response})
+	response.SuccessWithMessage(c, formResp, "")
 }
 
 // CopyData 复制数据
@@ -241,13 +240,13 @@ func (h *ShareHandler) CopyData(c *gin.Context) {
 		return
 	}
 
-	response, err := h.shareService.CopyData(c.Request.Context(), shareID, &req)
+	copyResp, err := h.shareService.CopyData(c.Request.Context(), shareID, &req)
 	if err != nil {
 		h.handleError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: response})
+	response.SuccessWithMessage(c, copyResp, "")
 }
 
 // GetCollaborators 获取协作者
@@ -270,13 +269,13 @@ func (h *ShareHandler) GetCollaborators(c *gin.Context) {
 		return
 	}
 
-	response, err := h.shareService.GetCollaborators(c.Request.Context(), shareID, &req)
+	collabResp, err := h.shareService.GetCollaborators(c.Request.Context(), shareID, &req)
 	if err != nil {
 		h.handleError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: response})
+	response.SuccessWithMessage(c, collabResp, "")
 }
 
 // GetLinkRecords 获取链接记录
@@ -301,13 +300,13 @@ func (h *ShareHandler) GetLinkRecords(c *gin.Context) {
 		return
 	}
 
-	response, err := h.shareService.GetLinkRecords(c.Request.Context(), shareID, &req)
+	linkResp, err := h.shareService.GetLinkRecords(c.Request.Context(), shareID, &req)
 	if err != nil {
 		h.handleError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: response})
+	response.SuccessWithMessage(c, linkResp, "")
 }
 
 // GetShareStats 获取分享统计
@@ -329,36 +328,9 @@ func (h *ShareHandler) GetShareStats(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: stats})
+	response.SuccessWithMessage(c, stats, "")
 }
 
 func (h *ShareHandler) handleError(c *gin.Context, err error) {
-	traceID := c.GetString("request_id")
-
-	if appErr, ok := errors.IsAppError(err); ok {
-		logger.Error("Application error",
-			logger.String("error", appErr.Message),
-			logger.String("code", appErr.Code),
-			logger.String("trace_id", traceID),
-		)
-
-		c.JSON(appErr.HTTPStatus, ErrorResponse{
-			Error:   appErr.Message,
-			Code:    appErr.Code,
-			Details: appErr.Details,
-			TraceID: traceID,
-		})
-		return
-	}
-
-	logger.Error("Internal server error",
-		logger.ErrorField(err),
-		logger.String("trace_id", traceID),
-	)
-
-	c.JSON(http.StatusInternalServerError, ErrorResponse{
-		Error:   "服务器内部错误",
-		Code:    "INTERNAL_SERVER_ERROR",
-		TraceID: traceID,
-	})
+	response.Error(c, err)
 }

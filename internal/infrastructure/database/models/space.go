@@ -34,5 +34,3 @@ type SpaceCollaborator struct {
 func (SpaceCollaborator) TableName() string {
 	return "space_collaborator"
 }
-
-

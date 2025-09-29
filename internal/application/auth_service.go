@@ -200,7 +200,7 @@ func (s *AuthService) CheckPermission(user *AuthenticatedUser, permission string
 
 func (s *AuthService) getCachedUser(ctx context.Context, userID string) (*AuthenticatedUser, error) {
 	key := cache.BuildCacheKey(cache.UserCachePrefix, userID)
-	
+
 	var user AuthenticatedUser
 	if err := s.cacheService.Get(ctx, key, &user); err != nil {
 		return nil, err
@@ -211,7 +211,7 @@ func (s *AuthService) getCachedUser(ctx context.Context, userID string) (*Authen
 
 func (s *AuthService) cacheUser(ctx context.Context, user *AuthenticatedUser) {
 	key := cache.BuildCacheKey(cache.UserCachePrefix, user.ID)
-	
+
 	if err := s.cacheService.Set(ctx, key, user, cache.DefaultTTL); err != nil {
 		logger.Warn("Failed to cache user info",
 			logger.String("user_id", user.ID),
@@ -223,18 +223,18 @@ func (s *AuthService) cacheUser(ctx context.Context, user *AuthenticatedUser) {
 // isAdminPermission 检查是否为管理员权限
 func isAdminPermission(permission string) bool {
 	adminPermissions := map[string]bool{
-		"user:manage":        true,
-		"user:create":        true,
-		"user:delete":        true,
-		"user:promote":       true,
-		"space:manage":       true,
-		"space:delete":       true,
-		"base:manage":        true,
-		"base:delete":        true,
-		"table:manage":       true,
-		"system:config":      true,
-		"system:monitor":     true,
-		"permission:manage":  true,
+		"user:manage":       true,
+		"user:create":       true,
+		"user:delete":       true,
+		"user:promote":      true,
+		"space:manage":      true,
+		"space:delete":      true,
+		"base:manage":       true,
+		"base:delete":       true,
+		"table:manage":      true,
+		"system:config":     true,
+		"system:monitor":    true,
+		"permission:manage": true,
 	}
 
 	return adminPermissions[permission]

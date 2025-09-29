@@ -20,32 +20,32 @@ type Table struct {
 	CreatedTime      time.Time  `json:"created_at"`
 	DeletedTime      *time.Time `json:"deleted_time"`
 	LastModifiedTime *time.Time `json:"updated_at"`
-	
+
 	// 动态schema支持
-	fields           []*Field   `json:"-"` // 内部字段缓存，不序列化
-	schemaVersion    int64      `json:"schema_version"`
+	fields        []*Field `json:"-"` // 内部字段缓存，不序列化
+	schemaVersion int64    `json:"schema_version"`
 }
 
 // Field 字段实体 - 增强的字段类型系统
 type Field struct {
-	ID               string     `json:"id"`
-	TableID          string     `json:"table_id"`
-	Name             string     `json:"name"`
-	Type             FieldType  `json:"type"`
-	Description      *string    `json:"description"`
-	IsRequired       bool       `json:"required"`
-	IsUnique         bool       `json:"is_unique"`
-	IsPrimary        bool       `json:"is_primary"`
-	IsComputed       bool       `json:"is_computed"`       // 计算字段
-	IsLookup         bool       `json:"is_lookup"`         // 查找字段
-	DefaultValue     *string    `json:"default_value"`
-	Options          *FieldOptions `json:"options"`        // 强类型选项配置
-	FieldOrder       int        `json:"field_order"`
-	Version          int64      `json:"version"`           // 字段版本号
-	CreatedBy        string     `json:"created_by"`
-	CreatedTime      time.Time  `json:"created_at"`
-	DeletedTime      *time.Time `json:"deleted_time"`
-	LastModifiedTime *time.Time `json:"updated_at"`
+	ID               string        `json:"id"`
+	TableID          string        `json:"table_id"`
+	Name             string        `json:"name"`
+	Type             FieldType     `json:"type"`
+	Description      *string       `json:"description"`
+	IsRequired       bool          `json:"required"`
+	IsUnique         bool          `json:"is_unique"`
+	IsPrimary        bool          `json:"is_primary"`
+	IsComputed       bool          `json:"is_computed"` // 计算字段
+	IsLookup         bool          `json:"is_lookup"`   // 查找字段
+	DefaultValue     *string       `json:"default_value"`
+	Options          *FieldOptions `json:"options"` // 强类型选项配置
+	FieldOrder       int           `json:"field_order"`
+	Version          int64         `json:"version"` // 字段版本号
+	CreatedBy        string        `json:"created_by"`
+	CreatedTime      time.Time     `json:"created_at"`
+	DeletedTime      *time.Time    `json:"deleted_time"`
+	LastModifiedTime *time.Time    `json:"updated_at"`
 }
 
 // CreateTableRequest 创建数据表请求
@@ -74,7 +74,7 @@ type CreateFieldRequest struct {
 	IsUnique     bool          `json:"is_unique"`
 	IsPrimary    bool          `json:"is_primary"`
 	DefaultValue *string       `json:"default_value"`
-	Options      *string       `json:"options"` // JSON字符串，向后兼容
+	Options      *string       `json:"options"`                 // JSON字符串，向后兼容
 	FieldOptions *FieldOptions `json:"field_options,omitempty"` // 强类型选项
 	FieldOrder   int           `json:"field_order"`
 	CreatedBy    string        `json:"created_by"`
@@ -89,7 +89,7 @@ type UpdateFieldRequest struct {
 	IsUnique     *bool         `json:"is_unique,omitempty"`
 	IsPrimary    *bool         `json:"is_primary,omitempty"`
 	DefaultValue *string       `json:"default_value,omitempty"`
-	Options      *string       `json:"options,omitempty"` // JSON字符串，向后兼容
+	Options      *string       `json:"options,omitempty"`       // JSON字符串，向后兼容
 	FieldOptions *FieldOptions `json:"field_options,omitempty"` // 强类型选项
 	FieldOrder   *int          `json:"field_order,omitempty"`
 }
@@ -182,12 +182,12 @@ func (t *Table) AddField(field *Field) error {
 	if t.HasFieldWithName(field.Name) {
 		return fmt.Errorf("字段名称 '%s' 已存在", field.Name)
 	}
-	
+
 	// 验证主键字段唯一性
 	if field.IsPrimary && t.HasPrimaryField() {
 		return fmt.Errorf("表格已存在主键字段")
 	}
-	
+
 	t.fields = append(t.fields, field)
 	t.incrementSchemaVersion()
 	return nil
@@ -201,7 +201,7 @@ func (t *Table) RemoveField(fieldID string) error {
 			if field.IsPrimary {
 				return fmt.Errorf("不能删除主键字段")
 			}
-			
+
 			// 软删除字段
 			field.SoftDelete()
 			t.fields = append(t.fields[:i], t.fields[i+1:]...)
@@ -267,11 +267,11 @@ func (t *Table) ValidateSchema() error {
 	if len(t.fields) == 0 {
 		return fmt.Errorf("表格必须至少包含一个字段")
 	}
-	
+
 	if !t.HasPrimaryField() {
 		return fmt.Errorf("表格必须包含一个主键字段")
 	}
-	
+
 	// 验证字段名称唯一性
 	nameMap := make(map[string]bool)
 	for _, field := range t.fields {
@@ -283,7 +283,7 @@ func (t *Table) ValidateSchema() error {
 		}
 		nameMap[field.Name] = true
 	}
-	
+
 	return nil
 }
 
@@ -302,7 +302,7 @@ func (t *Table) incrementSchemaVersion() {
 // NewField 创建新的字段
 func NewField(req CreateFieldRequest) *Field {
 	now := time.Now()
-	
+
 	// 解析选项配置
 	var options *FieldOptions
 	if req.Options != nil && *req.Options != "" {
@@ -311,7 +311,7 @@ func NewField(req CreateFieldRequest) *Field {
 			options = &opts
 		}
 	}
-	
+
 	return &Field{
 		ID:               utils.GenerateFieldID(),
 		TableID:          req.TableID,
@@ -339,12 +339,12 @@ func (f *Field) ValidateValue(value interface{}) error {
 	if f.IsRequired && (value == nil || value == "") {
 		return fmt.Errorf("字段 '%s' 是必填的", f.Name)
 	}
-	
+
 	// 空值检查
 	if value == nil || value == "" {
 		return nil
 	}
-	
+
 	// 根据字段类型进行验证
 	return f.Type.ValidateValue(value, f.Options)
 }
@@ -354,10 +354,10 @@ func (f *Field) GetOptionsAsMap() map[string]interface{} {
 	if f.Options == nil {
 		return make(map[string]interface{})
 	}
-	
+
 	// 将FieldOptions转换为map
 	optionsMap := make(map[string]interface{})
-	
+
 	if f.Options.Placeholder != "" {
 		optionsMap["placeholder"] = f.Options.Placeholder
 	}
@@ -409,7 +409,7 @@ func (f *Field) GetOptionsAsMap() map[string]interface{} {
 	if len(f.Options.ValidationRules) > 0 {
 		optionsMap["validation_rules"] = f.Options.ValidationRules
 	}
-	
+
 	return optionsMap
 }
 
@@ -419,12 +419,12 @@ func (f *Field) CanChangeTypeTo(newType FieldType) (bool, error) {
 	if f.IsPrimary {
 		return false, fmt.Errorf("主键字段不能更改类型")
 	}
-	
+
 	// 计算字段不能更改类型
 	if f.IsComputed {
 		return false, fmt.Errorf("计算字段不能更改类型")
 	}
-	
+
 	// 检查类型兼容性
 	return f.Type.IsCompatibleWith(newType), nil
 }
@@ -438,7 +438,7 @@ func (f *Field) ChangeType(newType FieldType, newOptions *FieldOptions) error {
 	if !canChange {
 		return fmt.Errorf("字段类型从 %s 到 %s 的转换不兼容", f.Type, newType)
 	}
-	
+
 	f.Type = newType
 	f.Options = newOptions
 	f.incrementVersion()
@@ -453,7 +453,7 @@ func (f *Field) SetDefaultValue(value *string) error {
 			return fmt.Errorf("默认值验证失败: %v", err)
 		}
 	}
-	
+
 	f.DefaultValue = value
 	f.incrementVersion()
 	return nil
@@ -465,7 +465,7 @@ func (f *Field) SetRequired(required bool) error {
 	if required && (f.DefaultValue == nil || *f.DefaultValue == "") {
 		return fmt.Errorf("设置为必填字段时必须提供默认值")
 	}
-	
+
 	f.IsRequired = required
 	f.incrementVersion()
 	return nil
@@ -477,7 +477,7 @@ func (f *Field) SetUnique(unique bool) error {
 	if unique && !f.Type.SupportsUnique() {
 		return fmt.Errorf("字段类型 %s 不支持唯一性约束", f.Type)
 	}
-	
+
 	f.IsUnique = unique
 	f.incrementVersion()
 	return nil
@@ -503,12 +503,12 @@ func (f *Field) CanBeDeleted() (bool, error) {
 	if f.IsPrimary {
 		return false, fmt.Errorf("主键字段不能删除")
 	}
-	
+
 	// 系统字段不能删除
 	if f.IsSystemField() {
 		return false, fmt.Errorf("系统字段不能删除")
 	}
-	
+
 	return true, nil
 }
 
@@ -571,7 +571,7 @@ func (f *Field) Update(req UpdateFieldRequest) error {
 			return err
 		}
 	}
-	
+
 	// 处理选项配置
 	if req.FieldOptions != nil {
 		f.Options = req.FieldOptions
@@ -582,11 +582,11 @@ func (f *Field) Update(req UpdateFieldRequest) error {
 			f.Options = &options
 		}
 	}
-	
+
 	if req.FieldOrder != nil {
 		f.FieldOrder = *req.FieldOrder
 	}
-	
+
 	f.incrementVersion()
 	return nil
 }

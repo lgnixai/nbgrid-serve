@@ -37,7 +37,7 @@ func TestRecordValidation(t *testing.T) {
 	testTable := &table.Table{
 		ID: "tbl_test123",
 	}
-	
+
 	// 创建测试字段
 	nameField := &table.Field{
 		ID:         "fld_name",
@@ -45,14 +45,14 @@ func TestRecordValidation(t *testing.T) {
 		Type:       table.FieldTypeText,
 		IsRequired: true,
 	}
-	
+
 	ageField := &table.Field{
 		ID:         "fld_age",
 		Name:       "age",
 		Type:       table.FieldTypeNumber,
 		IsRequired: false,
 	}
-	
+
 	testTable.SetFields([]*table.Field{nameField, ageField})
 
 	// 测试有效数据
@@ -62,9 +62,9 @@ func TestRecordValidation(t *testing.T) {
 			Data:      map[string]interface{}{"name": "张三", "age": 25},
 			CreatedBy: "usr_test123",
 		})
-		
+
 		record.SetTableSchema(testTable)
-		
+
 		if err := record.ValidateData(); err != nil {
 			t.Errorf("有效数据验证失败: %v", err)
 		}
@@ -77,13 +77,13 @@ func TestRecordValidation(t *testing.T) {
 			Data:      map[string]interface{}{"age": 25}, // 缺少必填的name字段
 			CreatedBy: "usr_test123",
 		})
-		
+
 		record.SetTableSchema(testTable)
-		
+
 		if err := record.ValidateData(); err == nil {
 			t.Error("期望验证失败，但验证通过了")
 		}
-		
+
 		errors := record.GetValidationErrors()
 		if len(errors) == 0 {
 			t.Error("期望有验证错误，但没有错误")
@@ -97,13 +97,13 @@ func TestRecordValidation(t *testing.T) {
 			Data:      map[string]interface{}{"name": "张三", "unknown_field": "值"},
 			CreatedBy: "usr_test123",
 		})
-		
+
 		record.SetTableSchema(testTable)
-		
+
 		if err := record.ValidateData(); err == nil {
 			t.Error("期望验证失败，但验证通过了")
 		}
-		
+
 		errors := record.GetValidationErrors()
 		found := false
 		for _, err := range errors {
@@ -123,14 +123,14 @@ func TestRecordUpdate(t *testing.T) {
 	testTable := &table.Table{
 		ID: "tbl_test123",
 	}
-	
+
 	nameField := &table.Field{
 		ID:         "fld_name",
 		Name:       "name",
 		Type:       table.FieldTypeText,
 		IsRequired: true,
 	}
-	
+
 	testTable.SetFields([]*table.Field{nameField})
 
 	record := NewRecord(CreateRecordRequest{
@@ -138,9 +138,9 @@ func TestRecordUpdate(t *testing.T) {
 		Data:      map[string]interface{}{"name": "张三"},
 		CreatedBy: "usr_test123",
 	})
-	
+
 	record.SetTableSchema(testTable)
-	
+
 	originalVersion := record.Version
 	originalHash := record.Hash
 
@@ -235,14 +235,14 @@ func TestRecordFieldOperations(t *testing.T) {
 	testTable := &table.Table{
 		ID: "tbl_test123",
 	}
-	
+
 	nameField := &table.Field{
 		ID:         "fld_name",
 		Name:       "name",
 		Type:       table.FieldTypeText,
 		IsRequired: true,
 	}
-	
+
 	testTable.SetFields([]*table.Field{nameField})
 
 	record := NewRecord(CreateRecordRequest{
@@ -250,7 +250,7 @@ func TestRecordFieldOperations(t *testing.T) {
 		Data:      map[string]interface{}{"name": "张三"},
 		CreatedBy: "usr_test123",
 	})
-	
+
 	record.SetTableSchema(testTable)
 
 	// 测试获取字段值

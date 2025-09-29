@@ -326,7 +326,7 @@ func (r *TableRepository) fieldDomainToModel(f *table.Field) *models.Field {
 			optionsJSON = &optionsStr
 		}
 	}
-	
+
 	model := &models.Field{
 		ID:               f.ID,
 		TableID:          f.TableID,
@@ -334,7 +334,7 @@ func (r *TableRepository) fieldDomainToModel(f *table.Field) *models.Field {
 		Type:             string(f.Type),
 		CellValueType:    string(f.Type), // 默认使用相同的类型
 		DBFieldType:      string(f.Type), // 默认使用相同的类型
-		DBFieldName:      f.Name, // 默认使用相同的名称
+		DBFieldName:      f.Name,         // 默认使用相同的名称
 		Description:      f.Description,
 		IsRequired:       f.IsRequired,
 		IsUnique:         f.IsUnique,
@@ -366,22 +366,22 @@ func (r *TableRepository) fieldModelToDomain(model *models.Field) *table.Field {
 	if model.IsPrimary != nil {
 		isPrimary = *model.IsPrimary
 	}
-	
+
 	var isComputed bool
 	if model.IsComputed != nil {
 		isComputed = *model.IsComputed
 	}
-	
+
 	var isLookup bool
 	if model.IsLookup != nil {
 		isLookup = *model.IsLookup
 	}
-	
+
 	var version int64 = 1
 	if model.Version != nil {
 		version = *model.Version
 	}
-	
+
 	// 反序列化选项配置
 	var options *table.FieldOptions
 	if model.Options != nil && *model.Options != "" {

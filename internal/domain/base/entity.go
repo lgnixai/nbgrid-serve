@@ -59,10 +59,10 @@ type Base struct {
 	CreatedTime      time.Time  `json:"created_at"`
 	DeletedTime      *time.Time `json:"deleted_time"`
 	LastModifiedTime *time.Time `json:"updated_at"`
-	
+
 	// 业务状态
 	status BaseStatus `json:"status"`
-	
+
 	// 统计信息
 	tableCount int `json:"-"` // 不序列化，由聚合根管理
 }
@@ -73,11 +73,11 @@ func NewBase(spaceID, name, createdBy string) (*Base, error) {
 	if err := validateSpaceID(spaceID); err != nil {
 		return nil, err
 	}
-	
+
 	if err := validateBaseName(name); err != nil {
 		return nil, err
 	}
-	
+
 	if err := validateUserID(createdBy); err != nil {
 		return nil, err
 	}
@@ -104,21 +104,21 @@ func (b *Base) Update(name *string, description *string, icon *string) error {
 		}
 		b.Name = *name
 	}
-	
+
 	if description != nil {
 		if err := validateDescription(*description); err != nil {
 			return err
 		}
 		b.Description = description
 	}
-	
+
 	if icon != nil {
 		if err := validateIcon(*icon); err != nil {
 			return err
 		}
 		b.Icon = icon
 	}
-	
+
 	b.updateModifiedTime()
 	return nil
 }
@@ -141,11 +141,11 @@ func (b *Base) Archive() error {
 	if b.IsDeleted() {
 		return ErrBaseDeleted
 	}
-	
+
 	if b.status == BaseStatusArchived {
 		return DomainError{Code: "BASE_ALREADY_ARCHIVED", Message: "base is already archived"}
 	}
-	
+
 	b.status = BaseStatusArchived
 	b.updateModifiedTime()
 	return nil
@@ -156,11 +156,11 @@ func (b *Base) Restore() error {
 	if b.IsDeleted() {
 		return ErrBaseDeleted
 	}
-	
+
 	if b.status == BaseStatusActive {
 		return DomainError{Code: "BASE_ALREADY_ACTIVE", Message: "base is already active"}
 	}
-	
+
 	b.status = BaseStatusActive
 	b.updateModifiedTime()
 	return nil
@@ -233,14 +233,15 @@ func (b *Base) ValidateForDeletion() error {
 	if b.IsDeleted() {
 		return ErrBaseDeleted
 	}
-	
+
 	// 系统基础表不能删除
 	if b.IsSystem {
 		return DomainError{Code: "CANNOT_DELETE_SYSTEM_BASE", Message: "cannot delete system base"}
 	}
-	
+
 	return nil
 }
+
 // 验证函数
 
 // validateSpaceID 验证空间ID
@@ -262,14 +263,14 @@ func validateBaseName(name string) error {
 	if len(name) > 255 {
 		return ErrBaseNameTooLong
 	}
-	
+
 	// 检查是否包含非法字符
 	for _, char := range name {
 		if char < 32 || char == 127 { // 控制字符
 			return DomainError{Code: "INVALID_NAME_CHARS", Message: "base name contains invalid characters"}
 		}
 	}
-	
+
 	return nil
 }
 

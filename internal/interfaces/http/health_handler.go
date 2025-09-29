@@ -10,6 +10,7 @@ import (
 
 	"teable-go-backend/internal/infrastructure/database"
 	"teable-go-backend/internal/infrastructure/monitoring"
+	"teable-go-backend/pkg/response"
 )
 
 // HealthHandler 健康检查处理器
@@ -85,7 +86,7 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 	// 获取系统指标
 	metrics := h.getSystemMetrics()
 
-	response := HealthResponse{
+	respBody := HealthResponse{
 		Status:    overallStatus,
 		Timestamp: time.Now(),
 		Version:   "1.0.0", // 这里应该从配置或构建信息中获取
@@ -100,7 +101,7 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 		httpStatus = http.StatusServiceUnavailable
 	}
 
-	c.JSON(httpStatus, response)
+	c.JSON(httpStatus, respBody)
 }
 
 // ReadinessCheck 就绪检查
@@ -128,12 +129,12 @@ func (h *HealthHandler) ReadinessCheck(c *gin.Context) {
 		httpStatus = http.StatusServiceUnavailable
 	}
 
-	response := ServiceHealth{
+	svc := ServiceHealth{
 		Status:  status,
 		Message: message,
 	}
 
-	c.JSON(httpStatus, response)
+	c.JSON(httpStatus, svc)
 }
 
 // LivenessCheck 存活检查
@@ -144,12 +145,12 @@ func (h *HealthHandler) ReadinessCheck(c *gin.Context) {
 // @Success 200 {object} ServiceHealth
 // @Router /alive [get]
 func (h *HealthHandler) LivenessCheck(c *gin.Context) {
-	response := ServiceHealth{
+	live := ServiceHealth{
 		Status:  "alive",
 		Message: "Service is alive",
 	}
 
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, live)
 }
 
 // Metrics 获取系统指标
@@ -165,10 +166,8 @@ func (h *HealthHandler) Metrics(c *gin.Context) {
 	// 检查是否为管理员用户
 	_, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Error: "未授权访问",
-			Code:  "UNAUTHORIZED",
-		})
+		// Admin only metrics; return 401 via unified envelope
+		c.JSON(http.StatusUnauthorized, response.APIResponse{Code: 401000, Message: "未授权访问", Data: nil})
 		return
 	}
 
@@ -176,7 +175,7 @@ func (h *HealthHandler) Metrics(c *gin.Context) {
 	// 为了简化，我们暂时跳过这个检查
 
 	metrics := h.getSystemMetrics()
-	c.JSON(http.StatusOK, metrics)
+	response.SuccessWithMessage(c, metrics, "")
 }
 
 // checkDatabase 检查数据库健康状态

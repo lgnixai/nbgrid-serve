@@ -305,4 +305,3 @@ func (m *Manager) GetStats() map[string]interface{} {
 		"total_channels":    len(m.channels),
 	}
 }
-

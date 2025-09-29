@@ -13,17 +13,17 @@ type Repository interface {
 	GetByPhone(ctx context.Context, phone string) (*User, error)
 	Update(ctx context.Context, user *User) error
 	Delete(ctx context.Context, id string) error
-	
+
 	// 查询操作
 	List(ctx context.Context, filter ListFilter) ([]*User, error)
 	Count(ctx context.Context, filter CountFilter) (int64, error)
 	Exists(ctx context.Context, filter ExistsFilter) (bool, error)
-	
+
 	// 批量操作
 	BatchCreate(ctx context.Context, users []*User) error
 	BatchUpdate(ctx context.Context, users []*User) error
 	BatchDelete(ctx context.Context, ids []string) error
-	
+
 	// 账户相关
 	CreateAccount(ctx context.Context, account *Account) error
 	GetAccountsByUserID(ctx context.Context, userID string) ([]*Account, error)
@@ -36,11 +36,11 @@ type ListFilter struct {
 	// 分页参数
 	Offset int
 	Limit  int
-	
+
 	// 排序参数
 	OrderBy string
 	Order   string // ASC, DESC
-	
+
 	// 过滤条件
 	Name           *string
 	Email          *string
@@ -51,7 +51,7 @@ type ListFilter struct {
 	CreatedBefore  *string
 	ModifiedAfter  *string
 	ModifiedBefore *string
-	
+
 	// 搜索
 	Search string
 }
@@ -72,10 +72,10 @@ type CountFilter struct {
 
 // ExistsFilter 存在性检查过滤器
 type ExistsFilter struct {
-	ID       *string
-	Email    *string
-	Phone    *string
-	Provider *string
+	ID         *string
+	Email      *string
+	Phone      *string
+	Provider   *string
 	ProviderID *string
 }
 

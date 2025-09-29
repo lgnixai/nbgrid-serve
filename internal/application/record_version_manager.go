@@ -154,8 +154,8 @@ func (m *RecordVersionManager) CompareVersions(ctx context.Context, versionID1, 
 
 	// 比较数据差异
 	comparison := &VersionComparison{
-		Version1:   version1,
-		Version2:   version2,
+		Version1:    version1,
+		Version2:    version2,
 		Differences: m.calculateDifferences(version1.Data, version2.Data),
 	}
 
@@ -277,19 +277,19 @@ func (m *RecordVersionManager) calculateDifferences(data1, data2 map[string]inte
 func (m *RecordVersionManager) isEqual(a, b interface{}) bool {
 	aJSON, aErr := json.Marshal(a)
 	bJSON, bErr := json.Marshal(b)
-	
+
 	if aErr != nil || bErr != nil {
 		return false
 	}
-	
+
 	return string(aJSON) == string(bJSON)
 }
 
 // VersionComparison 版本比较结果
 type VersionComparison struct {
-	Version1    *RecordVersion      `json:"version1"`
-	Version2    *RecordVersion      `json:"version2"`
-	Differences []FieldDifference   `json:"differences"`
+	Version1    *RecordVersion    `json:"version1"`
+	Version2    *RecordVersion    `json:"version2"`
+	Differences []FieldDifference `json:"differences"`
 }
 
 // FieldDifference 字段差异

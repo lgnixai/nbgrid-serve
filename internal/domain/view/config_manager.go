@@ -23,7 +23,7 @@ func (cm *ConfigManager) ParseConfig(viewType ViewType, configData map[string]in
 		}
 		config.Type = ViewTypeGrid
 		return &config, nil
-		
+
 	case ViewTypeKanban:
 		var config KanbanViewConfig
 		if err := cm.mapToStruct(configData, &config); err != nil {
@@ -31,7 +31,7 @@ func (cm *ConfigManager) ParseConfig(viewType ViewType, configData map[string]in
 		}
 		config.Type = ViewTypeKanban
 		return &config, nil
-		
+
 	case ViewTypeCalendar:
 		var config CalendarViewConfig
 		if err := cm.mapToStruct(configData, &config); err != nil {
@@ -39,7 +39,7 @@ func (cm *ConfigManager) ParseConfig(viewType ViewType, configData map[string]in
 		}
 		config.Type = ViewTypeCalendar
 		return &config, nil
-		
+
 	case ViewTypeGallery:
 		var config GalleryViewConfig
 		if err := cm.mapToStruct(configData, &config); err != nil {
@@ -47,7 +47,7 @@ func (cm *ConfigManager) ParseConfig(viewType ViewType, configData map[string]in
 		}
 		config.Type = ViewTypeGallery
 		return &config, nil
-		
+
 	case ViewTypeForm:
 		var config FormViewConfig
 		if err := cm.mapToStruct(configData, &config); err != nil {
@@ -55,7 +55,7 @@ func (cm *ConfigManager) ParseConfig(viewType ViewType, configData map[string]in
 		}
 		config.Type = ViewTypeForm
 		return &config, nil
-		
+
 	case ViewTypeChart:
 		var config ChartViewConfig
 		if err := cm.mapToStruct(configData, &config); err != nil {
@@ -63,7 +63,7 @@ func (cm *ConfigManager) ParseConfig(viewType ViewType, configData map[string]in
 		}
 		config.Type = ViewTypeChart
 		return &config, nil
-		
+
 	case ViewTypeTimeline:
 		var config TimelineViewConfig
 		if err := cm.mapToStruct(configData, &config); err != nil {
@@ -71,7 +71,7 @@ func (cm *ConfigManager) ParseConfig(viewType ViewType, configData map[string]in
 		}
 		config.Type = ViewTypeTimeline
 		return &config, nil
-		
+
 	default:
 		// 使用基础配置
 		var config BaseViewConfig
@@ -108,7 +108,7 @@ func (cm *ConfigManager) GetDefaultConfig(viewType ViewType) (ViewConfig, error)
 			FrozenColumns:  0,
 			PageSize:       50,
 		}, nil
-		
+
 	case ViewTypeKanban:
 		return &KanbanViewConfig{
 			BaseViewConfig: BaseViewConfig{
@@ -120,7 +120,7 @@ func (cm *ConfigManager) GetDefaultConfig(viewType ViewType) (ViewConfig, error)
 			ShowCount:    true,
 			AllowDrag:    true,
 		}, nil
-		
+
 	case ViewTypeCalendar:
 		return &CalendarViewConfig{
 			BaseViewConfig: BaseViewConfig{
@@ -134,7 +134,7 @@ func (cm *ConfigManager) GetDefaultConfig(viewType ViewType) (ViewConfig, error)
 			AllDay:         false,
 			DefaultView:    "month",
 		}, nil
-		
+
 	case ViewTypeGallery:
 		return &GalleryViewConfig{
 			BaseViewConfig: BaseViewConfig{
@@ -148,7 +148,7 @@ func (cm *ConfigManager) GetDefaultConfig(viewType ViewType) (ViewConfig, error)
 			Columns:         4,
 			AspectRatio:     "4:3",
 		}, nil
-		
+
 	case ViewTypeForm:
 		return &FormViewConfig{
 			BaseViewConfig: BaseViewConfig{
@@ -160,7 +160,7 @@ func (cm *ConfigManager) GetDefaultConfig(viewType ViewType) (ViewConfig, error)
 			ShowTitle:   true,
 			ShowSubmit:  true,
 		}, nil
-		
+
 	case ViewTypeChart:
 		return &ChartViewConfig{
 			BaseViewConfig: BaseViewConfig{
@@ -173,7 +173,7 @@ func (cm *ConfigManager) GetDefaultConfig(viewType ViewType) (ViewConfig, error)
 			Aggregation:  "count",
 			ColorScheme:  "default",
 		}, nil
-		
+
 	case ViewTypeTimeline:
 		return &TimelineViewConfig{
 			BaseViewConfig: BaseViewConfig{
@@ -186,7 +186,7 @@ func (cm *ConfigManager) GetDefaultConfig(viewType ViewType) (ViewConfig, error)
 			ShowMilestone:  true,
 			ShowDuration:   true,
 		}, nil
-		
+
 	default:
 		return &BaseViewConfig{
 			Type: viewType,
@@ -199,18 +199,18 @@ func (cm *ConfigManager) MergeConfig(baseConfig, updateConfig ViewConfig) (ViewC
 	if baseConfig.GetType() != updateConfig.GetType() {
 		return nil, fmt.Errorf("配置类型不匹配")
 	}
-	
+
 	// 将更新配置转换为map
 	updateMap := updateConfig.ToMap()
 	baseMap := baseConfig.ToMap()
-	
+
 	// 合并配置
 	for key, value := range updateMap {
 		if value != nil {
 			baseMap[key] = value
 		}
 	}
-	
+
 	// 重新解析配置
 	return cm.ParseConfig(baseConfig.GetType(), baseMap)
 }
@@ -230,7 +230,7 @@ func (cm *ConfigManager) structToMap(source interface{}) (map[string]interface{}
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var result map[string]interface{}
 	err = json.Unmarshal(jsonData, &result)
 	return result, err
@@ -265,7 +265,7 @@ func (c *ChartViewConfig) Validate() error {
 	if !isValid {
 		return fmt.Errorf("无效的图表类型: %s", c.ChartType)
 	}
-	
+
 	validAggregations := []string{"count", "sum", "avg", "min", "max"}
 	isValid = false
 	for _, agg := range validAggregations {
@@ -277,7 +277,7 @@ func (c *ChartViewConfig) Validate() error {
 	if !isValid {
 		return fmt.Errorf("无效的聚合方式: %s", c.Aggregation)
 	}
-	
+
 	return nil
 }
 
@@ -357,7 +357,7 @@ func (v *ViewConfigValidator) ValidateViewConfig(viewType ViewType, configData m
 	if err != nil {
 		return err
 	}
-	
+
 	return config.Validate()
 }
 
@@ -365,15 +365,15 @@ func (v *ViewConfigValidator) ValidateViewConfig(viewType ViewType, configData m
 func (v *ViewConfigValidator) ValidateViewTypeTransition(fromType, toType ViewType) error {
 	// 定义允许的视图类型转换
 	allowedTransitions := map[ViewType][]ViewType{
-		ViewTypeGrid: {ViewTypeKanban, ViewTypeCalendar, ViewTypeGallery},
-		ViewTypeKanban: {ViewTypeGrid, ViewTypeCalendar},
+		ViewTypeGrid:     {ViewTypeKanban, ViewTypeCalendar, ViewTypeGallery},
+		ViewTypeKanban:   {ViewTypeGrid, ViewTypeCalendar},
 		ViewTypeCalendar: {ViewTypeGrid, ViewTypeKanban},
-		ViewTypeGallery: {ViewTypeGrid},
-		ViewTypeForm: {}, // 表单视图不允许转换为其他类型
-		ViewTypeChart: {}, // 图表视图不允许转换为其他类型
+		ViewTypeGallery:  {ViewTypeGrid},
+		ViewTypeForm:     {},                 // 表单视图不允许转换为其他类型
+		ViewTypeChart:    {},                 // 图表视图不允许转换为其他类型
 		ViewTypeTimeline: {ViewTypeCalendar}, // 时间线视图可以转换为日历视图
 	}
-	
+
 	if allowed, exists := allowedTransitions[fromType]; exists {
 		for _, allowedType := range allowed {
 			if allowedType == toType {
@@ -381,7 +381,7 @@ func (v *ViewConfigValidator) ValidateViewTypeTransition(fromType, toType ViewTy
 			}
 		}
 	}
-	
+
 	return fmt.Errorf("不支持从 %s 视图转换为 %s 视图", fromType, toType)
 }
 
@@ -419,11 +419,11 @@ func (v *ViewConfigValidator) GetCompatibleFieldTypes(viewType ViewType) []strin
 			"date", "datetime", "text", "select", "multi_select",
 		},
 	}
-	
+
 	if types, exists := compatibleTypes[viewType]; exists {
 		return types
 	}
-	
+
 	return []string{}
 }
 

@@ -81,11 +81,11 @@ func (r *RedisClient) DeletePattern(ctx context.Context, pattern string) error {
 	if err != nil {
 		return fmt.Errorf("failed to get keys by pattern: %w", err)
 	}
-	
+
 	if len(keys) > 0 {
 		return r.client.Del(ctx, keys...).Err()
 	}
-	
+
 	return nil
 }
 
@@ -284,12 +284,12 @@ var (
 
 // 常用缓存键前缀
 const (
-	UserCachePrefix     = "user:"
-	SessionCachePrefix  = "session:"
-	TokenCachePrefix    = "token:"
-	SpaceCachePrefix    = "space:"
-	BaseCachePrefix     = "base:"
-	TableCachePrefix    = "table:"
+	UserCachePrefix       = "user:"
+	SessionCachePrefix    = "session:"
+	TokenCachePrefix      = "token:"
+	SpaceCachePrefix      = "space:"
+	BaseCachePrefix       = "base:"
+	TableCachePrefix      = "table:"
 	PermissionCachePrefix = "permission:"
 )
 

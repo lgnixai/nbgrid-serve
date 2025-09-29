@@ -371,4 +371,3 @@ func (e *OTEngine) ValidateOperation(op OTOperation, doc interface{}, typeName s
 
 	return otType.Validate(op, doc)
 }
-

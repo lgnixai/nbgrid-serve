@@ -58,12 +58,12 @@ func (f *DefaultStorageFactory) createLocalStorage(config map[string]string) (at
 	if basePath == "" {
 		return nil, fmt.Errorf("本地存储需要指定 base_path")
 	}
-	
+
 	permissions := config["permissions"]
 	if permissions == "" {
 		permissions = "0644"
 	}
-	
+
 	maxSizeStr := config["max_size"]
 	var maxSize int64 = 0
 	if maxSizeStr != "" {
@@ -73,13 +73,13 @@ func (f *DefaultStorageFactory) createLocalStorage(config map[string]string) (at
 			return nil, fmt.Errorf("无效的 max_size: %s", maxSizeStr)
 		}
 	}
-	
+
 	localConfig := attachment.LocalStorageConfig{
 		BasePath:    basePath,
 		Permissions: permissions,
 		MaxSize:     maxSize,
 	}
-	
+
 	return NewEnhancedLocalStorage(localConfig), nil
 }
 
@@ -102,13 +102,13 @@ func (f *DefaultStorageFactory) validateLocalConfig(config map[string]string) er
 	if config["base_path"] == "" {
 		return fmt.Errorf("本地存储需要指定 base_path")
 	}
-	
+
 	if maxSizeStr := config["max_size"]; maxSizeStr != "" {
 		if _, err := strconv.ParseInt(maxSizeStr, 10, 64); err != nil {
 			return fmt.Errorf("无效的 max_size: %s", maxSizeStr)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -144,13 +144,13 @@ func NewStorageRegistry() *StorageRegistry {
 	registry := &StorageRegistry{
 		factories: make(map[attachment.StorageType]attachment.StorageFactory),
 	}
-	
+
 	// 注册默认工厂
 	defaultFactory := NewDefaultStorageFactory()
 	for _, storageType := range defaultFactory.GetSupportedTypes() {
 		registry.factories[storageType] = defaultFactory
 	}
-	
+
 	return registry
 }
 
@@ -174,7 +174,7 @@ func (r *StorageRegistry) CreateStorage(config attachment.StorageConfig) (attach
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return factory.CreateStorage(config)
 }
 
@@ -193,7 +193,7 @@ func (r *StorageRegistry) ValidateConfig(storageType attachment.StorageType, con
 	if err != nil {
 		return err
 	}
-	
+
 	return factory.ValidateConfig(storageType, config)
 }
 
@@ -267,7 +267,7 @@ func (b *StorageConfigBuilder) CreateStorage() (attachment.StorageProvider, erro
 	if err := b.Validate(); err != nil {
 		return nil, err
 	}
-	
+
 	registry := GetGlobalStorageRegistry()
 	return registry.CreateStorage(b.config)
 }

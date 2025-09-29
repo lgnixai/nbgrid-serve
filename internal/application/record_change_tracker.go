@@ -82,7 +82,7 @@ func (t *RecordChangeTracker) calculateChangeDiff(event *record.RecordChangeEven
 	if event.ChangeType == "update" && event.OldData != nil && event.NewData != nil {
 		// 更新操作，计算字段级别的差异
 		diff := make(map[string]*FieldChange)
-		
+
 		// 检查修改和删除的字段
 		for key, oldValue := range event.OldData {
 			if newValue, exists := event.NewData[key]; exists {
@@ -132,11 +132,11 @@ func (t *RecordChangeTracker) calculateChangeDiff(event *record.RecordChangeEven
 func (t *RecordChangeTracker) isEqual(a, b interface{}) bool {
 	aJSON, aErr := json.Marshal(a)
 	bJSON, bErr := json.Marshal(b)
-	
+
 	if aErr != nil || bErr != nil {
 		return false
 	}
-	
+
 	return string(aJSON) == string(bJSON)
 }
 
@@ -164,7 +164,7 @@ type InMemoryChangeRepository struct {
 func (r *InMemoryChangeRepository) SaveChange(ctx context.Context, event *record.RecordChangeEvent) error {
 	// 生成事件ID
 	eventID := utils.GenerateID()
-	
+
 	// 创建事件副本
 	eventCopy := &record.RecordChangeEvent{
 		RecordID:   event.RecordID,
@@ -205,7 +205,7 @@ func (r *InMemoryChangeRepository) GetRecordChanges(ctx context.Context, recordI
 
 func (r *InMemoryChangeRepository) GetTableChanges(ctx context.Context, tableID string, limit int) ([]*record.RecordChangeEvent, error) {
 	var result []*record.RecordChangeEvent
-	
+
 	for _, changes := range r.changes {
 		for _, change := range changes {
 			if change.TableID == tableID {
@@ -233,7 +233,7 @@ func (r *InMemoryChangeRepository) GetTableChanges(ctx context.Context, tableID 
 
 func (r *InMemoryChangeRepository) GetUserChanges(ctx context.Context, userID string, limit int) ([]*record.RecordChangeEvent, error) {
 	var result []*record.RecordChangeEvent
-	
+
 	for _, changes := range r.changes {
 		for _, change := range changes {
 			if change.ChangedBy == userID {

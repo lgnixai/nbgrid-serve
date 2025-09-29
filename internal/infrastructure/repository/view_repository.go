@@ -213,16 +213,16 @@ func (r *ViewRepository) GetGridViewData(ctx context.Context, req view.GridViewD
 		return nil, errors.ErrNotFound.WithDetails("视图未找到")
 	}
 
-    // 解析网格视图配置
-    var config view.GridViewConfig
-    if viewInfo.Config != nil {
-        cm := view.GetGlobalConfigManager()
-        if parsed, err := cm.ParseConfig(view.ViewTypeGrid, viewInfo.Config); err == nil {
-            if gv, ok := parsed.(*view.GridViewConfig); ok {
-                config = *gv
-            }
-        }
-    }
+	// 解析网格视图配置
+	var config view.GridViewConfig
+	if viewInfo.Config != nil {
+		cm := view.GetGlobalConfigManager()
+		if parsed, err := cm.ParseConfig(view.ViewTypeGrid, viewInfo.Config); err == nil {
+			if gv, ok := parsed.(*view.GridViewConfig); ok {
+				config = *gv
+			}
+		}
+	}
 
 	// 构建记录查询条件
 	_ = view.ListViewFilter{
@@ -257,16 +257,16 @@ func (r *ViewRepository) GetFormViewData(ctx context.Context, req view.FormViewD
 		return nil, errors.ErrNotFound.WithDetails("视图未找到")
 	}
 
-    // 解析表单视图配置
-    var config view.FormViewConfig
-    if viewInfo.Config != nil {
-        cm := view.GetGlobalConfigManager()
-        if parsed, err := cm.ParseConfig(view.ViewTypeForm, viewInfo.Config); err == nil {
-            if fv, ok := parsed.(*view.FormViewConfig); ok {
-                config = *fv
-            }
-        }
-    }
+	// 解析表单视图配置
+	var config view.FormViewConfig
+	if viewInfo.Config != nil {
+		cm := view.GetGlobalConfigManager()
+		if parsed, err := cm.ParseConfig(view.ViewTypeForm, viewInfo.Config); err == nil {
+			if fv, ok := parsed.(*view.FormViewConfig); ok {
+				config = *fv
+			}
+		}
+	}
 
 	// 暂时返回一个空的数据结构
 	data := &view.FormViewData{
@@ -288,16 +288,16 @@ func (r *ViewRepository) GetKanbanViewData(ctx context.Context, req view.KanbanV
 		return nil, errors.ErrNotFound.WithDetails("视图未找到")
 	}
 
-    // 解析看板视图配置
-    var config view.KanbanViewConfig
-    if viewInfo.Config != nil {
-        cm := view.GetGlobalConfigManager()
-        if parsed, err := cm.ParseConfig(view.ViewTypeKanban, viewInfo.Config); err == nil {
-            if kv, ok := parsed.(*view.KanbanViewConfig); ok {
-                config = *kv
-            }
-        }
-    }
+	// 解析看板视图配置
+	var config view.KanbanViewConfig
+	if viewInfo.Config != nil {
+		cm := view.GetGlobalConfigManager()
+		if parsed, err := cm.ParseConfig(view.ViewTypeKanban, viewInfo.Config); err == nil {
+			if kv, ok := parsed.(*view.KanbanViewConfig); ok {
+				config = *kv
+			}
+		}
+	}
 
 	// 暂时返回一个空的数据结构
 	data := &view.KanbanViewData{
@@ -319,16 +319,16 @@ func (r *ViewRepository) GetCalendarViewData(ctx context.Context, req view.Calen
 		return nil, errors.ErrNotFound.WithDetails("视图未找到")
 	}
 
-    // 解析日历视图配置
-    var config view.CalendarViewConfig
-    if viewInfo.Config != nil {
-        cm := view.GetGlobalConfigManager()
-        if parsed, err := cm.ParseConfig(view.ViewTypeCalendar, viewInfo.Config); err == nil {
-            if cv, ok := parsed.(*view.CalendarViewConfig); ok {
-                config = *cv
-            }
-        }
-    }
+	// 解析日历视图配置
+	var config view.CalendarViewConfig
+	if viewInfo.Config != nil {
+		cm := view.GetGlobalConfigManager()
+		if parsed, err := cm.ParseConfig(view.ViewTypeCalendar, viewInfo.Config); err == nil {
+			if cv, ok := parsed.(*view.CalendarViewConfig); ok {
+				config = *cv
+			}
+		}
+	}
 
 	// 暂时返回一个空的数据结构
 	data := &view.CalendarViewData{
@@ -350,16 +350,16 @@ func (r *ViewRepository) GetGalleryViewData(ctx context.Context, req view.Galler
 		return nil, errors.ErrNotFound.WithDetails("视图未找到")
 	}
 
-    // 解析画廊视图配置
-    var config view.GalleryViewConfig
-    if viewInfo.Config != nil {
-        cm := view.GetGlobalConfigManager()
-        if parsed, err := cm.ParseConfig(view.ViewTypeGallery, viewInfo.Config); err == nil {
-            if gv, ok := parsed.(*view.GalleryViewConfig); ok {
-                config = *gv
-            }
-        }
-    }
+	// 解析画廊视图配置
+	var config view.GalleryViewConfig
+	if viewInfo.Config != nil {
+		cm := view.GetGlobalConfigManager()
+		if parsed, err := cm.ParseConfig(view.ViewTypeGallery, viewInfo.Config); err == nil {
+			if gv, ok := parsed.(*view.GalleryViewConfig); ok {
+				config = *gv
+			}
+		}
+	}
 
 	// 暂时返回一个空的数据结构
 	data := &view.GalleryViewData{

@@ -77,18 +77,18 @@ func (l *SQLLogger) Trace(ctx context.Context, begin time.Time, fc func() (strin
 func (l *SQLLogger) logSQL(level, sql string, rows int64, elapsed time.Duration, err error) {
 	// 清理和格式化SQL
 	formattedSQL := l.formatSQL(sql)
-	
+
 	// 构建日志字段
 	fields := []zap.Field{
 		zap.String("sql", formattedSQL),
 		zap.Int64("rows", rows),
 		zap.Duration("duration", elapsed),
 	}
-	
+
 	if err != nil {
 		fields = append(fields, zap.Error(err))
 	}
-	
+
 	// 根据查询类型使用不同的日志级别
 	if strings.Contains(strings.ToUpper(sql), "SELECT") {
 		l.zapLogger.Info(level, fields...)
@@ -108,11 +108,11 @@ func (l *SQLLogger) formatSQL(sql string) string {
 	// 移除多余的空白字符
 	sql = regexp.MustCompile(`\s+`).ReplaceAllString(sql, " ")
 	sql = strings.TrimSpace(sql)
-	
+
 	// 如果SQL太长，截断并添加省略号
 	if len(sql) > 200 {
 		sql = sql[:200] + "..."
 	}
-	
+
 	return sql
 }

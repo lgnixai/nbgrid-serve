@@ -267,7 +267,7 @@ export class TableClient {
     fields: Field[];
     schema_version: number;
   }> {
-    return this.httpClient.get(`/api/tables/${tableId}/schema`);
+    return this.httpClient.get(`/api/tables/${tableId}`);
   }
 
   /**
@@ -281,7 +281,7 @@ export class TableClient {
     fields: Field[];
     schema_version: number;
   }> {
-    return this.httpClient.put(`/api/tables/${tableId}/schema`, schema);
+    return this.httpClient.put(`/api/tables/${tableId}`, schema);
   }
 
   /**

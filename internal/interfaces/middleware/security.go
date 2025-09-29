@@ -29,12 +29,12 @@ type SecurityConfig struct {
 
 	// 安全头配置
 	SecurityHeaders struct {
-		ContentTypeNosniff    bool
-		FrameOptions          string // DENY, SAMEORIGIN, ALLOW-FROM
-		XSSProtection         string // 1; mode=block
-		ContentSecurityPolicy string
+		ContentTypeNosniff      bool
+		FrameOptions            string // DENY, SAMEORIGIN, ALLOW-FROM
+		XSSProtection           string // 1; mode=block
+		ContentSecurityPolicy   string
 		StrictTransportSecurity string
-		ReferrerPolicy        string
+		ReferrerPolicy          string
 	}
 
 	// IP白名单/黑名单
@@ -64,12 +64,12 @@ func DefaultSecurityConfig() SecurityConfig {
 			Enabled:           true,
 		},
 		SecurityHeaders: struct {
-			ContentTypeNosniff          bool
-			FrameOptions                string
-			XSSProtection               string
-			ContentSecurityPolicy       string
-			StrictTransportSecurity     string
-			ReferrerPolicy              string
+			ContentTypeNosniff      bool
+			FrameOptions            string
+			XSSProtection           string
+			ContentSecurityPolicy   string
+			StrictTransportSecurity string
+			ReferrerPolicy          string
 		}{
 			ContentTypeNosniff:      true,
 			FrameOptions:            "DENY",
@@ -98,7 +98,7 @@ func SecurityMiddleware(config SecurityConfig) gin.HandlerFunc {
 		// 请求大小限制
 		if c.Request.ContentLength > config.MaxRequestSize {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Request entity too large",
+				"error":    "Request entity too large",
 				"max_size": config.MaxRequestSize,
 				"received": c.Request.ContentLength,
 			})
@@ -114,7 +114,7 @@ func SecurityMiddleware(config SecurityConfig) gin.HandlerFunc {
 func CORSMiddleware(config SecurityConfig) gin.HandlerFunc {
 	return gin.HandlerFunc(func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
-		
+
 		// 检查Origin是否被允许
 		if isOriginAllowedForSecurity(origin, config.AllowOrigins) {
 			c.Header("Access-Control-Allow-Origin", origin)
@@ -123,11 +123,11 @@ func CORSMiddleware(config SecurityConfig) gin.HandlerFunc {
 		c.Header("Access-Control-Allow-Methods", strings.Join(config.AllowMethods, ", "))
 		c.Header("Access-Control-Allow-Headers", strings.Join(config.AllowHeaders, ", "))
 		c.Header("Access-Control-Expose-Headers", strings.Join(config.ExposeHeaders, ", "))
-		
+
 		if config.AllowCredentials {
 			c.Header("Access-Control-Allow-Credentials", "true")
 		}
-		
+
 		if config.MaxAge > 0 {
 			c.Header("Access-Control-Max-Age", strconv.Itoa(int(config.MaxAge.Seconds())))
 		}
@@ -154,7 +154,7 @@ func RateLimitMiddleware(config SecurityConfig) gin.HandlerFunc {
 	return gin.HandlerFunc(func(c *gin.Context) {
 		// 使用IP作为限流键
 		key := c.ClientIP()
-		
+
 		// 获取或创建限流器
 		limiter, exists := limiters[key]
 		if !exists {
@@ -168,9 +168,9 @@ func RateLimitMiddleware(config SecurityConfig) gin.HandlerFunc {
 		// 检查是否超过限制
 		if !limiter.Allow() {
 			c.JSON(http.StatusTooManyRequests, gin.H{
-				"error": "Rate limit exceeded",
-				"limit":      config.RateLimit.RequestsPerSecond,
-				"burst_size": config.RateLimit.BurstSize,
+				"error":       "Rate limit exceeded",
+				"limit":       config.RateLimit.RequestsPerSecond,
+				"burst_size":  config.RateLimit.BurstSize,
 				"retry_after": 60, // seconds
 			})
 			c.Header("Retry-After", "60")
@@ -187,7 +187,7 @@ func RequestSizeLimitMiddleware(maxSize int64) gin.HandlerFunc {
 	return gin.HandlerFunc(func(c *gin.Context) {
 		if c.Request.ContentLength > maxSize {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Request entity too large",
+				"error":    "Request entity too large",
 				"max_size": maxSize,
 				"received": c.Request.ContentLength,
 			})
@@ -244,7 +244,7 @@ func ContentTypeValidationMiddleware(allowedTypes []string) gin.HandlerFunc {
 
 			if !allowed {
 				c.JSON(http.StatusBadRequest, gin.H{
-					"error": "Unsupported content type",
+					"error":    "Unsupported content type",
 					"received": contentType,
 					"allowed":  allowedTypes,
 				})
@@ -259,12 +259,12 @@ func ContentTypeValidationMiddleware(allowedTypes []string) gin.HandlerFunc {
 
 // setSecurityHeaders 设置安全头
 func setSecurityHeaders(c *gin.Context, config struct {
-	ContentTypeNosniff          bool
-	FrameOptions                string
-	XSSProtection               string
-	ContentSecurityPolicy       string
-	StrictTransportSecurity     string
-	ReferrerPolicy              string
+	ContentTypeNosniff      bool
+	FrameOptions            string
+	XSSProtection           string
+	ContentSecurityPolicy   string
+	StrictTransportSecurity string
+	ReferrerPolicy          string
 }) {
 	if config.ContentTypeNosniff {
 		c.Header("X-Content-Type-Options", "nosniff")
@@ -429,7 +429,7 @@ func HoneypotMiddleware() gin.HandlerFunc {
 			if c.Request.URL.Path == honeypot {
 				// 记录蜜罐访问
 				c.Set("honeypot_triggered", true)
-				
+
 				// 返回假的响应以迷惑攻击者
 				c.JSON(http.StatusNotFound, gin.H{
 					"error": "Not Found",

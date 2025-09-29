@@ -1,14 +1,13 @@
 package http
 
 import (
-	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 
 	"teable-go-backend/internal/domain/view"
 	"teable-go-backend/pkg/errors"
-	"teable-go-backend/pkg/logger"
+	"teable-go-backend/pkg/response"
 )
 
 // ViewHandler 视图处理器
@@ -55,7 +54,7 @@ func (h *ViewHandler) CreateView(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, SuccessResponse{Data: newView})
+	response.SuccessWithMessage(c, newView, "")
 }
 
 // GetView 获取视图详情
@@ -76,7 +75,7 @@ func (h *ViewHandler) GetView(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, SuccessResponse{Data: v})
+	response.SuccessWithMessage(c, v, "")
 }
 
 // UpdateView 更新视图
@@ -107,7 +106,7 @@ func (h *ViewHandler) UpdateView(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, SuccessResponse{Data: updatedView})
+	response.SuccessWithMessage(c, updatedView, "")
 }
 
 // DeleteView 删除视图
@@ -128,7 +127,7 @@ func (h *ViewHandler) DeleteView(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // ListViews 列出视图
@@ -174,12 +173,12 @@ func (h *ViewHandler) ListViews(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, PaginatedResponse{
-		Data:   views,
-		Total:  total,
-		Limit:  filter.Limit,
-		Offset: filter.Offset,
-	})
+	response.PaginatedSuccess(c, views, response.Pagination{
+		Page:       0,
+		Limit:      filter.Limit,
+		Total:      int(total),
+		TotalPages: 0,
+	}, "")
 }
 
 // GetGridViewData 获取网格视图数据
@@ -217,7 +216,7 @@ func (h *ViewHandler) GetGridViewData(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: data})
+	response.SuccessWithMessage(c, data, "")
 }
 
 // UpdateGridViewConfig 更新网格视图配置
@@ -248,7 +247,7 @@ func (h *ViewHandler) UpdateGridViewConfig(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // AddGridViewColumn 添加网格视图列
@@ -279,7 +278,7 @@ func (h *ViewHandler) AddGridViewColumn(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // UpdateGridViewColumn 更新网格视图列
@@ -312,7 +311,7 @@ func (h *ViewHandler) UpdateGridViewColumn(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // RemoveGridViewColumn 移除网格视图列
@@ -338,7 +337,7 @@ func (h *ViewHandler) RemoveGridViewColumn(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // ReorderGridViewColumns 重新排序网格视图列
@@ -369,7 +368,7 @@ func (h *ViewHandler) ReorderGridViewColumns(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // GetViewConfig 获取视图配置
@@ -392,7 +391,7 @@ func (h *ViewHandler) GetViewConfig(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: config})
+	response.SuccessWithMessage(c, config, "")
 }
 
 // UpdateViewConfig 更新视图配置
@@ -423,7 +422,7 @@ func (h *ViewHandler) UpdateViewConfig(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // GetFormViewData 获取表单视图数据
@@ -447,7 +446,7 @@ func (h *ViewHandler) GetFormViewData(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: data})
+	response.SuccessWithMessage(c, data, "")
 }
 
 // UpdateFormViewConfig 更新表单视图配置
@@ -478,7 +477,7 @@ func (h *ViewHandler) UpdateFormViewConfig(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // AddFormViewField 添加表单视图字段
@@ -509,7 +508,7 @@ func (h *ViewHandler) AddFormViewField(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // UpdateFormViewField 更新表单视图字段
@@ -542,7 +541,7 @@ func (h *ViewHandler) UpdateFormViewField(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // RemoveFormViewField 移除表单视图字段
@@ -568,7 +567,7 @@ func (h *ViewHandler) RemoveFormViewField(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // ReorderFormViewFields 重新排序表单视图字段
@@ -599,7 +598,7 @@ func (h *ViewHandler) ReorderFormViewFields(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // GetKanbanViewData 获取看板视图数据
@@ -623,7 +622,7 @@ func (h *ViewHandler) GetKanbanViewData(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: data})
+	response.SuccessWithMessage(c, data, "")
 }
 
 // UpdateKanbanViewConfig 更新看板视图配置
@@ -654,7 +653,7 @@ func (h *ViewHandler) UpdateKanbanViewConfig(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // MoveKanbanCard 移动看板卡片
@@ -687,7 +686,7 @@ func (h *ViewHandler) MoveKanbanCard(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // GetCalendarViewData 获取日历视图数据
@@ -715,7 +714,7 @@ func (h *ViewHandler) GetCalendarViewData(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: data})
+	response.SuccessWithMessage(c, data, "")
 }
 
 // UpdateCalendarViewConfig 更新日历视图配置
@@ -746,7 +745,7 @@ func (h *ViewHandler) UpdateCalendarViewConfig(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // GetGalleryViewData 获取画廊视图数据
@@ -786,7 +785,7 @@ func (h *ViewHandler) GetGalleryViewData(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: data})
+	response.SuccessWithMessage(c, data, "")
 }
 
 // UpdateGalleryViewConfig 更新画廊视图配置
@@ -817,36 +816,9 @@ func (h *ViewHandler) UpdateGalleryViewConfig(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 func (h *ViewHandler) handleError(c *gin.Context, err error) {
-	traceID := c.GetString("request_id")
-
-	if appErr, ok := errors.IsAppError(err); ok {
-		logger.Error("Application error",
-			logger.String("error", appErr.Message),
-			logger.String("code", appErr.Code),
-			logger.String("trace_id", traceID),
-		)
-
-		c.JSON(appErr.HTTPStatus, ErrorResponse{
-			Error:   appErr.Message,
-			Code:    appErr.Code,
-			Details: appErr.Details,
-			TraceID: traceID,
-		})
-		return
-	}
-
-	logger.Error("Internal server error",
-		logger.ErrorField(err),
-		logger.String("trace_id", traceID),
-	)
-
-	c.JSON(http.StatusInternalServerError, ErrorResponse{
-		Error:   "服务器内部错误",
-		Code:    "INTERNAL_SERVER_ERROR",
-		TraceID: traceID,
-	})
+	response.Error(c, err)
 }

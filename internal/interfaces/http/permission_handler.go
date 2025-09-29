@@ -1,14 +1,12 @@
 package http
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
 	"teable-go-backend/internal/domain/permission"
 	"teable-go-backend/pkg/errors"
-	"teable-go-backend/pkg/logger"
+	"teable-go-backend/pkg/response"
 )
 
 // PermissionHandler 权限HTTP处理器
@@ -71,7 +69,7 @@ func (h *PermissionHandler) GrantPermission(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // RevokePermissionRequest 撤销权限请求
@@ -110,7 +108,7 @@ func (h *PermissionHandler) RevokePermission(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // UpdatePermissionRequest 更新权限请求
@@ -159,7 +157,7 @@ func (h *PermissionHandler) UpdatePermission(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // GetUserPermissions 获取用户权限
@@ -186,7 +184,7 @@ func (h *PermissionHandler) GetUserPermissions(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: permissions})
+	response.SuccessWithMessage(c, permissions, "")
 }
 
 // GetResourcePermissions 获取资源权限
@@ -215,7 +213,7 @@ func (h *PermissionHandler) GetResourcePermissions(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: permissions})
+	response.SuccessWithMessage(c, permissions, "")
 }
 
 // CheckPermissionRequest 检查权限请求
@@ -257,11 +255,7 @@ func (h *PermissionHandler) CheckPermission(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{
-		Data: map[string]interface{}{
-			"has_permission": hasPermission,
-		},
-	})
+	response.SuccessWithMessage(c, map[string]interface{}{"has_permission": hasPermission}, "")
 }
 
 // GetUserRole 获取用户角色
@@ -292,11 +286,7 @@ func (h *PermissionHandler) GetUserRole(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{
-		Data: map[string]interface{}{
-			"role": string(role),
-		},
-	})
+	response.SuccessWithMessage(c, map[string]interface{}{"role": string(role)}, "")
 }
 
 // GetUserResources 获取用户资源
@@ -325,7 +315,7 @@ func (h *PermissionHandler) GetUserResources(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: resources})
+	response.SuccessWithMessage(c, resources, "")
 }
 
 // GetResourceCollaborators 获取资源协作者
@@ -354,7 +344,7 @@ func (h *PermissionHandler) GetResourceCollaborators(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: collaborators})
+	response.SuccessWithMessage(c, collaborators, "")
 }
 
 // TransferOwnershipRequest 转移所有权请求
@@ -401,7 +391,7 @@ func (h *PermissionHandler) TransferOwnership(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // GetPermissionStats 获取权限统计
@@ -420,7 +410,7 @@ func (h *PermissionHandler) GetPermissionStats(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: stats})
+	response.SuccessWithMessage(c, stats, "")
 }
 
 // GetRolePermissions 获取角色权限
@@ -443,7 +433,7 @@ func (h *PermissionHandler) GetRolePermissions(c *gin.Context) {
 	role := permission.Role(roleStr)
 	permissions := permission.GetRolePermissions(role)
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: permissions})
+	response.SuccessWithMessage(c, permissions, "")
 }
 
 // CheckRolePermission 检查角色权限
@@ -469,11 +459,7 @@ func (h *PermissionHandler) CheckRolePermission(c *gin.Context) {
 	action := permission.Action(actionStr)
 	hasPermission := permission.HasRolePermission(role, action)
 
-	c.JSON(http.StatusOK, SuccessResponse{
-		Data: map[string]interface{}{
-			"has_permission": hasPermission,
-		},
-	})
+	response.SuccessWithMessage(c, map[string]interface{}{"has_permission": hasPermission}, "")
 }
 
 // GetRoleLevel 获取角色级别
@@ -496,12 +482,7 @@ func (h *PermissionHandler) GetRoleLevel(c *gin.Context) {
 	role := permission.Role(roleStr)
 	level := permission.GetRoleLevel(role)
 
-	c.JSON(http.StatusOK, SuccessResponse{
-		Data: map[string]interface{}{
-			"role":  string(role),
-			"level": level,
-		},
-	})
+	response.SuccessWithMessage(c, map[string]interface{}{"role": string(role), "level": level}, "")
 }
 
 // CompareRoles 比较角色
@@ -529,47 +510,18 @@ func (h *PermissionHandler) CompareRoles(c *gin.Context) {
 	level1 := permission.GetRoleLevel(role1)
 	level2 := permission.GetRoleLevel(role2)
 
-	c.JSON(http.StatusOK, SuccessResponse{
-		Data: map[string]interface{}{
-			"role1":     string(role1),
-			"role2":     string(role2),
-			"level1":    level1,
-			"level2":    level2,
-			"is_higher": permission.IsHigherRole(role1, role2),
-			"is_lower":  permission.IsLowerRole(role1, role2),
-			"is_equal":  permission.IsEqualRole(role1, role2),
-			"can_grant": permission.CanGrantRole(role1, role2),
-		},
-	})
+	response.SuccessWithMessage(c, map[string]interface{}{
+		"role1":     string(role1),
+		"role2":     string(role2),
+		"level1":    level1,
+		"level2":    level2,
+		"is_higher": permission.IsHigherRole(role1, role2),
+		"is_lower":  permission.IsLowerRole(role1, role2),
+		"is_equal":  permission.IsEqualRole(role1, role2),
+		"can_grant": permission.CanGrantRole(role1, role2),
+	}, "")
 }
 
 func (h *PermissionHandler) handleError(c *gin.Context, err error) {
-	traceID := c.GetString("request_id")
-
-	if appErr, ok := errors.IsAppError(err); ok {
-		logger.Error("Application error",
-			logger.String("error", appErr.Message),
-			logger.String("code", appErr.Code),
-			logger.String("trace_id", traceID),
-		)
-
-		c.JSON(appErr.HTTPStatus, ErrorResponse{
-			Error:   appErr.Message,
-			Code:    appErr.Code,
-			Details: appErr.Details,
-			TraceID: traceID,
-		})
-		return
-	}
-
-	logger.Error("Internal server error",
-		logger.ErrorField(err),
-		logger.String("trace_id", traceID),
-	)
-
-	c.JSON(http.StatusInternalServerError, ErrorResponse{
-		Error:   "服务器内部错误",
-		Code:    "INTERNAL_SERVER_ERROR",
-		TraceID: traceID,
-	})
+	response.Error(c, err)
 }

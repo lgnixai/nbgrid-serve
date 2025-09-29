@@ -44,17 +44,17 @@ func (e BaseDomainEvent) EventData() interface{} {
 
 // 用户相关事件类型常量
 const (
-	UserCreatedEventType        = "user.created"
-	UserUpdatedEventType        = "user.updated"
-	UserDeletedEventType        = "user.deleted"
-	UserActivatedEventType      = "user.activated"
-	UserDeactivatedEventType    = "user.deactivated"
-	UserPasswordChangedEventType = "user.password_changed"
-	UserPromotedEventType       = "user.promoted"
-	UserDemotedEventType        = "user.demoted"
-	UserSignedInEventType       = "user.signed_in"
-	UserAccountLinkedEventType  = "user.account_linked"
-	UserAccountUnlinkedEventType = "user.account_unlinked"
+	UserCreatedEventType            = "user.created"
+	UserUpdatedEventType            = "user.updated"
+	UserDeletedEventType            = "user.deleted"
+	UserActivatedEventType          = "user.activated"
+	UserDeactivatedEventType        = "user.deactivated"
+	UserPasswordChangedEventType    = "user.password_changed"
+	UserPromotedEventType           = "user.promoted"
+	UserDemotedEventType            = "user.demoted"
+	UserSignedInEventType           = "user.signed_in"
+	UserAccountLinkedEventType      = "user.account_linked"
+	UserAccountUnlinkedEventType    = "user.account_unlinked"
 	UserPreferencesUpdatedEventType = "user.preferences_updated"
 )
 
@@ -90,9 +90,9 @@ func NewUserCreatedEvent(user *User, createdBy string) *UserCreatedEvent {
 // UserUpdatedEvent 用户更新事件
 type UserUpdatedEvent struct {
 	BaseDomainEvent
-	UserID     string                 `json:"user_id"`
-	Changes    map[string]interface{} `json:"changes"`
-	UpdatedBy  string                 `json:"updated_by,omitempty"`
+	UserID       string                 `json:"user_id"`
+	Changes      map[string]interface{} `json:"changes"`
+	UpdatedBy    string                 `json:"updated_by,omitempty"`
 	PreviousData map[string]interface{} `json:"previous_data,omitempty"`
 }
 
@@ -233,10 +233,10 @@ func NewUserPromotedEvent(userID, promotedBy, fromRole, toRole string) *UserProm
 // UserDemotedEvent 用户降级事件
 type UserDemotedEvent struct {
 	BaseDomainEvent
-	UserID   string `json:"user_id"`
+	UserID    string `json:"user_id"`
 	DemotedBy string `json:"demoted_by,omitempty"`
-	ToRole   string `json:"to_role"`
-	FromRole string `json:"from_role"`
+	ToRole    string `json:"to_role"`
+	FromRole  string `json:"from_role"`
 }
 
 // NewUserDemotedEvent 创建用户降级事件
@@ -248,10 +248,10 @@ func NewUserDemotedEvent(userID, demotedBy, fromRole, toRole string) *UserDemote
 			AggregateId: userID,
 			OccurredOn:  time.Now(),
 		},
-		UserID:   userID,
+		UserID:    userID,
 		DemotedBy: demotedBy,
-		FromRole: fromRole,
-		ToRole:   toRole,
+		FromRole:  fromRole,
+		ToRole:    toRole,
 	}
 }
 
@@ -333,8 +333,8 @@ func NewUserAccountUnlinkedEvent(userID, accountID, provider, providerID string)
 // UserPreferencesUpdatedEvent 用户偏好设置更新事件
 type UserPreferencesUpdatedEvent struct {
 	BaseDomainEvent
-	UserID            string                 `json:"user_id"`
-	UpdatedPreferences map[string]interface{} `json:"updated_preferences"`
+	UserID              string                 `json:"user_id"`
+	UpdatedPreferences  map[string]interface{} `json:"updated_preferences"`
 	PreviousPreferences map[string]interface{} `json:"previous_preferences,omitempty"`
 }
 

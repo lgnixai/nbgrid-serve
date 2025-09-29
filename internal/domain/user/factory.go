@@ -77,8 +77,8 @@ func (f *UserFactoryImpl) CreateSystemUser(name, email string) (*UserAggregate, 
 		ID:               generateUserID(),
 		Name:             name,
 		Email:            email,
-		IsSystem:         true,  // 系统用户
-		IsAdmin:          true,  // 系统用户默认是管理员
+		IsSystem:         true, // 系统用户
+		IsAdmin:          true, // 系统用户默认是管理员
 		IsTrialUsed:      false,
 		CreatedTime:      now,
 		LastModifiedTime: &now,
@@ -114,7 +114,7 @@ func (f *UserFactoryImpl) CreateAdminUser(name, email, password string) (*UserAg
 		Name:             name,
 		Email:            email,
 		IsSystem:         false,
-		IsAdmin:          true,  // 管理员用户
+		IsAdmin:          true, // 管理员用户
 		IsTrialUsed:      false,
 		CreatedTime:      now,
 		LastModifiedTime: &now,

@@ -1,14 +1,12 @@
 package http
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 
 	"teable-go-backend/internal/application"
 	recdomain "teable-go-backend/internal/domain/record"
 	"teable-go-backend/pkg/errors"
-	"teable-go-backend/pkg/logger"
+	"teable-go-backend/pkg/response"
 )
 
 // RecordHandler 记录处理器
@@ -54,7 +52,7 @@ func (h *RecordHandler) CreateRecord(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, SuccessResponse{Data: newRecord})
+	response.SuccessWithMessage(c, newRecord, "")
 }
 
 // GetRecord 获取记录详情
@@ -76,7 +74,7 @@ func (h *RecordHandler) GetRecord(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, SuccessResponse{Data: r})
+	response.SuccessWithMessage(c, r, "")
 }
 
 // UpdateRecord 更新记录
@@ -107,7 +105,7 @@ func (h *RecordHandler) UpdateRecord(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, SuccessResponse{Data: updatedRecord})
+	response.SuccessWithMessage(c, updatedRecord, "")
 }
 
 // DeleteRecord 删除记录
@@ -129,7 +127,7 @@ func (h *RecordHandler) DeleteRecord(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // ListRecords 列出记录
@@ -173,12 +171,12 @@ func (h *RecordHandler) ListRecords(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, PaginatedResponse{
-		Data:   records,
-		Total:  total,
-		Limit:  filter.Limit,
-		Offset: filter.Offset,
-	})
+	response.PaginatedSuccess(c, records, response.Pagination{
+		Page:       0,
+		Limit:      filter.Limit,
+		Total:      int(total),
+		TotalPages: 0,
+	}, "")
 }
 
 // BulkCreateRecords 批量创建记录
@@ -222,7 +220,7 @@ func (h *RecordHandler) BulkCreateRecords(c *gin.Context) {
 		}
 		created = append(created, rec)
 	}
-	c.JSON(http.StatusCreated, SuccessResponse{Data: created})
+	response.SuccessWithMessage(c, created, "")
 }
 
 // BulkUpdateRecords 批量更新记录
@@ -360,32 +358,5 @@ func (h *RecordHandler) ImportRecords(c *gin.Context) {
 }
 
 func (h *RecordHandler) handleError(c *gin.Context, err error) {
-	traceID := c.GetString("request_id")
-
-	if appErr, ok := errors.IsAppError(err); ok {
-		logger.Error("Application error",
-			logger.String("error", appErr.Message),
-			logger.String("code", appErr.Code),
-			logger.String("trace_id", traceID),
-		)
-
-		c.JSON(appErr.HTTPStatus, ErrorResponse{
-			Error:   appErr.Message,
-			Code:    appErr.Code,
-			Details: appErr.Details,
-			TraceID: traceID,
-		})
-		return
-	}
-
-	logger.Error("Internal server error",
-		logger.ErrorField(err),
-		logger.String("trace_id", traceID),
-	)
-
-	c.JSON(http.StatusInternalServerError, ErrorResponse{
-		Error:   "服务器内部错误",
-		Code:    "INTERNAL_SERVER_ERROR",
-		TraceID: traceID,
-	})
+	response.Error(c, err)
 }

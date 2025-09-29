@@ -24,12 +24,12 @@ type Table struct {
 
 // BaseMetrics 基础表指标
 type BaseMetrics struct {
-	TotalTables      int64     `json:"total_tables"`
-	TotalRecords     int64     `json:"total_records"`
-	TotalFields      int64     `json:"total_fields"`
-	StorageUsed      int64     `json:"storage_used"`      // 字节
-	LastActivityAt   time.Time `json:"last_activity_at"`
-	CreatedAt        time.Time `json:"created_at"`
+	TotalTables    int64     `json:"total_tables"`
+	TotalRecords   int64     `json:"total_records"`
+	TotalFields    int64     `json:"total_fields"`
+	StorageUsed    int64     `json:"storage_used"` // 字节
+	LastActivityAt time.Time `json:"last_activity_at"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 // DomainEvent 领域事件接口

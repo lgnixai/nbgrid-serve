@@ -125,10 +125,10 @@ func (r *ShareRepository) GetShareStats(ctx context.Context, tableID string) (*s
 	lastAccessed := time.Now()
 
 	return &share.ShareStats{
-		TotalShares:        totalShares,
-		ActiveShares:       activeShares,
-		PasswordProtected:  passwordProtected,
-		LastAccessed:       lastAccessed,
+		TotalShares:       totalShares,
+		ActiveShares:      activeShares,
+		PasswordProtected: passwordProtected,
+		LastAccessed:      lastAccessed,
 	}, nil
 }
 

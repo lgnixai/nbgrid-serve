@@ -1,7 +1,7 @@
 package space
 
 import (
-	// "time" // 暂时注释掉，如果需要可以取消注释
+// "time" // 暂时注释掉，如果需要可以取消注释
 )
 
 // SpaceAggregate 空间聚合根

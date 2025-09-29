@@ -12,18 +12,18 @@ import (
 type Record struct {
 	ID               string                 `json:"id"`
 	TableID          string                 `json:"table_id"`
-	Data             map[string]interface{} `json:"data"` // 动态数据存储，键为字段名，值为字段值
-	Version          int64                  `json:"version"`           // 记录版本号，用于并发控制
-	Hash             string                 `json:"hash"`              // 数据哈希值，用于变更检测
+	Data             map[string]interface{} `json:"data"`    // 动态数据存储，键为字段名，值为字段值
+	Version          int64                  `json:"version"` // 记录版本号，用于并发控制
+	Hash             string                 `json:"hash"`    // 数据哈希值，用于变更检测
 	CreatedBy        string                 `json:"created_by"`
-	UpdatedBy        *string                `json:"updated_by"`        // 最后更新者
+	UpdatedBy        *string                `json:"updated_by"` // 最后更新者
 	CreatedTime      time.Time              `json:"created_at"`
 	DeletedTime      *time.Time             `json:"deleted_time"`
 	LastModifiedTime *time.Time             `json:"updated_at"`
-	
+
 	// 内部字段，不序列化
-	tableSchema      *table.Table           `json:"-"` // 表格schema缓存
-	validationErrors []ValidationError      `json:"-"` // 验证错误列表
+	tableSchema      *table.Table      `json:"-"` // 表格schema缓存
+	validationErrors []ValidationError `json:"-"` // 验证错误列表
 }
 
 // CreateRecordRequest 创建记录请求
@@ -41,13 +41,13 @@ type UpdateRecordRequest struct {
 
 // ListRecordFilter 记录列表过滤条件
 type ListRecordFilter struct {
-	TableID   *string                `json:"table_id,omitempty" form:"table_id"`
-	CreatedBy *string                `json:"created_by,omitempty" form:"created_by"`
-	Search    string                 `json:"search,omitempty" form:"search"`
-	OrderBy   string                 `json:"order_by,omitempty" form:"order_by"`
-	Order     string                 `json:"order,omitempty" form:"order"`
-	Limit     int                    `json:"limit,omitempty" form:"limit"`
-	Offset    int                    `json:"offset,omitempty" form:"offset"`
+	TableID   *string `json:"table_id,omitempty" form:"table_id"`
+	CreatedBy *string `json:"created_by,omitempty" form:"created_by"`
+	Search    string  `json:"search,omitempty" form:"search"`
+	OrderBy   string  `json:"order_by,omitempty" form:"order_by"`
+	Order     string  `json:"order,omitempty" form:"order"`
+	Limit     int     `json:"limit,omitempty" form:"limit"`
+	Offset    int     `json:"offset,omitempty" form:"offset"`
 	// 复杂查询条件
 	FieldFilters map[string]interface{} `json:"field_filters,omitempty"` // 字段过滤条件
 	DateRange    *DateRange             `json:"date_range,omitempty"`    // 日期范围过滤
@@ -147,14 +147,14 @@ type ValidationError struct {
 
 // RecordChangeEvent 记录变更事件
 type RecordChangeEvent struct {
-	RecordID    string                 `json:"record_id"`
-	TableID     string                 `json:"table_id"`
-	ChangeType  string                 `json:"change_type"` // create, update, delete
-	OldData     map[string]interface{} `json:"old_data,omitempty"`
-	NewData     map[string]interface{} `json:"new_data,omitempty"`
-	ChangedBy   string                 `json:"changed_by"`
-	ChangedAt   time.Time              `json:"changed_at"`
-	Version     int64                  `json:"version"`
+	RecordID   string                 `json:"record_id"`
+	TableID    string                 `json:"table_id"`
+	ChangeType string                 `json:"change_type"` // create, update, delete
+	OldData    map[string]interface{} `json:"old_data,omitempty"`
+	NewData    map[string]interface{} `json:"new_data,omitempty"`
+	ChangedBy  string                 `json:"changed_by"`
+	ChangedAt  time.Time              `json:"changed_at"`
+	Version    int64                  `json:"version"`
 }
 
 // NewRecord 创建新的数据记录
@@ -170,15 +170,15 @@ func NewRecord(req CreateRecordRequest) *Record {
 		LastModifiedTime: &now,
 		validationErrors: make([]ValidationError, 0),
 	}
-	
+
 	// 设置数据
 	if req.Data != nil {
 		record.Data = req.Data
 	}
-	
+
 	// 计算哈希值
 	record.updateHash()
-	
+
 	return record
 }
 
@@ -190,24 +190,24 @@ func (r *Record) SetTableSchema(schema *table.Table) {
 // ValidateData 验证记录数据
 func (r *Record) ValidateData() error {
 	r.validationErrors = make([]ValidationError, 0)
-	
+
 	if r.tableSchema == nil {
 		return fmt.Errorf("缺少表格schema信息")
 	}
-	
+
 	fields := r.tableSchema.GetFields()
 	if len(fields) == 0 {
 		return fmt.Errorf("表格没有定义字段")
 	}
-	
+
 	// 验证必填字段
 	for _, field := range fields {
 		if field.DeletedTime != nil {
 			continue // 跳过已删除的字段
 		}
-		
+
 		value, exists := r.Data[field.Name]
-		
+
 		// 检查必填字段
 		if field.IsRequired && (!exists || value == nil || value == "") {
 			r.validationErrors = append(r.validationErrors, ValidationError{
@@ -217,7 +217,7 @@ func (r *Record) ValidateData() error {
 			})
 			continue
 		}
-		
+
 		// 如果字段有值，进行类型验证
 		if exists && value != nil && value != "" {
 			if err := field.ValidateValue(value); err != nil {
@@ -229,7 +229,7 @@ func (r *Record) ValidateData() error {
 			}
 		}
 	}
-	
+
 	// 检查是否有未知字段
 	for fieldName := range r.Data {
 		if r.tableSchema.GetFieldByName(fieldName) == nil {
@@ -240,11 +240,11 @@ func (r *Record) ValidateData() error {
 			})
 		}
 	}
-	
+
 	if len(r.validationErrors) > 0 {
 		return fmt.Errorf("记录验证失败，共 %d 个错误", len(r.validationErrors))
 	}
-	
+
 	return nil
 }
 
@@ -258,18 +258,18 @@ func (r *Record) ApplyFieldDefaults() error {
 	if r.tableSchema == nil {
 		return fmt.Errorf("缺少表格schema信息")
 	}
-	
+
 	fields := r.tableSchema.GetFields()
 	for _, field := range fields {
 		if field.DeletedTime != nil {
 			continue
 		}
-		
+
 		// 如果字段没有值且有默认值，则应用默认值
 		if _, exists := r.Data[field.Name]; !exists && field.DefaultValue != nil {
 			r.Data[field.Name] = *field.DefaultValue
 		}
-		
+
 		// 处理系统字段
 		switch field.Type {
 		case table.FieldTypeCreatedTime:
@@ -290,7 +290,7 @@ func (r *Record) ApplyFieldDefaults() error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -299,37 +299,37 @@ func (r *Record) Update(req UpdateRecordRequest, updatedBy string) error {
 	if req.Data == nil {
 		return fmt.Errorf("更新数据不能为空")
 	}
-	
+
 	// 保存旧数据用于变更检测
 	oldData := make(map[string]interface{})
 	for k, v := range r.Data {
 		oldData[k] = v
 	}
-	
+
 	// 更新数据
 	for key, value := range req.Data {
 		r.Data[key] = value
 	}
-	
+
 	// 更新元数据
 	r.UpdatedBy = &updatedBy
 	now := time.Now()
 	r.LastModifiedTime = &now
 	r.Version++
-	
+
 	// 应用字段默认值
 	if err := r.ApplyFieldDefaults(); err != nil {
 		return fmt.Errorf("应用字段默认值失败: %v", err)
 	}
-	
+
 	// 验证数据
 	if err := r.ValidateData(); err != nil {
 		return fmt.Errorf("数据验证失败: %v", err)
 	}
-	
+
 	// 更新哈希值
 	r.updateHash()
-	
+
 	return nil
 }
 
@@ -338,27 +338,27 @@ func (r *Record) UpdateField(fieldName string, value interface{}, updatedBy stri
 	if r.tableSchema == nil {
 		return fmt.Errorf("缺少表格schema信息")
 	}
-	
+
 	field := r.tableSchema.GetFieldByName(fieldName)
 	if field == nil {
 		return fmt.Errorf("字段 '%s' 不存在", fieldName)
 	}
-	
+
 	// 验证字段值
 	if err := field.ValidateValue(value); err != nil {
 		return fmt.Errorf("字段值验证失败: %v", err)
 	}
-	
+
 	// 更新字段值
 	r.Data[fieldName] = value
 	r.UpdatedBy = &updatedBy
 	now := time.Now()
 	r.LastModifiedTime = &now
 	r.Version++
-	
+
 	// 更新哈希值
 	r.updateHash()
-	
+
 	return nil
 }
 
@@ -379,7 +379,7 @@ func (r *Record) Clone() *Record {
 	for k, v := range r.Data {
 		clonedData[k] = v
 	}
-	
+
 	cloned := &Record{
 		ID:               utils.GenerateRecordID(),
 		TableID:          r.TableID,
@@ -393,7 +393,7 @@ func (r *Record) Clone() *Record {
 		LastModifiedTime: r.LastModifiedTime,
 		tableSchema:      r.tableSchema,
 	}
-	
+
 	return cloned
 }
 

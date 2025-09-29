@@ -167,20 +167,20 @@ func (s *TokenService) BlacklistToken(ctx context.Context, tokenString string) e
 func (s *TokenService) InvalidateUserTokens(ctx context.Context, userID string) error {
 	// 将用户ID加入令牌失效列表
 	key := cache.BuildCacheKey("user_token_invalidated:", userID)
-	
+
 	// 设置较长的过期时间，确保覆盖所有可能的令牌
 	ttl := s.config.RefreshTokenTTL
 	if s.config.AccessTokenTTL > ttl {
 		ttl = s.config.AccessTokenTTL
 	}
-	
+
 	return s.cacheService.Set(ctx, key, time.Now().Unix(), ttl)
 }
 
 // IsUserTokensInvalidated 检查用户令牌是否已失效
 func (s *TokenService) IsUserTokensInvalidated(ctx context.Context, userID string, tokenIssuedAt time.Time) (bool, error) {
 	key := cache.BuildCacheKey("user_token_invalidated:", userID)
-	
+
 	var invalidatedAt int64
 	if err := s.cacheService.Get(ctx, key, &invalidatedAt); err != nil {
 		// 如果键不存在，说明没有失效
@@ -198,52 +198,52 @@ func (s *TokenService) GenerateAPIKey(ctx context.Context, userID string, name s
 	if _, err := rand.Read(keyBytes); err != nil {
 		return "", fmt.Errorf("failed to generate random key: %w", err)
 	}
-	
+
 	apiKey := "tk_" + hex.EncodeToString(keyBytes)
-	
+
 	// 存储API密钥信息
 	keyInfo := map[string]interface{}{
 		"user_id":    userID,
 		"name":       name,
 		"created_at": time.Now().Unix(),
 	}
-	
+
 	if expiresAt != nil {
 		keyInfo["expires_at"] = expiresAt.Unix()
 	}
-	
+
 	key := cache.BuildCacheKey("api_key:", apiKey)
 	var ttl time.Duration = 365 * 24 * time.Hour // 默认1年
 	if expiresAt != nil {
 		ttl = time.Until(*expiresAt)
 	}
-	
+
 	if err := s.cacheService.Set(ctx, key, keyInfo, ttl); err != nil {
 		return "", fmt.Errorf("failed to store API key: %w", err)
 	}
-	
+
 	logger.Info("API key generated",
 		logger.String("user_id", userID),
 		logger.String("key_name", name),
 	)
-	
+
 	return apiKey, nil
 }
 
 // ValidateAPIKey 验证API密钥
 func (s *TokenService) ValidateAPIKey(ctx context.Context, apiKey string) (string, error) {
 	key := cache.BuildCacheKey("api_key:", apiKey)
-	
+
 	var keyInfo map[string]interface{}
 	if err := s.cacheService.Get(ctx, key, &keyInfo); err != nil {
 		return "", errors.ErrInvalidToken
 	}
-	
+
 	userID, ok := keyInfo["user_id"].(string)
 	if !ok {
 		return "", errors.ErrInvalidToken
 	}
-	
+
 	// 检查是否过期
 	if expiresAt, exists := keyInfo["expires_at"]; exists {
 		if expTime, ok := expiresAt.(float64); ok {
@@ -252,7 +252,7 @@ func (s *TokenService) ValidateAPIKey(ctx context.Context, apiKey string) (strin
 			}
 		}
 	}
-	
+
 	return userID, nil
 }
 

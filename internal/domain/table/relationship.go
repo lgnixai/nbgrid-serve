@@ -17,21 +17,21 @@ const (
 
 // RelationshipConfig 关系配置
 type RelationshipConfig struct {
-	ID                    string       `json:"id"`
-	SourceTableID         string       `json:"source_table_id"`
-	SourceFieldID         string       `json:"source_field_id"`
-	TargetTableID         string       `json:"target_table_id"`
-	TargetFieldID         string       `json:"target_field_id"`
-	RelationType          RelationType `json:"relation_type"`
-	DisplayField          string       `json:"display_field"`          // 显示字段名称
-	AllowLinkToMultiple   bool         `json:"allow_link_to_multiple"` // 是否允许链接到多个记录
-	IsSymmetric           bool         `json:"is_symmetric"`           // 是否为对称关系
-	CascadeDelete         bool         `json:"cascade_delete"`         // 是否级联删除
-	OnDeleteAction        string       `json:"on_delete_action"`       // 删除时的动作: cascade, set_null, restrict
-	OnUpdateAction        string       `json:"on_update_action"`       // 更新时的动作: cascade, set_null, restrict
-	CreatedBy             string       `json:"created_by"`
-	CreatedTime           time.Time    `json:"created_at"`
-	LastModifiedTime      *time.Time   `json:"updated_at"`
+	ID                  string       `json:"id"`
+	SourceTableID       string       `json:"source_table_id"`
+	SourceFieldID       string       `json:"source_field_id"`
+	TargetTableID       string       `json:"target_table_id"`
+	TargetFieldID       string       `json:"target_field_id"`
+	RelationType        RelationType `json:"relation_type"`
+	DisplayField        string       `json:"display_field"`          // 显示字段名称
+	AllowLinkToMultiple bool         `json:"allow_link_to_multiple"` // 是否允许链接到多个记录
+	IsSymmetric         bool         `json:"is_symmetric"`           // 是否为对称关系
+	CascadeDelete       bool         `json:"cascade_delete"`         // 是否级联删除
+	OnDeleteAction      string       `json:"on_delete_action"`       // 删除时的动作: cascade, set_null, restrict
+	OnUpdateAction      string       `json:"on_update_action"`       // 更新时的动作: cascade, set_null, restrict
+	CreatedBy           string       `json:"created_by"`
+	CreatedTime         time.Time    `json:"created_at"`
+	LastModifiedTime    *time.Time   `json:"updated_at"`
 }
 
 // LinkFieldOptions 链接字段选项
@@ -49,19 +49,19 @@ type LinkFieldOptions struct {
 
 // RelationshipConstraint 关系约束
 type RelationshipConstraint struct {
-	Type        string      `json:"type"`        // unique, foreign_key, check
-	Expression  string      `json:"expression"`  // 约束表达式
-	ErrorMessage string     `json:"error_message"`
-	IsActive    bool        `json:"is_active"`
+	Type         string `json:"type"`       // unique, foreign_key, check
+	Expression   string `json:"expression"` // 约束表达式
+	ErrorMessage string `json:"error_message"`
+	IsActive     bool   `json:"is_active"`
 }
 
 // RelationshipImpactAnalysis 关系影响分析
 type RelationshipImpactAnalysis struct {
-	AffectedTables   []string `json:"affected_tables"`
-	AffectedRecords  int64    `json:"affected_records"`
-	AffectedFields   []string `json:"affected_fields"`
-	BreakingChanges  []string `json:"breaking_changes"`
-	Warnings         []string `json:"warnings"`
+	AffectedTables     []string `json:"affected_tables"`
+	AffectedRecords    int64    `json:"affected_records"`
+	AffectedFields     []string `json:"affected_fields"`
+	BreakingChanges    []string `json:"breaking_changes"`
+	Warnings           []string `json:"warnings"`
 	RequiredMigrations []string `json:"required_migrations"`
 }
 
@@ -188,7 +188,7 @@ func (rm *RelationshipManager) GetRelationshipsByField(fieldID string) []*Relati
 // ValidateRelationshipIntegrity 验证关系完整性
 func (rm *RelationshipManager) ValidateRelationshipIntegrity(tableID string, recordData map[string]interface{}) error {
 	relationships := rm.GetRelationshipsByTable(tableID)
-	
+
 	for _, rel := range relationships {
 		if rel.SourceTableID == tableID {
 			// 验证源表的关系完整性
@@ -197,7 +197,7 @@ func (rm *RelationshipManager) ValidateRelationshipIntegrity(tableID string, rec
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -293,7 +293,7 @@ func (rm *RelationshipManager) checkRelationshipConflicts(config *RelationshipCo
 // createReverseRelationship 创建反向关系
 func (rm *RelationshipManager) createReverseRelationship(config *RelationshipConfig) *RelationshipConfig {
 	reverseType := rm.getReverseRelationType(config.RelationType)
-	
+
 	return &RelationshipConfig{
 		ID:                  rm.generateReverseRelationshipID(config),
 		SourceTableID:       config.TargetTableID,
@@ -347,7 +347,7 @@ func (rm *RelationshipManager) analyzeRelationshipImpact(oldConfig, newConfig *R
 
 	// 检查关系类型变更
 	if oldConfig.RelationType != newConfig.RelationType {
-		impact.BreakingChanges = append(impact.BreakingChanges, 
+		impact.BreakingChanges = append(impact.BreakingChanges,
 			fmt.Sprintf("关系类型从 %s 变更为 %s", oldConfig.RelationType, newConfig.RelationType))
 		impact.RequiredMigrations = append(impact.RequiredMigrations, "重建关系索引")
 	}

@@ -8,19 +8,19 @@ import (
 
 // AttachmentItem 附件项
 type AttachmentItem struct {
-	ID              string  `json:"id"`
-	Name            string  `json:"name"`
-	Path            string  `json:"path"`
-	Token           string  `json:"token"`
-	Size            int64   `json:"size"`
-	MimeType        string  `json:"mimetype"`
-	PresignedURL    *string `json:"presigned_url,omitempty"`
-	Width           *int    `json:"width,omitempty"`
-	Height          *int    `json:"height,omitempty"`
-	SmallThumbnail  *string `json:"sm_thumbnail_url,omitempty"`
-	LargeThumbnail  *string `json:"lg_thumbnail_url,omitempty"`
-	CreatedTime     time.Time `json:"created_time"`
-	UpdatedTime     time.Time `json:"updated_time"`
+	ID             string    `json:"id"`
+	Name           string    `json:"name"`
+	Path           string    `json:"path"`
+	Token          string    `json:"token"`
+	Size           int64     `json:"size"`
+	MimeType       string    `json:"mimetype"`
+	PresignedURL   *string   `json:"presigned_url,omitempty"`
+	Width          *int      `json:"width,omitempty"`
+	Height         *int      `json:"height,omitempty"`
+	SmallThumbnail *string   `json:"sm_thumbnail_url,omitempty"`
+	LargeThumbnail *string   `json:"lg_thumbnail_url,omitempty"`
+	CreatedTime    time.Time `json:"created_time"`
+	UpdatedTime    time.Time `json:"updated_time"`
 }
 
 // NewAttachmentItem 创建新的附件项
@@ -85,7 +85,7 @@ func (a *AttachmentItem) IsDocument() bool {
 		"text/plain",
 		"text/csv",
 	}
-	
+
 	for _, docType := range documentTypes {
 		if a.MimeType == docType {
 			return true
@@ -96,15 +96,15 @@ func (a *AttachmentItem) IsDocument() bool {
 
 // UploadToken 上传令牌
 type UploadToken struct {
-	Token       string    `json:"token"`
-	UserID      string    `json:"user_id"`
-	TableID     string    `json:"table_id"`
-	FieldID     string    `json:"field_id"`
-	RecordID    string    `json:"record_id"`
-	ExpiresAt   time.Time `json:"expires_at"`
-	MaxSize     int64     `json:"max_size"`
-	AllowedTypes []string `json:"allowed_types"`
-	CreatedTime time.Time `json:"created_time"`
+	Token        string    `json:"token"`
+	UserID       string    `json:"user_id"`
+	TableID      string    `json:"table_id"`
+	FieldID      string    `json:"field_id"`
+	RecordID     string    `json:"record_id"`
+	ExpiresAt    time.Time `json:"expires_at"`
+	MaxSize      int64     `json:"max_size"`
+	AllowedTypes []string  `json:"allowed_types"`
+	CreatedTime  time.Time `json:"created_time"`
 }
 
 // NewUploadToken 创建新的上传令牌
@@ -132,7 +132,7 @@ func (t *UploadToken) IsValidType(mimeType string) bool {
 	if len(t.AllowedTypes) == 0 {
 		return true // 如果没有限制，则允许所有类型
 	}
-	
+
 	for _, allowedType := range t.AllowedTypes {
 		if mimeType == allowedType {
 			return true
@@ -148,19 +148,19 @@ func (t *UploadToken) IsValidSize(size int64) bool {
 
 // SignatureRequest 签名请求
 type SignatureRequest struct {
-	TableID     string   `json:"table_id" binding:"required"`
-	FieldID     string   `json:"field_id" binding:"required"`
-	RecordID    string   `json:"record_id" binding:"required"`
-	MaxSize     int64    `json:"max_size,omitempty"`
+	TableID      string   `json:"table_id" binding:"required"`
+	FieldID      string   `json:"field_id" binding:"required"`
+	RecordID     string   `json:"record_id" binding:"required"`
+	MaxSize      int64    `json:"max_size,omitempty"`
 	AllowedTypes []string `json:"allowed_types,omitempty"`
 }
 
 // SignatureResponse 签名响应
 type SignatureResponse struct {
-	Token       string `json:"token"`
-	UploadURL   string `json:"upload_url"`
-	ExpiresAt   int64  `json:"expires_at"`
-	MaxSize     int64  `json:"max_size"`
+	Token        string   `json:"token"`
+	UploadURL    string   `json:"upload_url"`
+	ExpiresAt    int64    `json:"expires_at"`
+	MaxSize      int64    `json:"max_size"`
 	AllowedTypes []string `json:"allowed_types"`
 }
 
@@ -191,8 +191,8 @@ type NotifyResponse struct {
 
 // ReadRequest 读取请求
 type ReadRequest struct {
-	Path                     string `form:"path" binding:"required"`
-	Token                    string `form:"token,omitempty"`
+	Path                       string `form:"path" binding:"required"`
+	Token                      string `form:"token,omitempty"`
 	ResponseContentDisposition string `form:"response-content-disposition,omitempty"`
 }
 
@@ -206,37 +206,37 @@ type ReadResponse struct {
 
 // AttachmentStats 附件统计信息
 type AttachmentStats struct {
-	TotalFiles     int64   `json:"total_files"`
-	TotalSize      int64   `json:"total_size"`
-	ImageFiles     int64   `json:"image_files"`
-	VideoFiles     int64   `json:"video_files"`
-	AudioFiles     int64   `json:"audio_files"`
-	DocumentFiles  int64   `json:"document_files"`
-	OtherFiles     int64   `json:"other_files"`
-	LastUploaded   time.Time `json:"last_uploaded"`
+	TotalFiles    int64     `json:"total_files"`
+	TotalSize     int64     `json:"total_size"`
+	ImageFiles    int64     `json:"image_files"`
+	VideoFiles    int64     `json:"video_files"`
+	AudioFiles    int64     `json:"audio_files"`
+	DocumentFiles int64     `json:"document_files"`
+	OtherFiles    int64     `json:"other_files"`
+	LastUploaded  time.Time `json:"last_uploaded"`
 }
 
 // AttachmentStorageConfig 附件存储配置
 type AttachmentStorageConfig struct {
-	Type         string `json:"type"` // local, s3, oss, etc.
-	LocalPath    string `json:"local_path,omitempty"`
-	BucketName   string `json:"bucket_name,omitempty"`
-	AccessKey    string `json:"access_key,omitempty"`
-	SecretKey    string `json:"secret_key,omitempty"`
-	Region       string `json:"region,omitempty"`
-	Endpoint     string `json:"endpoint,omitempty"`
-	CDNBaseURL   string `json:"cdn_base_url,omitempty"`
-	MaxFileSize  int64  `json:"max_file_size"`
+	Type         string   `json:"type"` // local, s3, oss, etc.
+	LocalPath    string   `json:"local_path,omitempty"`
+	BucketName   string   `json:"bucket_name,omitempty"`
+	AccessKey    string   `json:"access_key,omitempty"`
+	SecretKey    string   `json:"secret_key,omitempty"`
+	Region       string   `json:"region,omitempty"`
+	Endpoint     string   `json:"endpoint,omitempty"`
+	CDNBaseURL   string   `json:"cdn_base_url,omitempty"`
+	MaxFileSize  int64    `json:"max_file_size"`
 	AllowedTypes []string `json:"allowed_types"`
 }
 
 // ThumbnailConfig 缩略图配置
 type ThumbnailConfig struct {
-	Enabled      bool   `json:"enabled"`
-	SmallWidth   int    `json:"small_width"`
-	SmallHeight  int    `json:"small_height"`
-	LargeWidth   int    `json:"large_width"`
-	LargeHeight  int    `json:"large_height"`
-	Quality      int    `json:"quality"`
-	Format       string `json:"format"`
+	Enabled     bool   `json:"enabled"`
+	SmallWidth  int    `json:"small_width"`
+	SmallHeight int    `json:"small_height"`
+	LargeWidth  int    `json:"large_width"`
+	LargeHeight int    `json:"large_height"`
+	Quality     int    `json:"quality"`
+	Format      string `json:"format"`
 }
