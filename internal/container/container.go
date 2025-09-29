@@ -59,9 +59,10 @@ type Container struct {
 	attachmentDomainService attachment.Service
 
 	// 应用服务
-	userAppService       *application.UserService
-	authService          *application.AuthService
-	permissionAppService *application.PermissionService
+	userAppService        *application.UserService
+	authService           *application.AuthService
+	recordAppService      *application.RecordService
+	permissionAppService  *application.PermissionService
 	middlewareAuthService middleware.AuthService
 
 	// WebSocket和实时协作
@@ -182,19 +183,22 @@ func (c *Container) initDomainServices() {
 func (c *Container) initApplicationServices() {
 	// 创建令牌服务
 	tokenService := application.NewTokenService(c.config.JWT, c.redisClient)
-	
+
 	// 创建会话服务
 	sessionService := application.NewSessionService(c.redisClient)
-	
+
 	// 创建用户应用服务
 	c.userAppService = application.NewUserService(c.userDomainService, tokenService, sessionService, c.redisClient)
-	
+
 	// 创建新的认证服务
 	c.authService = application.NewAuthService(tokenService, c.userDomainService, c.redisClient)
-	
+
+	// 创建记录应用服务
+	c.recordAppService = application.NewRecordService(c.recordRepo, c.tableDomainService, c.permissionDomainService)
+
 	// 创建权限应用服务
 	c.permissionAppService = application.NewPermissionService(c.permissionDomainService, c.redisClient)
-	
+
 	// 创建中间件认证服务（保持兼容性）
 	c.middlewareAuthService = middleware.NewJWTAuthService(c.config.JWT, c.redisClient)
 }
@@ -345,26 +349,33 @@ func (c *Container) Close() error {
 
 // Getters for accessing services
 
-func (c *Container) Config() *config.Config                                { return c.config }
-func (c *Container) DBConnection() *database.Connection                    { return c.dbConn }
-func (c *Container) RedisClient() *cache.RedisClient                       { return c.redisClient }
-func (c *Container) UserAppService() *application.UserService              { return c.userAppService }
-func (c *Container) AuthService() *application.AuthService               { return c.authService }
-func (c *Container) PermissionAppService() *application.PermissionService { return c.permissionAppService }
-func (c *Container) MiddlewareAuthService() middleware.AuthService       { return c.middlewareAuthService }
-func (c *Container) SpaceService() space.Service                           { return c.spaceDomainService }
-func (c *Container) BaseService() base.Service                             { return c.baseDomainService }
-func (c *Container) TableService() table.Service                           { return c.tableDomainService }
-func (c *Container) RecordService() record.Service                         { return c.recordDomainService }
-func (c *Container) ViewService() view.Service                             { return c.viewDomainService }
-func (c *Container) PermissionService() permission.Service                 { return c.permissionDomainService }
-func (c *Container) ShareService() share.Service                           { return c.shareDomainService }
-func (c *Container) AttachmentService() attachment.Service                  { return c.attachmentDomainService }
-func (c *Container) WebSocketService() websocket.Service                   { return c.wsService }
-func (c *Container) WebSocketHandler() *websocket.Handler                  { return c.wsHandler }
-func (c *Container) ShareDBService() sharedb.ShareDB                       { return c.sharedbService }
-func (c *Container) ShareDBWSIntegration() *sharedb.WebSocketIntegration   { return c.sharedbWSIntegration }
-func (c *Container) CollaborationService() *websocket.CollaborationService { return c.collaborationService }
+func (c *Container) Config() *config.Config                       { return c.config }
+func (c *Container) DBConnection() *database.Connection           { return c.dbConn }
+func (c *Container) RedisClient() *cache.RedisClient              { return c.redisClient }
+func (c *Container) UserAppService() *application.UserService     { return c.userAppService }
+func (c *Container) AuthService() *application.AuthService        { return c.authService }
+func (c *Container) RecordAppService() *application.RecordService { return c.recordAppService }
+func (c *Container) PermissionAppService() *application.PermissionService {
+	return c.permissionAppService
+}
+func (c *Container) MiddlewareAuthService() middleware.AuthService { return c.middlewareAuthService }
+func (c *Container) SpaceService() space.Service                   { return c.spaceDomainService }
+func (c *Container) BaseService() base.Service                     { return c.baseDomainService }
+func (c *Container) TableService() table.Service                   { return c.tableDomainService }
+func (c *Container) RecordService() record.Service                 { return c.recordDomainService }
+func (c *Container) ViewService() view.Service                     { return c.viewDomainService }
+func (c *Container) PermissionService() permission.Service         { return c.permissionDomainService }
+func (c *Container) ShareService() share.Service                   { return c.shareDomainService }
+func (c *Container) AttachmentService() attachment.Service         { return c.attachmentDomainService }
+func (c *Container) WebSocketService() websocket.Service           { return c.wsService }
+func (c *Container) WebSocketHandler() *websocket.Handler          { return c.wsHandler }
+func (c *Container) ShareDBService() sharedb.ShareDB               { return c.sharedbService }
+func (c *Container) ShareDBWSIntegration() *sharedb.WebSocketIntegration {
+	return c.sharedbWSIntegration
+}
+func (c *Container) CollaborationService() *websocket.CollaborationService {
+	return c.collaborationService
+}
 
 // 简单的内存上传令牌仓储实现
 type memoryUploadTokenRepository struct {

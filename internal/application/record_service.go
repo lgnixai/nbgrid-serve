@@ -43,7 +43,15 @@ func NewRecordService(
 func (s *RecordService) CreateRecord(ctx context.Context, req record.CreateRecordRequest, userID string) (*record.Record, error) {
 	// 1. 权限检查
 	if err := s.checkPermission(ctx, userID, req.TableID, "record:create"); err != nil {
-		return nil, err
+		// 如果权限检查失败，尝试自动分配权限（如果用户是表的创建者）
+		if s.autoGrantPermissionIfOwner(ctx, userID, req.TableID) {
+			// 重新检查权限
+			if err := s.checkPermission(ctx, userID, req.TableID, "record:create"); err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
 	}
 
 	// 2. 获取表格schema
@@ -377,6 +385,36 @@ func (s *RecordService) checkPermission(ctx context.Context, userID, tableID, ac
 		return errors.ErrForbidden.WithDetails(fmt.Sprintf("用户 %s 没有权限执行操作 %s", userID, action))
 	}
 	return nil
+}
+
+// autoGrantPermissionIfOwner 如果用户是表的创建者，自动分配权限
+func (s *RecordService) autoGrantPermissionIfOwner(ctx context.Context, userID, tableID string) bool {
+	// 获取表信息
+	table, err := s.tableService.GetTable(ctx, tableID)
+	if err != nil {
+		logger.Error("获取表信息失败", logger.ErrorField(err))
+		return false
+	}
+
+	// 检查用户是否是表的创建者
+	if table.CreatedBy != userID {
+		return false
+	}
+
+	// 自动分配表的所有权限给创建者
+	ownerRole := permission.RoleOwner
+	if err := s.permissionSvc.GrantPermission(ctx, userID, "table", tableID, ownerRole, userID); err != nil {
+		logger.Error("自动分配权限失败", logger.ErrorField(err))
+		return false
+	}
+
+	logger.Info("自动为表创建者分配权限",
+		logger.String("user_id", userID),
+		logger.String("table_id", tableID),
+		logger.String("role", string(ownerRole)),
+	)
+
+	return true
 }
 
 // RecordVersion 记录版本信息

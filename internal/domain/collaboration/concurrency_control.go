@@ -13,20 +13,20 @@ import (
 
 // ConcurrencyControlService 并发控制服务
 type ConcurrencyControlService struct {
-	lockManager     *LockManager
+	lockManager      *LockManager
 	conflictDetector *ConflictDetector
-	operationQueue  *OperationQueue
-	logger          *zap.Logger
-	mu              sync.RWMutex
+	operationQueue   *OperationQueue
+	logger           *zap.Logger
+	mu               sync.RWMutex
 }
 
 // NewConcurrencyControlService 创建并发控制服务
 func NewConcurrencyControlService(logger *zap.Logger) *ConcurrencyControlService {
 	return &ConcurrencyControlService{
-		lockManager:     NewLockManager(),
+		lockManager:      NewLockManager(),
 		conflictDetector: NewConflictDetector(),
-		operationQueue:  NewOperationQueue(),
-		logger:          logger,
+		operationQueue:   NewOperationQueue(),
+		logger:           logger,
 	}
 }
 
@@ -80,7 +80,7 @@ func (lm *LockManager) AcquireLock(ctx context.Context, req *LockRequest) (*Reso
 	defer lm.mu.Unlock()
 
 	resourceKey := fmt.Sprintf("%s:%s", req.ResourceType, req.ResourceID)
-	
+
 	// 检查是否已存在锁
 	if existingLock, exists := lm.locks[resourceKey]; exists {
 		// 检查锁是否过期
@@ -115,7 +115,7 @@ func (lm *LockManager) ReleaseLock(resourceType, resourceID, userID, sessionID s
 	defer lm.mu.Unlock()
 
 	resourceKey := fmt.Sprintf("%s:%s", resourceType, resourceID)
-	
+
 	if lock, exists := lm.locks[resourceKey]; exists {
 		if lock.OwnerID == userID && lock.SessionID == sessionID {
 			delete(lm.locks, resourceKey)
@@ -168,7 +168,7 @@ func (lm *LockManager) GetActiveLocks() map[string]*ResourceLock {
 
 	result := make(map[string]*ResourceLock)
 	now := time.Now()
-	
+
 	for key, lock := range lm.locks {
 		if now.Before(lock.ExpiresAt) {
 			result[key] = lock
@@ -218,7 +218,7 @@ func (cd *ConflictDetector) DetectConflict(ctx context.Context, op *Operation, e
 		if cd.hasConflict(op, existingOp) {
 			conflictType := cd.determineConflictType(op, existingOp)
 			resolution := cd.generateResolution(op, existingOp, conflictType)
-			
+
 			return &ConflictResult{
 				HasConflict:   true,
 				ConflictType:  conflictType,
@@ -250,7 +250,7 @@ func (cd *ConflictDetector) hasConflict(op1, op2 *Operation) bool {
 	if timeDiff < 0 {
 		timeDiff = -timeDiff
 	}
-	
+
 	// 5秒内的操作可能冲突
 	if timeDiff > 5*time.Second {
 		return false
@@ -275,60 +275,60 @@ func (cd *ConflictDetector) determineConflictType(op1, op2 *Operation) string {
 	if op1.Type == "delete" || op2.Type == "delete" {
 		return "delete_conflict"
 	}
-	
+
 	if op1.Type == "update" && op2.Type == "update" {
 		return "concurrent_update"
 	}
-	
+
 	if op1.Type == "create" && op2.Type == "create" {
 		return "duplicate_create"
 	}
-	
+
 	return "unknown_conflict"
 }
 
 // generateResolution 生成冲突解决方案
 func (cd *ConflictDetector) generateResolution(op1, op2 *Operation, conflictType string) map[string]interface{} {
 	resolution := make(map[string]interface{})
-	
+
 	switch conflictType {
 	case "concurrent_update":
 		// 合并更新策略
 		resolution["strategy"] = "merge"
 		resolution["merged_data"] = cd.mergeData(op1.Data, op2.Data)
 		resolution["winner"] = cd.selectWinner(op1, op2)
-		
+
 	case "delete_conflict":
 		// 删除冲突策略
 		resolution["strategy"] = "delete_wins"
 		resolution["action"] = "confirm_delete"
-		
+
 	case "duplicate_create":
 		// 重复创建策略
 		resolution["strategy"] = "latest_wins"
 		resolution["winner"] = cd.selectWinner(op1, op2)
-		
+
 	default:
 		resolution["strategy"] = "manual_resolve"
 	}
-	
+
 	return resolution
 }
 
 // mergeData 合并数据
 func (cd *ConflictDetector) mergeData(data1, data2 map[string]interface{}) map[string]interface{} {
 	merged := make(map[string]interface{})
-	
+
 	// 复制第一个操作的数据
 	for key, value := range data1 {
 		merged[key] = value
 	}
-	
+
 	// 合并第二个操作的数据（后者优先）
 	for key, value := range data2 {
 		merged[key] = value
 	}
-	
+
 	return merged
 }
 
@@ -341,12 +341,12 @@ func (cd *ConflictDetector) selectWinner(op1, op2 *Operation) string {
 	if op2.Version > op1.Version {
 		return op2.ID
 	}
-	
+
 	// 时间戳晚的获胜
 	if op1.Timestamp.After(op2.Timestamp) {
 		return op1.ID
 	}
-	
+
 	return op2.ID
 }
 
@@ -379,7 +379,7 @@ func (oq *OperationQueue) GetOperations(resourceType, resourceID string) []*Oper
 
 	resourceKey := fmt.Sprintf("%s:%s", resourceType, resourceID)
 	ops := oq.operations[resourceKey]
-	
+
 	// 返回副本
 	result := make([]*Operation, len(ops))
 	copy(result, ops)
@@ -393,7 +393,7 @@ func (oq *OperationQueue) RemoveOperation(resourceType, resourceID, operationID 
 
 	resourceKey := fmt.Sprintf("%s:%s", resourceType, resourceID)
 	ops := oq.operations[resourceKey]
-	
+
 	for i, op := range ops {
 		if op.ID == operationID {
 			oq.operations[resourceKey] = append(ops[:i], ops[i+1:]...)
@@ -408,7 +408,7 @@ func (oq *OperationQueue) CleanupOldOperations(maxAge time.Duration) {
 	defer oq.mu.Unlock()
 
 	cutoff := time.Now().Add(-maxAge)
-	
+
 	for resourceKey, ops := range oq.operations {
 		var filtered []*Operation
 		for _, op := range ops {
@@ -436,7 +436,7 @@ func (ccs *ConcurrencyControlService) ExecuteWithConcurrencyControl(
 		Timeout:      30 * time.Second,
 	}
 
-	lock, err := ccs.lockManager.AcquireLock(ctx, lockReq)
+	_, err := ccs.lockManager.AcquireLock(ctx, lockReq)
 	if err != nil {
 		return fmt.Errorf("failed to acquire lock: %w", err)
 	}
@@ -503,23 +503,23 @@ func (ccs *ConcurrencyControlService) handleConflict(ctx context.Context, op *Op
 		if mergedData, ok := conflict.Resolution["merged_data"].(map[string]interface{}); ok {
 			op.Data = mergedData
 		}
-		
+
 	case "delete_wins":
 		// 删除操作获胜，确认删除
 		if op.Type != "delete" {
 			return fmt.Errorf("operation cancelled due to delete conflict")
 		}
-		
+
 	case "latest_wins":
 		// 最新操作获胜
 		if winner, ok := conflict.Resolution["winner"].(string); ok && winner != op.ID {
 			return fmt.Errorf("operation cancelled, latest operation wins")
 		}
-		
+
 	case "manual_resolve":
 		// 需要手动解决
 		return fmt.Errorf("manual conflict resolution required")
-		
+
 	default:
 		return fmt.Errorf("unknown conflict resolution strategy: %s", strategy)
 	}
@@ -546,7 +546,7 @@ func (ccs *ConcurrencyControlService) StartCleanupTasks(ctx context.Context) {
 // GetConcurrencyStats 获取并发控制统计信息
 func (ccs *ConcurrencyControlService) GetConcurrencyStats() map[string]interface{} {
 	activeLocks := ccs.lockManager.GetActiveLocks()
-	
+
 	return map[string]interface{}{
 		"active_locks": len(activeLocks),
 		"lock_details": activeLocks,

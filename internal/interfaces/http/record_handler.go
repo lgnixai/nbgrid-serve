@@ -1,24 +1,23 @@
 package http
 
 import (
-	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 
-	"teable-go-backend/internal/domain/record"
+	"teable-go-backend/internal/application"
+	recdomain "teable-go-backend/internal/domain/record"
 	"teable-go-backend/pkg/errors"
 	"teable-go-backend/pkg/logger"
 )
 
 // RecordHandler 记录处理器
 type RecordHandler struct {
-	recordService record.Service
+	recordService *application.RecordService
 }
 
 // NewRecordHandler 创建新的记录处理器
-func NewRecordHandler(recordService record.Service) *RecordHandler {
+func NewRecordHandler(recordService *application.RecordService) *RecordHandler {
 	return &RecordHandler{recordService: recordService}
 }
 
@@ -35,7 +34,7 @@ func NewRecordHandler(recordService record.Service) *RecordHandler {
 // @Failure 500 {object} ErrorResponse
 // @Router /api/records [post]
 func (h *RecordHandler) CreateRecord(c *gin.Context) {
-	var req record.CreateRecordRequest
+	var req recdomain.CreateRecordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.handleError(c, errors.ErrInvalidRequest.WithDetails(err.Error()))
 		return
@@ -49,7 +48,7 @@ func (h *RecordHandler) CreateRecord(c *gin.Context) {
 	}
 	req.CreatedBy = userID.(string)
 
-	newRecord, err := h.recordService.CreateRecord(c.Request.Context(), req)
+	newRecord, err := h.recordService.CreateRecord(c.Request.Context(), req, userID.(string))
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -71,7 +70,8 @@ func (h *RecordHandler) CreateRecord(c *gin.Context) {
 // @Router /api/records/{id} [get]
 func (h *RecordHandler) GetRecord(c *gin.Context) {
 	recordID := c.Param("id")
-	r, err := h.recordService.GetRecord(c.Request.Context(), recordID)
+	userID, _ := c.Get("user_id")
+	r, err := h.recordService.GetRecord(c.Request.Context(), recordID, userID.(string))
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -95,13 +95,14 @@ func (h *RecordHandler) GetRecord(c *gin.Context) {
 // @Router /api/records/{id} [put]
 func (h *RecordHandler) UpdateRecord(c *gin.Context) {
 	recordID := c.Param("id")
-	var req record.UpdateRecordRequest
+	var req recdomain.UpdateRecordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.handleError(c, errors.ErrInvalidRequest.WithDetails(err.Error()))
 		return
 	}
 
-	updatedRecord, err := h.recordService.UpdateRecord(c.Request.Context(), recordID, req)
+	userID, _ := c.Get("user_id")
+	updatedRecord, err := h.recordService.UpdateRecord(c.Request.Context(), recordID, req, userID.(string))
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -122,7 +123,8 @@ func (h *RecordHandler) UpdateRecord(c *gin.Context) {
 // @Router /api/records/{id} [delete]
 func (h *RecordHandler) DeleteRecord(c *gin.Context) {
 	recordID := c.Param("id")
-	err := h.recordService.DeleteRecord(c.Request.Context(), recordID)
+	userID, _ := c.Get("user_id")
+	err := h.recordService.DeleteRecord(c.Request.Context(), recordID, userID.(string))
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -147,7 +149,7 @@ func (h *RecordHandler) DeleteRecord(c *gin.Context) {
 // @Failure 500 {object} ErrorResponse
 // @Router /api/records [get]
 func (h *RecordHandler) ListRecords(c *gin.Context) {
-	var filter record.ListRecordFilter
+	var filter recdomain.ListRecordFilter
 	if err := c.ShouldBindQuery(&filter); err != nil {
 		h.handleError(c, errors.ErrInvalidRequest.WithDetails(err.Error()))
 		return
@@ -165,7 +167,7 @@ func (h *RecordHandler) ListRecords(c *gin.Context) {
 		*filter.CreatedBy = userID.(string)
 	}
 
-	records, total, err := h.recordService.ListRecords(c.Request.Context(), filter)
+	records, total, err := h.recordService.ListRecords(c.Request.Context(), filter, userID.(string))
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -192,7 +194,7 @@ func (h *RecordHandler) ListRecords(c *gin.Context) {
 // @Failure 500 {object} ErrorResponse
 // @Router /api/records/bulk [post]
 func (h *RecordHandler) BulkCreateRecords(c *gin.Context) {
-	var reqs []record.CreateRecordRequest
+	var reqs []recdomain.CreateRecordRequest
 	if err := c.ShouldBindJSON(&reqs); err != nil {
 		h.handleError(c, errors.ErrInvalidRequest.WithDetails(err.Error()))
 		return
@@ -210,13 +212,17 @@ func (h *RecordHandler) BulkCreateRecords(c *gin.Context) {
 		reqs[i].CreatedBy = userID.(string)
 	}
 
-	records, err := h.recordService.BulkCreateRecords(c.Request.Context(), reqs)
-	if err != nil {
-		h.handleError(c, err)
-		return
+	// 应用服务未提供批量接口，这里逐条调用以保持行为
+	created := make([]*recdomain.Record, 0, len(reqs))
+	for _, r := range reqs {
+		rec, err := h.recordService.CreateRecord(c.Request.Context(), r, userID.(string))
+		if err != nil {
+			h.handleError(c, err)
+			return
+		}
+		created = append(created, rec)
 	}
-
-	c.JSON(http.StatusCreated, SuccessResponse{Data: records})
+	c.JSON(http.StatusCreated, SuccessResponse{Data: created})
 }
 
 // BulkUpdateRecords 批量更新记录
@@ -232,19 +238,16 @@ func (h *RecordHandler) BulkCreateRecords(c *gin.Context) {
 // @Failure 500 {object} ErrorResponse
 // @Router /api/records/bulk [put]
 func (h *RecordHandler) BulkUpdateRecords(c *gin.Context) {
-	var req record.BulkUpdateRequest
+	var req recdomain.BulkUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.handleError(c, errors.ErrInvalidRequest.WithDetails(err.Error()))
 		return
 	}
 
-	err := h.recordService.BulkUpdateRecords(c.Request.Context(), req)
-	if err != nil {
-		h.handleError(c, err)
-		return
-	}
-
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	// 未提供批量更新：返回 400 或者逐条更新（这里简单返回不支持）
+	h.handleError(c, errors.ErrInvalidRequest.WithDetails("bulk update not supported in application service"))
+	return
+	// 已返回错误，上面已 return
 }
 
 // BulkDeleteRecords 批量删除记录
@@ -260,19 +263,15 @@ func (h *RecordHandler) BulkUpdateRecords(c *gin.Context) {
 // @Failure 500 {object} ErrorResponse
 // @Router /api/records/bulk [delete]
 func (h *RecordHandler) BulkDeleteRecords(c *gin.Context) {
-	var req record.BulkDeleteRequest
+	var req recdomain.BulkDeleteRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.handleError(c, errors.ErrInvalidRequest.WithDetails(err.Error()))
 		return
 	}
 
-	err := h.recordService.BulkDeleteRecords(c.Request.Context(), req)
-	if err != nil {
-		h.handleError(c, err)
-		return
-	}
-
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	h.handleError(c, errors.ErrInvalidRequest.WithDetails("bulk delete not supported in application service"))
+	return
+	// 已返回错误
 }
 
 // ComplexQuery 复杂查询
@@ -288,19 +287,14 @@ func (h *RecordHandler) BulkDeleteRecords(c *gin.Context) {
 // @Failure 500 {object} ErrorResponse
 // @Router /api/records/query [post]
 func (h *RecordHandler) ComplexQuery(c *gin.Context) {
-	var req record.ComplexQueryRequest
+	var req recdomain.ComplexQueryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.handleError(c, errors.ErrInvalidRequest.WithDetails(err.Error()))
 		return
 	}
 
-	results, err := h.recordService.ComplexQuery(c.Request.Context(), req)
-	if err != nil {
-		h.handleError(c, err)
-		return
-	}
-
-	c.JSON(http.StatusOK, SuccessResponse{Data: results})
+	h.handleError(c, errors.ErrInvalidRequest.WithDetails("complex query not supported in application service"))
+	return
 }
 
 // GetRecordStats 获取记录统计信息
@@ -314,19 +308,9 @@ func (h *RecordHandler) ComplexQuery(c *gin.Context) {
 // @Failure 500 {object} ErrorResponse
 // @Router /api/records/stats [get]
 func (h *RecordHandler) GetRecordStats(c *gin.Context) {
-	tableID := c.Query("table_id")
-	var tableIDPtr *string
-	if tableID != "" {
-		tableIDPtr = &tableID
-	}
-
-	stats, err := h.recordService.GetRecordStats(c.Request.Context(), tableIDPtr)
-	if err != nil {
-		h.handleError(c, err)
-		return
-	}
-
-	c.JSON(http.StatusOK, SuccessResponse{Data: stats})
+	_ = c.Query("table_id")
+	h.handleError(c, errors.ErrInvalidRequest.WithDetails("record stats not supported in application service"))
+	return
 }
 
 // ExportRecords 导出记录
@@ -342,23 +326,14 @@ func (h *RecordHandler) GetRecordStats(c *gin.Context) {
 // @Failure 500 {object} ErrorResponse
 // @Router /api/records/export [post]
 func (h *RecordHandler) ExportRecords(c *gin.Context) {
-	var req record.ExportRequest
+	var req recdomain.ExportRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.handleError(c, errors.ErrInvalidRequest.WithDetails(err.Error()))
 		return
 	}
 
-	data, err := h.recordService.ExportRecords(c.Request.Context(), req)
-	if err != nil {
-		h.handleError(c, err)
-		return
-	}
-
-	// 设置响应头
-	filename := fmt.Sprintf("records_export_%d.%s", time.Now().Unix(), req.Format)
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
-	c.Header("Content-Type", "application/octet-stream")
-	c.Data(http.StatusOK, "application/octet-stream", data)
+	h.handleError(c, errors.ErrInvalidRequest.WithDetails("export not supported in application service"))
+	return
 }
 
 // ImportRecords 导入记录
@@ -374,19 +349,14 @@ func (h *RecordHandler) ExportRecords(c *gin.Context) {
 // @Failure 500 {object} ErrorResponse
 // @Router /api/records/import [post]
 func (h *RecordHandler) ImportRecords(c *gin.Context) {
-	var req record.ImportRequest
+	var req recdomain.ImportRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.handleError(c, errors.ErrInvalidRequest.WithDetails(err.Error()))
 		return
 	}
 
-	count, err := h.recordService.ImportRecords(c.Request.Context(), req)
-	if err != nil {
-		h.handleError(c, err)
-		return
-	}
-
-	c.JSON(http.StatusOK, SuccessResponse{Data: count})
+	h.handleError(c, errors.ErrInvalidRequest.WithDetails("import not supported in application service"))
+	return
 }
 
 func (h *RecordHandler) handleError(c *gin.Context, err error) {

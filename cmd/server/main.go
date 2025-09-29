@@ -69,7 +69,7 @@ func main() {
 
 	// 创建依赖注入容器
 	container := container.NewContainer(cfg)
-	
+
 	// 初始化所有依赖
 	if err := container.Initialize(); err != nil {
 		logger.Fatal("Failed to initialize container", logger.ErrorField(err))
@@ -123,8 +123,6 @@ func main() {
 	logger.Info("Server exited")
 }
 
-
-
 // setupRouter 设置路由
 func setupRouter(container *container.Container) *gin.Engine {
 	cfg := container.Config()
@@ -155,6 +153,7 @@ func setupRouter(container *container.Container) *gin.Engine {
 		SpaceService:         container.SpaceService(),
 		BaseService:          container.BaseService(),
 		TableService:         container.TableService(),
+		RecordAppService:     container.RecordAppService(),
 		RecordService:        container.RecordService(),
 		ViewService:          container.ViewService(),
 		PermissionService:    container.PermissionService(),

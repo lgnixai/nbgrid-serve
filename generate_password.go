@@ -1,11 +1,12 @@
-package main
+package tools
 
 import (
 	"fmt"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
-func main() {
+func GeneratePassword() {
 	password := "password123"
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {

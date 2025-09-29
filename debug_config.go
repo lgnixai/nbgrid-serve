@@ -1,11 +1,11 @@
-package main
+package tools
 
 import (
 	"fmt"
 	"teable-go-backend/internal/config"
 )
 
-func main() {
+func PrintDebugConfig() {
 	cfg, err := config.Load()
 	if err != nil {
 		fmt.Printf("Failed to load config: %v\n", err)

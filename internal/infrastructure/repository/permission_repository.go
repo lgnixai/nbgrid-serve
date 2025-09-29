@@ -415,11 +415,11 @@ func (r *PermissionRepository) GetResourceCollaborators(ctx context.Context, res
 				ID:        model.ID,
 				UserID:    model.UserID,
 				Role:      permission.Role(model.Role),
-				Email:     nil, // 空间协作者模型中没有Email字段
-				InvitedBy: "",  // 空间协作者模型中没有InvitedBy字段
+				Email:     nil,         // 空间协作者模型中没有Email字段
+				InvitedBy: "",          // 空间协作者模型中没有InvitedBy字段
 				InvitedAt: time.Time{}, // 空间协作者模型中没有InvitedAt字段
-				JoinedAt:  nil, // 空间协作者模型中没有JoinedAt字段
-				IsActive:  true, // 空间协作者模型中没有IsActive字段，默认为true
+				JoinedAt:  nil,         // 空间协作者模型中没有JoinedAt字段
+				IsActive:  true,        // 空间协作者模型中没有IsActive字段，默认为true
 			})
 		}
 
@@ -501,8 +501,8 @@ func (r *PermissionRepository) GetUserEffectiveRole(ctx context.Context, userID,
 		// 这里需要查询基础表所属的空间，暂时返回空角色
 		return "", permission.ErrPermissionNotFound
 	case "table", "view", "field", "record":
-		// 检查基础表权限
-		// 这里需要查询表格所属的基础表，暂时返回空角色
+		// 对于表、视图、字段、记录，暂时只检查直接权限
+		// TODO: 实现继承权限逻辑
 		return "", permission.ErrPermissionNotFound
 	}
 
@@ -591,11 +591,11 @@ func (r *PermissionRepository) modelToSpaceCollaborator(model *models.SpaceColla
 		SpaceID:   model.SpaceID,
 		UserID:    model.UserID,
 		Role:      permission.Role(model.Role),
-		Email:     nil, // 空间协作者模型中没有Email字段
-		InvitedBy: "",  // 空间协作者模型中没有InvitedBy字段
+		Email:     nil,         // 空间协作者模型中没有Email字段
+		InvitedBy: "",          // 空间协作者模型中没有InvitedBy字段
 		InvitedAt: time.Time{}, // 空间协作者模型中没有InvitedAt字段
-		JoinedAt:  nil, // 空间协作者模型中没有JoinedAt字段
-		IsActive:  true, // 空间协作者模型中没有IsActive字段，默认为true
+		JoinedAt:  nil,         // 空间协作者模型中没有JoinedAt字段
+		IsActive:  true,        // 空间协作者模型中没有IsActive字段，默认为true
 		CreatedAt: model.CreatedTime,
 		UpdatedAt: model.CreatedTime, // 空间协作者模型中没有UpdatedAt字段，使用CreatedTime
 	}

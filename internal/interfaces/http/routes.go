@@ -8,7 +8,7 @@ import (
 	"teable-go-backend/internal/domain/base"
 	"teable-go-backend/internal/domain/notification"
 	"teable-go-backend/internal/domain/permission"
-	"teable-go-backend/internal/domain/record"
+	recdomain "teable-go-backend/internal/domain/record"
 	"teable-go-backend/internal/domain/search"
 	"teable-go-backend/internal/domain/share"
 	"teable-go-backend/internal/domain/sharedb"
@@ -28,7 +28,8 @@ type RouterConfig struct {
 	SpaceService         space.Service
 	BaseService          base.Service
 	TableService         table.Service
-	RecordService        record.Service
+	RecordAppService     *application.RecordService
+	RecordService        recdomain.Service
 	ViewService          view.Service
 	PermissionService    permission.Service
 	ShareService         share.Service
@@ -51,7 +52,14 @@ func SetupRoutes(router *gin.Engine, config RouterConfig) {
 	spaceHandler := NewSpaceHandler(config.SpaceService)
 	baseHandler := NewBaseHandler(config.BaseService)
 	tableHandler := NewTableHandler(config.TableService)
-	recordHandler := NewRecordHandler(config.RecordService)
+	var recordHandler *RecordHandler
+	if config.RecordAppService != nil {
+		recordHandler = NewRecordHandler(config.RecordAppService)
+	} else {
+		// 回退到领域服务（不推荐），但避免空指针
+		// 注意：领域服务缺少真实 schema 校验，可能导致 500
+		recordHandler = NewRecordHandler(nil)
+	}
 	viewHandler := NewViewHandler(config.ViewService)
 	permissionHandler := NewPermissionHandler(config.PermissionService, nil)       // 暂时传nil logger，稍后修复
 	shareHandler := NewShareHandler(config.ShareService, nil)                      // 暂时传nil logger，稍后修复

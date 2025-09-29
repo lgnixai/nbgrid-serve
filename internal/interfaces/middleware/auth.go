@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -50,6 +51,8 @@ func NewJWTAuthService(jwtConfig config.JWTConfig, cacheClient cache.CacheServic
 
 // ValidateToken 验证JWT令牌
 func (s *JWTAuthService) ValidateToken(tokenString string) (*Claims, error) {
+
+	fmt.Print(tokenString)
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		// 检查签名方法
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -84,6 +87,8 @@ func (s *JWTAuthService) ValidateToken(tokenString string) (*Claims, error) {
 
 // GetUserFromToken 从令牌获取用户信息
 func (s *JWTAuthService) GetUserFromToken(ctx context.Context, tokenString string) (*models.User, error) {
+
+	fmt.Println(tokenString)
 	claims, err := s.ValidateToken(tokenString)
 	if err != nil {
 		return nil, err
@@ -104,12 +109,12 @@ func (s *JWTAuthService) GetUserFromToken(ctx context.Context, tokenString strin
 		Email: claims.Email,
 		Name:  claims.Name,
 	}
-	
+
 	if claims.IsAdmin {
 		isAdmin := true
 		user.IsAdmin = &isAdmin
 	}
-	
+
 	if claims.IsSystem {
 		isSystem := true
 		user.IsSystem = &isSystem
@@ -305,7 +310,7 @@ func RequireAuth(c *gin.Context) (*models.User, error) {
 func GenerateToken(user *models.User, jwtConfig config.JWTConfig, tokenType string) (string, error) {
 	now := time.Now()
 	var exp time.Time
-	
+
 	switch tokenType {
 	case "access":
 		exp = now.Add(jwtConfig.AccessTokenTTL)
