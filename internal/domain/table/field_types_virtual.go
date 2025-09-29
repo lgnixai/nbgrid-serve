@@ -1,6 +1,7 @@
 package table
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -10,13 +11,13 @@ import (
 const (
 	// FieldTypeVirtualFormula is a computed field based on a formula expression
 	FieldTypeVirtualFormula FieldType = "virtual_formula"
-	
+
 	// FieldTypeVirtualLookup retrieves values from linked records
 	FieldTypeVirtualLookup FieldType = "virtual_lookup"
-	
+
 	// FieldTypeVirtualRollup aggregates values from linked records
 	FieldTypeVirtualRollup FieldType = "virtual_rollup"
-	
+
 	// FieldTypeVirtualAI uses AI to generate or process content
 	FieldTypeVirtualAI FieldType = "virtual_ai"
 )
@@ -25,13 +26,13 @@ const (
 type FormulaFieldOptions struct {
 	// Formula expression to evaluate
 	Expression string `json:"expression"`
-	
+
 	// Result type of the formula
 	ResultType FieldType `json:"result_type"`
-	
+
 	// Referenced field IDs used in the formula
 	ReferencedFields []string `json:"referenced_fields"`
-	
+
 	// Whether to recalculate on every read
 	DynamicCalculation bool `json:"dynamic_calculation"`
 }
@@ -40,10 +41,10 @@ type FormulaFieldOptions struct {
 type LookupFieldOptions struct {
 	// The link field ID to traverse
 	LinkFieldID string `json:"link_field_id"`
-	
+
 	// The field ID in the linked table to look up
 	LookupFieldID string `json:"lookup_field_id"`
-	
+
 	// How to handle multiple linked records
 	MultipleRecordHandling string `json:"multiple_record_handling"` // first, last, array, comma_separated
 }
@@ -52,13 +53,13 @@ type LookupFieldOptions struct {
 type RollupFieldOptions struct {
 	// The link field ID to traverse
 	LinkFieldID string `json:"link_field_id"`
-	
+
 	// The field ID in the linked table to aggregate
 	RollupFieldID string `json:"rollup_field_id"`
-	
+
 	// Aggregation function
 	AggregationFunction string `json:"aggregation_function"` // sum, avg, count, min, max, unique_count
-	
+
 	// Filter condition for records to include
 	FilterExpression string `json:"filter_expression,omitempty"`
 }
@@ -67,31 +68,31 @@ type RollupFieldOptions struct {
 type AIFieldOptions struct {
 	// AI operation type
 	OperationType string `json:"operation_type"` // generate, extract, classify, summarize, translate
-	
+
 	// AI provider to use
 	Provider string `json:"provider"` // openai, deepseek, anthropic, etc.
-	
+
 	// Model to use
 	Model string `json:"model"`
-	
+
 	// Prompt template with field references
 	PromptTemplate string `json:"prompt_template"`
-	
+
 	// Source fields to use as input
 	SourceFields []string `json:"source_fields"`
-	
+
 	// Output format
 	OutputFormat string `json:"output_format"` // text, json, markdown
-	
+
 	// Cache results
 	CacheResults bool `json:"cache_results"`
-	
+
 	// Max tokens for generation
 	MaxTokens int `json:"max_tokens,omitempty"`
-	
+
 	// Temperature for generation
 	Temperature float32 `json:"temperature,omitempty"`
-	
+
 	// Additional provider-specific options
 	ProviderOptions map[string]interface{} `json:"provider_options,omitempty"`
 }
@@ -100,13 +101,13 @@ type AIFieldOptions struct {
 type VirtualFieldMetadata struct {
 	// Last calculation time
 	LastCalculatedAt *string `json:"last_calculated_at,omitempty"`
-	
+
 	// Calculation error if any
 	CalculationError *string `json:"calculation_error,omitempty"`
-	
+
 	// Cached value
 	CachedValue interface{} `json:"cached_value,omitempty"`
-	
+
 	// Dependencies that trigger recalculation
 	Dependencies []string `json:"dependencies,omitempty"`
 }
@@ -114,8 +115,8 @@ type VirtualFieldMetadata struct {
 // IsVirtualField checks if a field type is virtual
 func IsVirtualField(fieldType FieldType) bool {
 	switch fieldType {
-	case FieldTypeVirtualFormula, FieldTypeVirtualLookup, 
-	     FieldTypeVirtualRollup, FieldTypeVirtualAI:
+	case FieldTypeVirtualFormula, FieldTypeVirtualLookup,
+		FieldTypeVirtualRollup, FieldTypeVirtualAI:
 		return true
 	default:
 		return false
@@ -127,13 +128,13 @@ func ParseVirtualFieldOptions(fieldType FieldType, options *FieldOptions) (inter
 	if options == nil {
 		return nil, fmt.Errorf("options required for virtual field type %s", fieldType)
 	}
-	
+
 	// Convert options to JSON for parsing
 	optionsJSON, err := json.Marshal(options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal options: %w", err)
 	}
-	
+
 	switch fieldType {
 	case FieldTypeVirtualFormula:
 		var formulaOpts FormulaFieldOptions
@@ -141,28 +142,28 @@ func ParseVirtualFieldOptions(fieldType FieldType, options *FieldOptions) (inter
 			return nil, fmt.Errorf("invalid formula field options: %w", err)
 		}
 		return &formulaOpts, nil
-		
+
 	case FieldTypeVirtualLookup:
 		var lookupOpts LookupFieldOptions
 		if err := json.Unmarshal(optionsJSON, &lookupOpts); err != nil {
 			return nil, fmt.Errorf("invalid lookup field options: %w", err)
 		}
 		return &lookupOpts, nil
-		
+
 	case FieldTypeVirtualRollup:
 		var rollupOpts RollupFieldOptions
 		if err := json.Unmarshal(optionsJSON, &rollupOpts); err != nil {
 			return nil, fmt.Errorf("invalid rollup field options: %w", err)
 		}
 		return &rollupOpts, nil
-		
+
 	case FieldTypeVirtualAI:
 		var aiOpts AIFieldOptions
 		if err := json.Unmarshal(optionsJSON, &aiOpts); err != nil {
 			return nil, fmt.Errorf("invalid AI field options: %w", err)
 		}
 		return &aiOpts, nil
-		
+
 	default:
 		return nil, fmt.Errorf("unknown virtual field type: %s", fieldType)
 	}
@@ -204,11 +205,11 @@ func GetVirtualFieldInfo(fieldType FieldType) FieldTypeInfo {
 			Color:       "#00BCD4",
 		},
 	}
-	
+
 	if info, exists := infos[fieldType]; exists {
 		return info
 	}
-	
+
 	return FieldTypeInfo{
 		Type:        fieldType,
 		Name:        "未知虚拟字段",
@@ -223,10 +224,10 @@ func GetVirtualFieldInfo(fieldType FieldType) FieldTypeInfo {
 type VirtualFieldCalculator interface {
 	// Calculate computes the value for a virtual field
 	Calculate(ctx CalculationContext) (interface{}, error)
-	
+
 	// ValidateOptions validates the field options
 	ValidateOptions() error
-	
+
 	// GetDependencies returns field IDs this virtual field depends on
 	GetDependencies() []string
 }
@@ -235,30 +236,33 @@ type VirtualFieldCalculator interface {
 type CalculationContext struct {
 	// Current record data
 	RecordData map[string]interface{}
-	
+
 	// Table containing the field
 	Table *Table
-	
+
 	// Field being calculated
 	Field *Field
-	
+
 	// User context for permissions
 	UserID string
-	
+
+	// Request-scoped context
+	Ctx context.Context
+
 	// Additional context data
 	Context map[string]interface{}
 }
 
 // FieldShortcut represents a pre-configured field template
 type FieldShortcut struct {
-	ID          string       `json:"id"`
-	Name        string       `json:"name"`
-	Description string       `json:"description"`
-	Category    string       `json:"category"`
-	Icon        string       `json:"icon"`
-	FieldType   FieldType    `json:"field_type"`
-	Options     interface{}  `json:"options"`
-	Tags        []string     `json:"tags"`
+	ID          string      `json:"id"`
+	Name        string      `json:"name"`
+	Description string      `json:"description"`
+	Category    string      `json:"category"`
+	Icon        string      `json:"icon"`
+	FieldType   FieldType   `json:"field_type"`
+	Options     interface{} `json:"options"`
+	Tags        []string    `json:"tags"`
 }
 
 // Common field shortcuts for quick field creation

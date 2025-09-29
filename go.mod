@@ -7,7 +7,7 @@ require (
 	github.com/gin-gonic/gin v1.9.1
 
 	// 验证
-	github.com/go-playground/validator/v10 v10.16.0 // indirect
+	github.com/go-playground/validator/v10 v10.16.0
 
 	// 认证和安全
 	github.com/golang-jwt/jwt/v5 v5.2.0
@@ -34,6 +34,7 @@ require (
 )
 
 require (
+	github.com/Knetic/govaluate v3.0.0+incompatible
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.8.4

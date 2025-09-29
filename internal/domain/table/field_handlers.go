@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+
 	// "strings" // 暂时注释掉，如果需要可以取消注释
 	"time"
 )
@@ -720,8 +721,8 @@ func NewRollupFieldHandler() FieldTypeHandler {
 	}
 }
 
-// NewFormulaFieldHandler 创建公式字段处理器
-func NewFormulaFieldHandler() FieldTypeHandler {
+// NewSimpleFormulaFieldHandler 创建简单公式字段处理器（占位实现，避免与虚拟公式实现重名）
+func NewSimpleFormulaFieldHandler() FieldTypeHandler {
 	return &BaseFieldHandler{
 		fieldType: FieldTypeFormula,
 		info: FieldTypeInfo{

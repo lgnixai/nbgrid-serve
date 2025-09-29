@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 )
 
 // AIFieldHandler handles AI-powered field operations
@@ -18,16 +17,16 @@ type AIFieldHandler struct {
 type AIProvider interface {
 	// Generate generates content based on prompt
 	Generate(ctx context.Context, prompt string, options AIGenerateOptions) (string, error)
-	
+
 	// Classify classifies content into categories
 	Classify(ctx context.Context, content string, categories []string, options AIClassifyOptions) (string, error)
-	
+
 	// Extract extracts information from content
 	Extract(ctx context.Context, content string, schema interface{}, options AIExtractOptions) (interface{}, error)
-	
+
 	// Summarize creates a summary of content
 	Summarize(ctx context.Context, content string, options AISummarizeOptions) (string, error)
-	
+
 	// Translate translates content to target language
 	Translate(ctx context.Context, content string, targetLang string, options AITranslateOptions) (string, error)
 }
@@ -196,15 +195,15 @@ func (h *AIFieldHandler) Calculate(ctx CalculationContext) (interface{}, error) 
 	var result interface{}
 	switch aiOpts.OperationType {
 	case "generate":
-		result, err = h.generate(ctx.Context, prompt, aiOpts)
+		result, err = h.generate(ctx.Ctx, prompt, aiOpts)
 	case "classify":
-		result, err = h.classify(ctx.Context, prompt, aiOpts)
+		result, err = h.classify(ctx.Ctx, prompt, aiOpts)
 	case "extract":
-		result, err = h.extract(ctx.Context, prompt, aiOpts)
+		result, err = h.extract(ctx.Ctx, prompt, aiOpts)
 	case "summarize":
-		result, err = h.summarize(ctx.Context, prompt, aiOpts)
+		result, err = h.summarize(ctx.Ctx, prompt, aiOpts)
 	case "translate":
-		result, err = h.translate(ctx.Context, prompt, aiOpts)
+		result, err = h.translate(ctx.Ctx, prompt, aiOpts)
 	default:
 		return nil, fmt.Errorf("unsupported operation type: %s", aiOpts.OperationType)
 	}
@@ -259,7 +258,7 @@ func (h *AIFieldHandler) generate(ctx context.Context, prompt string, opts *AIFi
 func (h *AIFieldHandler) classify(ctx context.Context, content string, opts *AIFieldOptions) (interface{}, error) {
 	// Extract categories from prompt or options
 	categories := h.extractCategories(opts)
-	
+
 	classOpts := AIClassifyOptions{
 		Model:       opts.Model,
 		Temperature: opts.Temperature,
@@ -312,7 +311,7 @@ func (h *AIFieldHandler) summarize(ctx context.Context, content string, opts *AI
 func (h *AIFieldHandler) translate(ctx context.Context, content string, opts *AIFieldOptions) (interface{}, error) {
 	// Extract target language from prompt or options
 	targetLang := h.extractTargetLanguage(opts)
-	
+
 	transOpts := AITranslateOptions{
 		Model: opts.Model,
 	}
@@ -399,18 +398,18 @@ func ParseAIOptions(options *FieldOptions) (*AIFieldOptions, error) {
 			break
 		}
 		idx += start
-		
+
 		endIdx := strings.Index(prompt[idx:], "}")
 		if endIdx == -1 {
 			break
 		}
 		endIdx += idx
-		
+
 		fieldName := prompt[idx+1 : endIdx]
 		if fieldName != "" && !contains(aiOpts.SourceFields, fieldName) {
 			aiOpts.SourceFields = append(aiOpts.SourceFields, fieldName)
 		}
-		
+
 		start = endIdx + 1
 	}
 

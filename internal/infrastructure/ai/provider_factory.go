@@ -3,8 +3,8 @@ package ai
 import (
 	"fmt"
 
-	"github.com/yourusername/teable-app/internal/config"
-	"github.com/yourusername/teable-app/internal/domain/table"
+	"teable-go-backend/internal/config"
+	"teable-go-backend/internal/domain/table"
 )
 
 // ProviderFactory creates AI providers based on configuration
@@ -54,7 +54,7 @@ func (f *ProviderFactory) createOpenAIProvider(cfg config.AIProviderConfig) (tab
 	}
 
 	provider := NewOpenAIProvider(cfg.APIKey)
-	
+
 	// Set custom base URL if provided
 	if cfg.BaseURL != "" {
 		provider.baseURL = cfg.BaseURL
@@ -70,7 +70,7 @@ func (f *ProviderFactory) createDeepSeekProvider(cfg config.AIProviderConfig) (t
 
 	// DeepSeek uses OpenAI-compatible API
 	provider := NewOpenAIProvider(cfg.APIKey)
-	
+
 	// Set DeepSeek base URL
 	if cfg.BaseURL != "" {
 		provider.baseURL = cfg.BaseURL

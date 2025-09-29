@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/yourusername/teable-app/internal/domain/table"
+	"teable-go-backend/internal/domain/table"
 )
 
 // OpenAIProvider implements AI provider using OpenAI API
@@ -97,7 +97,7 @@ Category:`, categoriesStr, content)
 		"model": model,
 		"messages": []map[string]string{
 			{
-				"role": "system",
+				"role":    "system",
 				"content": "You are a text classifier. Respond with only the category name, nothing else.",
 			},
 			{"role": "user", "content": prompt},
@@ -142,7 +142,7 @@ Return the extracted information as a valid JSON object.`, content)
 		"model": model,
 		"messages": []map[string]string{
 			{
-				"role": "system",
+				"role":    "system",
 				"content": "You are a data extraction assistant. Always respond with valid JSON only, no explanations.",
 			},
 			{"role": "user", "content": prompt},
@@ -196,7 +196,7 @@ func (p *OpenAIProvider) Summarize(ctx context.Context, content string, options 
 		"model": model,
 		"messages": []map[string]string{
 			{
-				"role": "system",
+				"role":    "system",
 				"content": "You are a summarization assistant. Provide concise, informative summaries.",
 			},
 			{"role": "user", "content": prompt},
@@ -249,7 +249,7 @@ func (p *OpenAIProvider) Translate(ctx context.Context, content string, targetLa
 		"model": model,
 		"messages": []map[string]string{
 			{
-				"role": "system",
+				"role":    "system",
 				"content": "You are a professional translator. Provide accurate translations preserving the original meaning and tone.",
 			},
 			{"role": "user", "content": prompt},

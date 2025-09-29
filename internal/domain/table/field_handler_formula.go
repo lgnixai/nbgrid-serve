@@ -1,7 +1,6 @@
 package table
 
 import (
-	"context"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -145,7 +144,7 @@ func (h *FormulaFieldHandler) Calculate(ctx CalculationContext) (interface{}, er
 func (h *FormulaFieldHandler) validateExpression(expression string) error {
 	// Remove field references for validation
 	testExpr := regexp.MustCompile(`\{[^}]+\}`).ReplaceAllString(expression, "1")
-	
+
 	// Try to parse the expression
 	_, err := govaluate.NewEvaluableExpression(testExpr)
 	return err
@@ -155,20 +154,20 @@ func (h *FormulaFieldHandler) validateExpression(expression string) error {
 func (h *FormulaFieldHandler) prepareExpression(expression string, recordData map[string]interface{}) (string, error) {
 	// Find all field references like {field_name}
 	re := regexp.MustCompile(`\{([^}]+)\}`)
-	
+
 	result := re.ReplaceAllStringFunc(expression, func(match string) string {
 		fieldName := strings.Trim(match, "{}")
-		
+
 		// Get field value from record data
 		if value, exists := recordData[fieldName]; exists {
 			// Convert value to string representation for expression
 			return h.valueToExpressionString(value)
 		}
-		
+
 		// Field not found, use null
 		return "null"
 	})
-	
+
 	return result, nil
 }
 
@@ -177,7 +176,7 @@ func (h *FormulaFieldHandler) valueToExpressionString(value interface{}) string 
 	if value == nil {
 		return "null"
 	}
-	
+
 	switch v := value.(type) {
 	case string:
 		// Escape strings
@@ -198,7 +197,7 @@ func (h *FormulaFieldHandler) evaluateExpression(expression string) (interface{}
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Add custom functions
 	functions := map[string]govaluate.ExpressionFunction{
 		"ABS": func(args ...interface{}) (interface{}, error) {
@@ -264,13 +263,20 @@ func (h *FormulaFieldHandler) evaluateExpression(expression string) (interface{}
 			return float64(len(str)), nil
 		},
 	}
-	
+
 	// Evaluate with custom functions
-	result, err := expr.Evaluate(functions)
+	// govaluate.EvaluableExpression#Evaluate expects parameters map[string]interface{}
+	// Wrap our functions via Parameters to avoid type mismatch
+	params := make(map[string]interface{}, len(functions))
+	for name, fn := range functions {
+		// Adapt function signature to govaluate: must be func(args ...interface{}) (interface{}, error)
+		params[name] = fn
+	}
+	result, err := expr.Evaluate(params)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return result, nil
 }
 
@@ -279,21 +285,21 @@ func (h *FormulaFieldHandler) convertResult(result interface{}, resultType Field
 	if result == nil {
 		return nil, nil
 	}
-	
+
 	switch resultType {
 	case FieldTypeText:
 		return fmt.Sprintf("%v", result), nil
-		
+
 	case FieldTypeNumber, FieldTypeCurrency, FieldTypePercent:
 		return toFloat64(result)
-		
+
 	case FieldTypeBoolean:
 		return toBool(result)
-		
+
 	case FieldTypeDate, FieldTypeDateTime:
 		// TODO: Implement date conversion
 		return fmt.Sprintf("%v", result), nil
-		
+
 	default:
 		return result, nil
 	}
@@ -368,29 +374,29 @@ func ParseFormulaOptions(options *FieldOptions) (*FormulaFieldOptions, error) {
 	if options == nil {
 		return nil, fmt.Errorf("options is nil")
 	}
-	
+
 	// Create a temporary map to extract formula-specific fields
 	tempMap := map[string]interface{}{
-		"expression":           options.Formula,
+		"expression":          options.Formula,
 		"result_type":         "text", // default
 		"referenced_fields":   []string{},
 		"dynamic_calculation": true,
 	}
-	
+
 	// If there's a Formula field, use it as expression
 	if options.Formula != "" {
 		tempMap["expression"] = options.Formula
 	}
-	
+
 	// TODO: Parse from options JSON structure if needed
-	
+
 	formulaOpts := &FormulaFieldOptions{
 		Expression:         tempMap["expression"].(string),
-		ResultType:        FieldType(tempMap["result_type"].(string)),
-		ReferencedFields:  tempMap["referenced_fields"].([]string),
+		ResultType:         FieldType(tempMap["result_type"].(string)),
+		ReferencedFields:   tempMap["referenced_fields"].([]string),
 		DynamicCalculation: tempMap["dynamic_calculation"].(bool),
 	}
-	
+
 	// Extract referenced fields from expression
 	re := regexp.MustCompile(`\{([^}]+)\}`)
 	matches := re.FindAllStringSubmatch(formulaOpts.Expression, -1)
@@ -399,7 +405,7 @@ func ParseFormulaOptions(options *FieldOptions) (*FormulaFieldOptions, error) {
 			formulaOpts.ReferencedFields = append(formulaOpts.ReferencedFields, match[1])
 		}
 	}
-	
+
 	return formulaOpts, nil
 }
 
@@ -407,8 +413,8 @@ func ParseFormulaOptions(options *FieldOptions) (*FormulaFieldOptions, error) {
 func isValidResultType(fieldType FieldType) bool {
 	switch fieldType {
 	case FieldTypeText, FieldTypeNumber, FieldTypeBoolean,
-	     FieldTypeDate, FieldTypeDateTime, FieldTypeCurrency,
-	     FieldTypePercent:
+		FieldTypeDate, FieldTypeDateTime, FieldTypeCurrency,
+		FieldTypePercent:
 		return true
 	default:
 		return false
