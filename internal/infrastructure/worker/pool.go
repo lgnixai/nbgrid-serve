@@ -34,24 +34,24 @@ type WorkerPool struct {
 	workers     []*worker
 	wg          sync.WaitGroup
 	logger      *zap.Logger
-	
+
 	// 统计信息
-	stats       *PoolStats
-	
+	stats *PoolStats
+
 	// 控制
-	ctx         context.Context
-	cancel      context.CancelFunc
-	started     atomic.Bool
+	ctx     context.Context
+	cancel  context.CancelFunc
+	started atomic.Bool
 }
 
 // PoolStats 工作池统计信息
 type PoolStats struct {
-	TotalJobs      atomic.Uint64
-	CompletedJobs  atomic.Uint64
-	FailedJobs     atomic.Uint64
-	ActiveWorkers  atomic.Int32
-	QueuedJobs     atomic.Int32
-	TotalDuration  atomic.Uint64 // 纳秒
+	TotalJobs     atomic.Uint64
+	CompletedJobs atomic.Uint64
+	FailedJobs    atomic.Uint64
+	ActiveWorkers atomic.Int32
+	QueuedJobs    atomic.Int32
+	TotalDuration atomic.Uint64 // 纳秒
 }
 
 // worker 工作者
@@ -83,9 +83,9 @@ func NewWorkerPool(name string, maxWorkers int, queueSize int, opts ...PoolOptio
 	if maxWorkers <= 0 {
 		maxWorkers = runtime.NumCPU()
 	}
-	
+
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	pool := &WorkerPool{
 		name:       name,
 		maxWorkers: maxWorkers,
@@ -96,12 +96,12 @@ func NewWorkerPool(name string, maxWorkers int, queueSize int, opts ...PoolOptio
 		ctx:        ctx,
 		cancel:     cancel,
 	}
-	
+
 	// 应用选项
 	for _, opt := range opts {
 		opt(pool)
 	}
-	
+
 	// 创建工作者
 	for i := 0; i < maxWorkers; i++ {
 		pool.workers[i] = &worker{
@@ -110,7 +110,7 @@ func NewWorkerPool(name string, maxWorkers int, queueSize int, opts ...PoolOptio
 			jobChannel: make(chan Job),
 		}
 	}
-	
+
 	return pool
 }
 
@@ -119,22 +119,22 @@ func (p *WorkerPool) Start() error {
 	if p.started.Load() {
 		return fmt.Errorf("worker pool already started")
 	}
-	
+
 	p.started.Store(true)
-	
+
 	// 启动分发器
 	go p.dispatcher()
-	
+
 	// 启动所有工作者
 	for _, w := range p.workers {
 		go w.start()
 	}
-	
+
 	p.logger.Info("Worker pool started",
 		zap.String("name", p.name),
 		zap.Int("workers", p.maxWorkers),
 	)
-	
+
 	return nil
 }
 
@@ -143,30 +143,30 @@ func (p *WorkerPool) Stop() error {
 	if !p.started.Load() {
 		return fmt.Errorf("worker pool not started")
 	}
-	
+
 	// 停止接收新任务
 	close(p.jobQueue)
-	
+
 	// 等待所有任务完成
 	p.wg.Wait()
-	
+
 	// 取消上下文
 	p.cancel()
-	
+
 	// 关闭结果队列
 	if p.resultQueue != nil {
 		close(p.resultQueue)
 	}
-	
+
 	p.started.Store(false)
-	
+
 	p.logger.Info("Worker pool stopped",
 		zap.String("name", p.name),
 		zap.Uint64("total_jobs", p.stats.TotalJobs.Load()),
 		zap.Uint64("completed_jobs", p.stats.CompletedJobs.Load()),
 		zap.Uint64("failed_jobs", p.stats.FailedJobs.Load()),
 	)
-	
+
 	return nil
 }
 
@@ -175,7 +175,7 @@ func (p *WorkerPool) Submit(job Job) error {
 	if !p.started.Load() {
 		return fmt.Errorf("worker pool not started")
 	}
-	
+
 	select {
 	case p.jobQueue <- job:
 		p.stats.TotalJobs.Add(1)
@@ -193,10 +193,10 @@ func (p *WorkerPool) SubmitWithTimeout(job Job, timeout time.Duration) error {
 	if !p.started.Load() {
 		return fmt.Errorf("worker pool not started")
 	}
-	
+
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
-	
+
 	select {
 	case p.jobQueue <- job:
 		p.stats.TotalJobs.Add(1)
@@ -211,11 +211,6 @@ func (p *WorkerPool) SubmitWithTimeout(job Job, timeout time.Duration) error {
 
 // GetStats 获取统计信息
 func (p *WorkerPool) GetStats() PoolStats {
-	avgDuration := time.Duration(0)
-	if completed := p.stats.CompletedJobs.Load(); completed > 0 {
-		avgDuration = time.Duration(p.stats.TotalDuration.Load() / completed)
-	}
-	
 	return PoolStats{
 		TotalJobs:     atomic.Uint64{},
 		CompletedJobs: atomic.Uint64{},
@@ -243,10 +238,10 @@ func (p *WorkerPool) dispatcher() {
 				}
 				return
 			}
-			
+
 			// 找到空闲的工作者
 			p.assignJob(job)
-			
+
 		case <-p.ctx.Done():
 			return
 		}
@@ -267,7 +262,7 @@ func (p *WorkerPool) assignJob(job Job) {
 				// 工作者忙碌，尝试下一个
 			}
 		}
-		
+
 		// 所有工作者都忙，等待一会儿再试
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -277,7 +272,7 @@ func (p *WorkerPool) assignJob(job Job) {
 func (w *worker) start() {
 	w.pool.wg.Add(1)
 	defer w.pool.wg.Done()
-	
+
 	for {
 		select {
 		case job, ok := <-w.jobChannel:
@@ -285,9 +280,9 @@ func (w *worker) start() {
 				// 通道已关闭
 				return
 			}
-			
+
 			w.executeJob(job)
-			
+
 		case <-w.pool.ctx.Done():
 			return
 		}
@@ -298,18 +293,18 @@ func (w *worker) start() {
 func (w *worker) executeJob(job Job) {
 	w.pool.stats.ActiveWorkers.Add(1)
 	defer w.pool.stats.ActiveWorkers.Add(-1)
-	
+
 	start := time.Now()
-	
+
 	// 创建任务上下文（可以设置超时）
 	ctx := context.WithValue(w.pool.ctx, "worker_id", w.id)
-	
+
 	// 执行任务
 	err := job.Execute(ctx)
-	
+
 	elapsed := time.Since(start)
 	w.pool.stats.TotalDuration.Add(uint64(elapsed.Nanoseconds()))
-	
+
 	if err != nil {
 		w.pool.stats.FailedJobs.Add(1)
 		w.pool.logger.Error("Job execution failed",
@@ -326,7 +321,7 @@ func (w *worker) executeJob(job Job) {
 			zap.Duration("elapsed", elapsed),
 		)
 	}
-	
+
 	// 发送结果
 	if w.pool.resultQueue != nil {
 		select {
@@ -391,21 +386,20 @@ func (bp *BatchProcessor) ProcessBatch(jobs []Job) ([]Result, error) {
 	if len(jobs) == 0 {
 		return nil, nil
 	}
-	
+
 	results := make([]Result, 0, len(jobs))
-	resultChan := make(chan Result, len(jobs))
-	
+
 	// 提交所有任务
 	for _, job := range jobs {
 		if err := bp.pool.Submit(job); err != nil {
 			return nil, fmt.Errorf("failed to submit job %s: %w", job.Name(), err)
 		}
 	}
-	
+
 	// 收集结果
 	timer := time.NewTimer(bp.timeout)
 	defer timer.Stop()
-	
+
 	for i := 0; i < len(jobs); i++ {
 		select {
 		case result := <-bp.pool.Results():
@@ -414,6 +408,6 @@ func (bp *BatchProcessor) ProcessBatch(jobs []Job) ([]Result, error) {
 			return results, fmt.Errorf("batch processing timeout")
 		}
 	}
-	
+
 	return results, nil
 }

@@ -1,10 +1,12 @@
 package validators
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -17,7 +19,7 @@ type Validator struct {
 // NewValidator 创建验证器
 func NewValidator() *Validator {
 	v := validator.New()
-	
+
 	// 注册自定义验证器
 	v.RegisterValidation("phone", validatePhone)
 	v.RegisterValidation("password", validatePassword)
@@ -27,7 +29,7 @@ func NewValidator() *Validator {
 	v.RegisterValidation("json", validateJSON)
 	v.RegisterValidation("timezone", validateTimezone)
 	v.RegisterValidation("language", validateLanguage)
-	
+
 	// 注册自定义标签名称
 	v.RegisterTagNameFunc(func(fld reflect.StructField) string {
 		name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
@@ -36,7 +38,7 @@ func NewValidator() *Validator {
 		}
 		return name
 	})
-	
+
 	return &Validator{validate: v}
 }
 
@@ -61,14 +63,14 @@ func (v *Validator) formatError(err error) error {
 	if _, ok := err.(*validator.InvalidValidationError); ok {
 		return fmt.Errorf("invalid validation error")
 	}
-	
+
 	validationErrors := err.(validator.ValidationErrors)
 	var errorMessages []string
-	
+
 	for _, err := range validationErrors {
 		errorMessages = append(errorMessages, v.getErrorMsg(err))
 	}
-	
+
 	return fmt.Errorf(strings.Join(errorMessages, "; "))
 }
 
@@ -76,7 +78,7 @@ func (v *Validator) formatError(err error) error {
 func (v *Validator) getErrorMsg(err validator.FieldError) string {
 	field := err.Field()
 	tag := err.Tag()
-	
+
 	switch tag {
 	case "required":
 		return fmt.Sprintf("%s is required", field)
@@ -117,7 +119,7 @@ func validatePhone(fl validator.FieldLevel) bool {
 	if phone == "" {
 		return true // 允许空值，使用 required 标签控制是否必填
 	}
-	
+
 	// 支持国际格式
 	phoneRegex := regexp.MustCompile(`^\+?[1-9]\d{1,14}$`)
 	return phoneRegex.MatchString(phone)
@@ -129,17 +131,17 @@ func validatePassword(fl validator.FieldLevel) bool {
 	if password == "" {
 		return true
 	}
-	
+
 	// 至少8个字符
 	if len(password) < 8 {
 		return false
 	}
-	
+
 	// 至少包含一个大写字母、一个小写字母、一个数字
 	hasUpper := regexp.MustCompile(`[A-Z]`).MatchString(password)
 	hasLower := regexp.MustCompile(`[a-z]`).MatchString(password)
 	hasDigit := regexp.MustCompile(`\d`).MatchString(password)
-	
+
 	return hasUpper && hasLower && hasDigit
 }
 
@@ -149,7 +151,7 @@ func validateUsername(fl validator.FieldLevel) bool {
 	if username == "" {
 		return true
 	}
-	
+
 	// 3-20个字符，只能包含字母、数字、下划线和横线
 	usernameRegex := regexp.MustCompile(`^[a-zA-Z0-9_-]{3,20}$`)
 	return usernameRegex.MatchString(username)
@@ -161,7 +163,7 @@ func validateNanoID(fl validator.FieldLevel) bool {
 	if id == "" {
 		return true
 	}
-	
+
 	// NanoID 默认长度为21，字符集为 A-Za-z0-9_-
 	nanoIDRegex := regexp.MustCompile(`^[A-Za-z0-9_-]{21}$`)
 	return nanoIDRegex.MatchString(id)
@@ -173,7 +175,7 @@ func validateURL(fl validator.FieldLevel) bool {
 	if url == "" {
 		return true
 	}
-	
+
 	urlRegex := regexp.MustCompile(`^https?://[^\s/$.?#].[^\s]*$`)
 	return urlRegex.MatchString(url)
 }
@@ -184,7 +186,7 @@ func validateJSON(fl validator.FieldLevel) bool {
 	if jsonStr == "" {
 		return true
 	}
-	
+
 	var js interface{}
 	return json.Unmarshal([]byte(jsonStr), &js) == nil
 }
@@ -195,7 +197,7 @@ func validateTimezone(fl validator.FieldLevel) bool {
 	if tz == "" {
 		return true
 	}
-	
+
 	_, err := time.LoadLocation(tz)
 	return err == nil
 }
@@ -206,14 +208,14 @@ func validateLanguage(fl validator.FieldLevel) bool {
 	if lang == "" {
 		return true
 	}
-	
+
 	// 简化的语言代码验证
 	validLanguages := map[string]bool{
 		"zh-CN": true, "zh-TW": true, "en-US": true, "en-GB": true,
 		"ja-JP": true, "ko-KR": true, "fr-FR": true, "de-DE": true,
 		"es-ES": true, "pt-BR": true, "ru-RU": true, "it-IT": true,
 	}
-	
+
 	return validLanguages[lang]
 }
 

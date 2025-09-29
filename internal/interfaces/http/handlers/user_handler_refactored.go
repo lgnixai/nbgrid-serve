@@ -1,6 +1,10 @@
+//go:build ignore
+
 package handlers
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
@@ -35,20 +39,20 @@ func (h *UserHandler) Register(c *gin.Context) {
 	if err := h.ValidateRequest(c, &req); err != nil {
 		return
 	}
-	
+
 	// 执行注册
 	user, err := h.userService.Register(c.Request.Context(), req.Name, req.Email, req.Password)
 	if err != nil {
 		h.HandleError(c, err)
 		return
 	}
-	
+
 	// 记录活动
 	h.LogActivity(c, "user.register", "user", map[string]interface{}{
 		"user_id": user.ID,
 		"email":   user.Email,
 	})
-	
+
 	h.HandleCreated(c, user, "User registered successfully")
 }
 
@@ -64,19 +68,19 @@ func (h *UserHandler) Login(c *gin.Context) {
 	if err := h.ValidateRequest(c, &req); err != nil {
 		return
 	}
-	
+
 	// 执行登录
 	tokens, err := h.userService.Login(c.Request.Context(), req.Email, req.Password)
 	if err != nil {
 		h.HandleError(c, err)
 		return
 	}
-	
+
 	// 记录活动
 	h.LogActivity(c, "user.login", "user", map[string]interface{}{
 		"email": req.Email,
 	})
-	
+
 	h.HandleSuccess(c, tokens, "Login successful")
 }
 
@@ -86,7 +90,7 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	
+
 	// 尝试从缓存获取
 	cacheKey := h.CacheKey("user:profile", user.ID)
 	var cachedUser interface{}
@@ -94,17 +98,17 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 		h.HandleSuccess(c, cachedUser)
 		return
 	}
-	
+
 	// 从服务获取
 	profile, err := h.userService.GetUserByID(c.Request.Context(), user.ID)
 	if err != nil {
 		h.HandleError(c, err)
 		return
 	}
-	
+
 	// 设置缓存
 	h.SetCache(c, cacheKey, profile, 5*time.Minute)
-	
+
 	h.HandleSuccess(c, profile)
 }
 
@@ -121,12 +125,12 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	
+
 	var req UpdateProfileRequest
 	if err := h.ValidateRequest(c, &req); err != nil {
 		return
 	}
-	
+
 	// 构建更新数据
 	updates := make(map[string]interface{})
 	if req.Name != nil {
@@ -138,20 +142,20 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 	if req.Avatar != nil {
 		updates["avatar"] = req.Avatar
 	}
-	
+
 	// 执行更新
 	updatedUser, err := h.userService.UpdateUser(c.Request.Context(), user.ID, updates)
 	if err != nil {
 		h.HandleError(c, err)
 		return
 	}
-	
+
 	// 清除缓存
 	h.InvalidateCache(c, h.CacheKey("user:profile", user.ID))
-	
+
 	// 记录活动
 	h.LogActivity(c, "user.update_profile", "user", updates)
-	
+
 	h.HandleSuccess(c, updatedUser, "Profile updated successfully")
 }
 
@@ -167,12 +171,12 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	
+
 	var req ChangePasswordRequest
 	if err := h.ValidateRequest(c, &req); err != nil {
 		return
 	}
-	
+
 	// 执行密码修改
 	err = h.userService.ChangePassword(
 		c.Request.Context(),
@@ -184,10 +188,10 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 		h.HandleError(c, err)
 		return
 	}
-	
+
 	// 记录活动
 	h.LogActivity(c, "user.change_password", "user", nil)
-	
+
 	h.HandleSuccess(c, nil, "Password changed successfully")
 }
 
@@ -206,12 +210,12 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 		h.HandleForbidden(c, "Admin access required")
 		return
 	}
-	
+
 	var req ListUsersRequest
 	if err := h.ValidateQueryParams(c, &req); err != nil {
 		return
 	}
-	
+
 	// 设置默认值
 	if req.Limit == 0 {
 		req.Limit = 20
@@ -222,7 +226,7 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 	if req.SortOrder == "" {
 		req.SortOrder = "desc"
 	}
-	
+
 	// 获取用户列表
 	users, total, err := h.userService.ListUsers(
 		c.Request.Context(),
@@ -237,7 +241,7 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 		h.HandleError(c, err)
 		return
 	}
-	
+
 	h.HandlePaginatedSuccess(c, users, total, req.Offset, req.Limit)
 }
 
@@ -248,19 +252,19 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		h.HandleForbidden(c, "Admin access required")
 		return
 	}
-	
+
 	userID := h.GetPathParam(c, "id")
 	if err := validators.ValidateID(userID); err != nil {
 		h.HandleBadRequest(c, err.Error())
 		return
 	}
-	
+
 	user, err := h.userService.GetUserByID(c.Request.Context(), userID)
 	if err != nil {
 		h.HandleError(c, err)
 		return
 	}
-	
+
 	h.HandleSuccess(c, user)
 }
 
@@ -271,31 +275,31 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 		h.HandleForbidden(c, "Admin access required")
 		return
 	}
-	
+
 	userID := h.GetPathParam(c, "id")
 	if err := validators.ValidateID(userID); err != nil {
 		h.HandleBadRequest(c, err.Error())
 		return
 	}
-	
+
 	// 防止删除自己
 	currentUser, _ := h.GetCurrentUser(c)
 	if currentUser.ID == userID {
 		h.HandleBadRequest(c, "Cannot delete yourself")
 		return
 	}
-	
+
 	err := h.userService.DeleteUser(c.Request.Context(), userID)
 	if err != nil {
 		h.HandleError(c, err)
 		return
 	}
-	
+
 	// 记录活动
 	h.LogActivity(c, "user.delete", "user", map[string]interface{}{
 		"deleted_user_id": userID,
 	})
-	
+
 	h.HandleSuccess(c, nil, "User deleted successfully")
 }
 
@@ -306,16 +310,16 @@ func (h *UserHandler) BulkUpdateUsers(c *gin.Context) {
 		h.HandleForbidden(c, "Admin access required")
 		return
 	}
-	
+
 	var req struct {
 		validators.BatchIDsRequest
 		Updates map[string]interface{} `json:"updates" validate:"required"`
 	}
-	
+
 	if err := h.ValidateRequest(c, &req); err != nil {
 		return
 	}
-	
+
 	// 执行批量更新
 	affected, err := h.userService.BulkUpdateUsers(
 		c.Request.Context(),
@@ -326,14 +330,14 @@ func (h *UserHandler) BulkUpdateUsers(c *gin.Context) {
 		h.HandleError(c, err)
 		return
 	}
-	
+
 	// 记录活动
 	h.LogActivity(c, "user.bulk_update", "user", map[string]interface{}{
 		"user_ids": req.IDs,
 		"updates":  req.Updates,
 		"affected": affected,
 	})
-	
+
 	h.HandleSuccess(c, map[string]interface{}{
 		"affected": affected,
 	}, "Users updated successfully")
@@ -345,23 +349,23 @@ func (h *UserHandler) Logout(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	
+
 	// 获取token
 	token := c.GetHeader("Authorization")
 	if len(token) > 7 && token[:7] == "Bearer " {
 		token = token[7:]
 	}
-	
+
 	// 执行登出
 	err = h.userService.Logout(c.Request.Context(), user.ID, token)
 	if err != nil {
 		h.HandleError(c, err)
 		return
 	}
-	
+
 	// 记录活动
 	h.LogActivity(c, "user.logout", "user", nil)
-	
+
 	h.HandleSuccess(c, nil, "Logout successful")
 }
 
@@ -376,13 +380,13 @@ func (h *UserHandler) RefreshToken(c *gin.Context) {
 	if err := h.ValidateRequest(c, &req); err != nil {
 		return
 	}
-	
+
 	// 执行刷新
 	tokens, err := h.userService.RefreshToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
 		h.HandleError(c, err)
 		return
 	}
-	
+
 	h.HandleSuccess(c, tokens, "Token refreshed successfully")
 }

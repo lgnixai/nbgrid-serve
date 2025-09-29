@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"bytes"
-	"io"
 	"runtime"
+	"sort"
 	"sync"
 	"time"
 
@@ -56,42 +56,42 @@ func (pm *PerformanceMonitor) Middleware() gin.HandlerFunc {
 		start := time.Now()
 		path := c.Request.URL.Path
 		method := c.Request.Method
-		
+
 		// 获取请求体大小
 		requestSize := c.Request.ContentLength
-		
+
 		// 内存使用前
 		var memStatsBefore runtime.MemStats
 		runtime.ReadMemStats(&memStatsBefore)
-		
+
 		// 创建响应写入器包装器来捕获响应大小
-		blw := &bodyLogWriter{
+		blw := &perfBodyLogWriter{
 			ResponseWriter: c.Writer,
 			body:           bytes.NewBufferString(""),
 		}
 		c.Writer = blw
-		
+
 		// 处理请求
 		c.Next()
-		
+
 		// 计算耗时
 		duration := time.Since(start)
-		
+
 		// 内存使用后
 		var memStatsAfter runtime.MemStats
 		runtime.ReadMemStats(&memStatsAfter)
-		
+
 		// 计算内存增长
 		memoryUsed := int64(memStatsAfter.Alloc - memStatsBefore.Alloc)
-		
+
 		// 获取响应信息
 		statusCode := c.Writer.Status()
 		responseSize := blw.body.Len()
-		
+
 		// 更新指标
 		endpoint := method + " " + path
 		pm.updateMetrics(endpoint, duration, statusCode, len(c.Errors) > 0)
-		
+
 		// 慢请求检测
 		if duration > pm.slowThreshold {
 			pm.logger.Warn("Slow request detected",
@@ -106,7 +106,7 @@ func (pm *PerformanceMonitor) Middleware() gin.HandlerFunc {
 				zap.String("user_agent", c.Request.UserAgent()),
 			)
 		}
-		
+
 		// 记录性能日志
 		pm.logger.Info("Request processed",
 			zap.String("method", method),
@@ -117,7 +117,7 @@ func (pm *PerformanceMonitor) Middleware() gin.HandlerFunc {
 			zap.Int("response_size", responseSize),
 			zap.Int64("memory_used", memoryUsed),
 		)
-		
+
 		// 设置性能响应头
 		c.Header("X-Response-Time", duration.String())
 		c.Header("X-Server-Time", start.Format(time.RFC3339))
@@ -128,7 +128,7 @@ func (pm *PerformanceMonitor) Middleware() gin.HandlerFunc {
 func (pm *PerformanceMonitor) updateMetrics(endpoint string, duration time.Duration, statusCode int, hasError bool) {
 	pm.metrics.mu.Lock()
 	defer pm.metrics.mu.Unlock()
-	
+
 	// 获取或创建端点指标
 	metrics, exists := pm.metrics.requests[endpoint]
 	if !exists {
@@ -139,26 +139,26 @@ func (pm *PerformanceMonitor) updateMetrics(endpoint string, duration time.Durat
 		}
 		pm.metrics.requests[endpoint] = metrics
 	}
-	
+
 	// 更新指标
 	metrics.Count++
 	metrics.TotalTime += duration
 	metrics.LastTime = duration
 	metrics.AvgTime = metrics.TotalTime / time.Duration(metrics.Count)
-	
+
 	if duration < metrics.MinTime {
 		metrics.MinTime = duration
 	}
 	if duration > metrics.MaxTime {
 		metrics.MaxTime = duration
 	}
-	
+
 	if hasError {
 		metrics.Errors++
 	}
-	
+
 	metrics.StatusCodes[statusCode]++
-	
+
 	// 更新总体指标
 	pm.metrics.totalRequests++
 	pm.metrics.totalDuration += duration
@@ -168,34 +168,34 @@ func (pm *PerformanceMonitor) updateMetrics(endpoint string, duration time.Durat
 func (pm *PerformanceMonitor) GetMetrics() map[string]interface{} {
 	pm.metrics.mu.RLock()
 	defer pm.metrics.mu.RUnlock()
-	
+
 	endpoints := make(map[string]map[string]interface{})
-	
+
 	for endpoint, metrics := range pm.metrics.requests {
 		endpoints[endpoint] = map[string]interface{}{
-			"count":         metrics.Count,
-			"total_time":    metrics.TotalTime.String(),
-			"avg_time":      metrics.AvgTime.String(),
-			"min_time":      metrics.MinTime.String(),
-			"max_time":      metrics.MaxTime.String(),
-			"last_time":     metrics.LastTime.String(),
-			"errors":        metrics.Errors,
-			"error_rate":    float64(metrics.Errors) / float64(metrics.Count),
-			"status_codes":  metrics.StatusCodes,
+			"count":        metrics.Count,
+			"total_time":   metrics.TotalTime.String(),
+			"avg_time":     metrics.AvgTime.String(),
+			"min_time":     metrics.MinTime.String(),
+			"max_time":     metrics.MaxTime.String(),
+			"last_time":    metrics.LastTime.String(),
+			"errors":       metrics.Errors,
+			"error_rate":   float64(metrics.Errors) / float64(metrics.Count),
+			"status_codes": metrics.StatusCodes,
 		}
 	}
-	
+
 	avgDuration := time.Duration(0)
 	if pm.metrics.totalRequests > 0 {
 		avgDuration = pm.metrics.totalDuration / time.Duration(pm.metrics.totalRequests)
 	}
-	
+
 	return map[string]interface{}{
-		"total_requests":  pm.metrics.totalRequests,
-		"total_duration":  pm.metrics.totalDuration.String(),
-		"avg_duration":    avgDuration.String(),
-		"endpoints":       endpoints,
-		"slow_threshold":  pm.slowThreshold.String(),
+		"total_requests": pm.metrics.totalRequests,
+		"total_duration": pm.metrics.totalDuration.String(),
+		"avg_duration":   avgDuration.String(),
+		"endpoints":      endpoints,
+		"slow_threshold": pm.slowThreshold.String(),
 	}
 }
 
@@ -203,14 +203,14 @@ func (pm *PerformanceMonitor) GetMetrics() map[string]interface{} {
 func (pm *PerformanceMonitor) GetTopSlowEndpoints(limit int) []map[string]interface{} {
 	pm.metrics.mu.RLock()
 	defer pm.metrics.mu.RUnlock()
-	
+
 	// 收集所有端点
 	type endpointStat struct {
 		endpoint string
 		avgTime  time.Duration
 		count    uint64
 	}
-	
+
 	stats := make([]endpointStat, 0, len(pm.metrics.requests))
 	for endpoint, metrics := range pm.metrics.requests {
 		stats = append(stats, endpointStat{
@@ -219,12 +219,12 @@ func (pm *PerformanceMonitor) GetTopSlowEndpoints(limit int) []map[string]interf
 			count:    metrics.Count,
 		})
 	}
-	
+
 	// 按平均时间排序
 	sort.Slice(stats, func(i, j int) bool {
 		return stats[i].avgTime > stats[j].avgTime
 	})
-	
+
 	// 返回前N个
 	result := make([]map[string]interface{}, 0, limit)
 	for i := 0; i < limit && i < len(stats); i++ {
@@ -234,7 +234,7 @@ func (pm *PerformanceMonitor) GetTopSlowEndpoints(limit int) []map[string]interf
 			"count":    stats[i].count,
 		})
 	}
-	
+
 	return result
 }
 
@@ -242,19 +242,19 @@ func (pm *PerformanceMonitor) GetTopSlowEndpoints(limit int) []map[string]interf
 func (pm *PerformanceMonitor) Reset() {
 	pm.metrics.mu.Lock()
 	defer pm.metrics.mu.Unlock()
-	
+
 	pm.metrics.requests = make(map[string]*EndpointMetrics)
 	pm.metrics.totalRequests = 0
 	pm.metrics.totalDuration = 0
 }
 
 // bodyLogWriter 响应写入器包装器
-type bodyLogWriter struct {
+type perfBodyLogWriter struct {
 	gin.ResponseWriter
 	body *bytes.Buffer
 }
 
-func (w *bodyLogWriter) Write(b []byte) (int, error) {
+func (w *perfBodyLogWriter) Write(b []byte) (int, error) {
 	w.body.Write(b)
 	return w.ResponseWriter.Write(b)
 }
@@ -289,7 +289,7 @@ func (mm *MemoryMonitor) Start() {
 func (mm *MemoryMonitor) check() {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	
+
 	// 检查是否超过阈值
 	if m.Alloc > mm.threshold {
 		mm.logger.Warn("Memory usage exceeds threshold",
@@ -299,10 +299,10 @@ func (mm *MemoryMonitor) check() {
 			zap.Uint64("sys", m.Sys),
 			zap.Uint32("num_gc", m.NumGC),
 		)
-		
+
 		// 触发 GC
 		runtime.GC()
-		
+
 		// 再次读取内存统计
 		runtime.ReadMemStats(&m)
 		mm.logger.Info("After GC",
@@ -330,7 +330,7 @@ func NewCPUMonitor(logger *zap.Logger, interval time.Duration) *CPUMonitor {
 func (cm *CPUMonitor) Start() {
 	ticker := time.NewTicker(cm.interval)
 	numCPU := runtime.NumCPU()
-	
+
 	go func() {
 		for range ticker.C {
 			cm.logger.Info("CPU stats",

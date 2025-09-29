@@ -1,3 +1,5 @@
+//go:build integration
+
 package integration
 
 import (
@@ -83,7 +85,7 @@ func (s *IntegrationTestSuite) SetupTest() {
 func (s *IntegrationTestSuite) TearDownTest() {
 	// 回滚事务
 	s.db.GetDB().Rollback()
-	
+
 	// 清理Redis
 	s.clearRedis()
 }
@@ -164,7 +166,7 @@ func (s *IntegrationTestSuite) clearRedis() {
 		"token:*",
 		"permission:*",
 	}
-	
+
 	for _, pattern := range keys {
 		_ = s.redis.DeletePattern(ctx, pattern)
 	}
@@ -195,44 +197,48 @@ func (s *IntegrationTestSuite) Context() context.Context {
 // CreateTestUser 创建测试用户
 func (s *IntegrationTestSuite) CreateTestUser(name, email, password string) string {
 	userService := s.container.UserAppService()
-	
-	user, err := userService.Register(s.ctx, name, email, password)
+
+	req := container.ApplicationRegisterRequest(name, email, password)
+	user, err := userService.Register(s.ctx, req, nil)
 	s.Require().NoError(err)
 	s.Require().NotNil(user)
-	
-	return user.ID
+
+	return user.UserID
 }
 
 // CreateTestSpace 创建测试空间
 func (s *IntegrationTestSuite) CreateTestSpace(userID, name string) string {
 	spaceService := s.container.SpaceService()
-	
-	space, err := spaceService.CreateSpace(s.ctx, userID, name, "Test space")
+
+	req := container.SpaceCreateRequest(userID, name, "Test space")
+	space, err := spaceService.CreateSpace(s.ctx, req)
 	s.Require().NoError(err)
 	s.Require().NotNil(space)
-	
+
 	return space.ID
 }
 
 // CreateTestBase 创建测试基础表
 func (s *IntegrationTestSuite) CreateTestBase(spaceID, name string) string {
 	baseService := s.container.BaseService()
-	
-	base, err := baseService.CreateBase(s.ctx, spaceID, name, "Test base")
+
+	req := container.BaseCreateRequest(spaceID, name, "Test base")
+	base, err := baseService.CreateBase(s.ctx, req)
 	s.Require().NoError(err)
 	s.Require().NotNil(base)
-	
+
 	return base.ID
 }
 
 // CreateTestTable 创建测试表
 func (s *IntegrationTestSuite) CreateTestTable(baseID, name string) string {
 	tableService := s.container.TableService()
-	
-	table, err := tableService.CreateTable(s.ctx, baseID, name, "Test table")
+
+	req := container.TableCreateRequest(baseID, name, "Test table")
+	table, err := tableService.CreateTable(s.ctx, req)
 	s.Require().NoError(err)
 	s.Require().NotNil(table)
-	
+
 	return table.ID
 }
 
@@ -270,14 +276,14 @@ func (s *IntegrationTestSuite) MeasureExecutionTime(fn func()) time.Duration {
 // RunConcurrent 并发运行测试
 func (s *IntegrationTestSuite) RunConcurrent(concurrency int, fn func(int)) {
 	done := make(chan struct{}, concurrency)
-	
+
 	for i := 0; i < concurrency; i++ {
 		go func(index int) {
 			defer func() { done <- struct{}{} }()
 			fn(index)
 		}(i)
 	}
-	
+
 	// 等待所有goroutine完成
 	for i := 0; i < concurrency; i++ {
 		<-done

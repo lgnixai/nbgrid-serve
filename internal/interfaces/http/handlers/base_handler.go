@@ -1,12 +1,17 @@
 package handlers
 
 import (
+	"fmt"
+	"mime/multipart"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 
+	"teable-go-backend/internal/infrastructure/database/models"
 	"teable-go-backend/internal/interfaces/middleware"
 	"teable-go-backend/pkg/errors"
 	"teable-go-backend/pkg/response"
@@ -33,8 +38,7 @@ func (h *BaseHandler) HandleSuccess(c *gin.Context, data interface{}, message ..
 	if len(message) > 0 {
 		msg = message[0]
 	}
-	
-	c.JSON(http.StatusOK, response.Success(data, msg))
+	response.SuccessWithMessage(c, data, msg)
 }
 
 // HandleCreated 处理创建成功响应
@@ -43,8 +47,12 @@ func (h *BaseHandler) HandleCreated(c *gin.Context, data interface{}, message ..
 	if len(message) > 0 {
 		msg = message[0]
 	}
-	
-	c.JSON(http.StatusCreated, response.Success(data, msg))
+	c.JSON(http.StatusCreated, response.Response{
+		Success: true,
+		Data:    data,
+		Message: msg,
+		Code:    http.StatusCreated,
+	})
 }
 
 // HandleError 处理错误响应
@@ -55,30 +63,30 @@ func (h *BaseHandler) HandleError(c *gin.Context, err error) {
 		zap.String("path", c.Request.URL.Path),
 		zap.String("method", c.Request.Method),
 	)
-	
+
 	// 检查是否是应用错误
 	if appErr, ok := errors.IsAppError(err); ok {
-		c.JSON(appErr.HTTPStatus, response.Error(appErr.Code, appErr.Message))
+		response.Error(c, appErr)
 		return
 	}
-	
+
 	// 处理特定错误类型
 	switch err {
 	case gorm.ErrRecordNotFound:
-		c.JSON(http.StatusNotFound, response.Error("NOT_FOUND", "Resource not found"))
+		response.NotFound(c, "Resource not found")
 	default:
-		c.JSON(http.StatusInternalServerError, response.Error("INTERNAL_ERROR", "Internal server error"))
+		response.InternalServerError(c, "Internal server error")
 	}
 }
 
 // HandleNotFound 处理资源未找到
 func (h *BaseHandler) HandleNotFound(c *gin.Context, resource string) {
-	c.JSON(http.StatusNotFound, response.Error("NOT_FOUND", resource+" not found"))
+	response.NotFound(c, resource+" not found")
 }
 
 // HandleBadRequest 处理错误请求
 func (h *BaseHandler) HandleBadRequest(c *gin.Context, message string) {
-	c.JSON(http.StatusBadRequest, response.Error("BAD_REQUEST", message))
+	response.BadRequest(c, message)
 }
 
 // HandleUnauthorized 处理未授权
@@ -87,7 +95,7 @@ func (h *BaseHandler) HandleUnauthorized(c *gin.Context, message ...string) {
 	if len(message) > 0 {
 		msg = message[0]
 	}
-	c.JSON(http.StatusUnauthorized, response.Error("UNAUTHORIZED", msg))
+	response.Unauthorized(c, msg)
 }
 
 // HandleForbidden 处理禁止访问
@@ -96,7 +104,7 @@ func (h *BaseHandler) HandleForbidden(c *gin.Context, message ...string) {
 	if len(message) > 0 {
 		msg = message[0]
 	}
-	c.JSON(http.StatusForbidden, response.Error("FORBIDDEN", msg))
+	response.Forbidden(c, msg)
 }
 
 // GetCurrentUser 获取当前用户
@@ -123,10 +131,10 @@ func (h *BaseHandler) RequireAuth(c *gin.Context) (*models.User, error) {
 func (h *BaseHandler) GetPagination(c *gin.Context) (offset, limit int) {
 	offsetStr := c.DefaultQuery("offset", "0")
 	limitStr := c.DefaultQuery("limit", "20")
-	
+
 	offset, _ = strconv.Atoi(offsetStr)
 	limit, _ = strconv.Atoi(limitStr)
-	
+
 	// 限制最大值
 	if limit > 100 {
 		limit = 100
@@ -137,7 +145,7 @@ func (h *BaseHandler) GetPagination(c *gin.Context) (offset, limit int) {
 	if offset < 0 {
 		offset = 0
 	}
-	
+
 	return offset, limit
 }
 
@@ -145,12 +153,12 @@ func (h *BaseHandler) GetPagination(c *gin.Context) (offset, limit int) {
 func (h *BaseHandler) GetSortParams(c *gin.Context) (sortBy string, sortOrder string) {
 	sortBy = c.DefaultQuery("sort_by", "created_time")
 	sortOrder = c.DefaultQuery("sort_order", "desc")
-	
+
 	// 验证排序顺序
 	if sortOrder != "asc" && sortOrder != "desc" {
 		sortOrder = "desc"
 	}
-	
+
 	return sortBy, sortOrder
 }
 
@@ -174,7 +182,7 @@ func (h *BaseHandler) ValidateRequest(c *gin.Context, req interface{}) error {
 		h.HandleBadRequest(c, "Invalid request body: "+err.Error())
 		return err
 	}
-	
+
 	// 使用验证器验证
 	if v, ok := req.(Validator); ok {
 		if err := v.Validate(); err != nil {
@@ -182,7 +190,7 @@ func (h *BaseHandler) ValidateRequest(c *gin.Context, req interface{}) error {
 			return err
 		}
 	}
-	
+
 	return nil
 }
 
@@ -192,7 +200,7 @@ func (h *BaseHandler) ValidateQueryParams(c *gin.Context, req interface{}) error
 		h.HandleBadRequest(c, "Invalid query parameters: "+err.Error())
 		return err
 	}
-	
+
 	// 使用验证器验证
 	if v, ok := req.(Validator); ok {
 		if err := v.Validate(); err != nil {
@@ -200,7 +208,7 @@ func (h *BaseHandler) ValidateQueryParams(c *gin.Context, req interface{}) error
 			return err
 		}
 	}
-	
+
 	return nil
 }
 
@@ -211,17 +219,17 @@ type Validator interface {
 
 // PaginatedResponse 分页响应
 type PaginatedResponse struct {
-	Data       interface{} `json:"data"`
-	Total      int64       `json:"total"`
-	Offset     int         `json:"offset"`
-	Limit      int         `json:"limit"`
-	HasMore    bool        `json:"has_more"`
+	Data    interface{} `json:"data"`
+	Total   int64       `json:"total"`
+	Offset  int         `json:"offset"`
+	Limit   int         `json:"limit"`
+	HasMore bool        `json:"has_more"`
 }
 
 // HandlePaginatedSuccess 处理分页成功响应
 func (h *BaseHandler) HandlePaginatedSuccess(c *gin.Context, data interface{}, total int64, offset, limit int) {
 	hasMore := int64(offset+limit) < total
-	
+
 	resp := PaginatedResponse{
 		Data:    data,
 		Total:   total,
@@ -229,7 +237,7 @@ func (h *BaseHandler) HandlePaginatedSuccess(c *gin.Context, data interface{}, t
 		Limit:   limit,
 		HasMore: hasMore,
 	}
-	
+
 	h.HandleSuccess(c, resp)
 }
 
@@ -246,20 +254,20 @@ func (h *BaseHandler) CheckPermission(c *gin.Context, resource, action string) e
 	if err != nil {
 		return err
 	}
-	
+
 	// 这里需要调用权限服务检查权限
 	// 简化示例
 	_ = user
 	_ = resource
 	_ = action
-	
+
 	return nil
 }
 
 // LogActivity 记录活动日志
 func (h *BaseHandler) LogActivity(c *gin.Context, action, resource string, metadata map[string]interface{}) {
 	userID, _ := h.GetCurrentUserID(c)
-	
+
 	h.logger.Info("User activity",
 		zap.String("user_id", userID),
 		zap.String("action", action),
@@ -277,13 +285,13 @@ func (h *BaseHandler) HandleFileUpload(c *gin.Context, fieldName string, maxSize
 		h.HandleBadRequest(c, "No file uploaded")
 		return nil, err
 	}
-	
+
 	// 检查文件大小
 	if file.Size > maxSize {
 		h.HandleBadRequest(c, fmt.Sprintf("File size exceeds limit of %d bytes", maxSize))
 		return nil, fmt.Errorf("file too large")
 	}
-	
+
 	return file, nil
 }
 
@@ -292,16 +300,16 @@ func (h *BaseHandler) HandleBatchOperation(c *gin.Context, fn func(ids []string)
 	var req struct {
 		IDs []string `json:"ids" binding:"required,min=1"`
 	}
-	
+
 	if err := h.ValidateRequest(c, &req); err != nil {
 		return
 	}
-	
+
 	if err := fn(req.IDs); err != nil {
 		h.HandleError(c, err)
 		return
 	}
-	
+
 	h.HandleSuccess(c, map[string]interface{}{
 		"affected": len(req.IDs),
 	})

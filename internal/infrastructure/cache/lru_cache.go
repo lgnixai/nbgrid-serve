@@ -3,6 +3,7 @@ package cache
 import (
 	"container/list"
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -11,24 +12,24 @@ import (
 
 // LRUCache 线程安全的 LRU 缓存实现
 type LRUCache struct {
-	capacity   int
-	evictList  *list.List
-	items      map[string]*list.Element
-	mu         sync.RWMutex
-	onEvicted  func(key string, value interface{})
-	stats      *CacheStats
-	logger     *zap.Logger
+	capacity  int
+	evictList *list.List
+	items     map[string]*list.Element
+	mu        sync.RWMutex
+	onEvicted func(key string, value interface{})
+	stats     *CacheStats
+	logger    *zap.Logger
 }
 
 // CacheStats 缓存统计信息
 type CacheStats struct {
-	Hits       uint64
-	Misses     uint64
-	Evictions  uint64
-	Sets       uint64
-	Deletes    uint64
-	Size       int
-	mu         sync.RWMutex
+	Hits      uint64
+	Misses    uint64
+	Evictions uint64
+	Sets      uint64
+	Deletes   uint64
+	Size      int
+	mu        sync.RWMutex
 }
 
 // cacheEntry 缓存条目
@@ -56,7 +57,7 @@ func (c *LRUCache) Get(key string) (interface{}, bool) {
 	c.mu.RLock()
 	if elem, ok := c.items[key]; ok {
 		entry := elem.Value.(*cacheEntry)
-		
+
 		// 检查是否过期
 		if time.Now().After(entry.expiresAt) {
 			c.mu.RUnlock()
@@ -64,19 +65,19 @@ func (c *LRUCache) Get(key string) (interface{}, bool) {
 			c.incrementMisses()
 			return nil, false
 		}
-		
+
 		c.mu.RUnlock()
-		
+
 		// 移动到队列前面（最近使用）
 		c.mu.Lock()
 		c.evictList.MoveToFront(elem)
 		c.mu.Unlock()
-		
+
 		c.incrementHits()
 		return entry.value, true
 	}
 	c.mu.RUnlock()
-	
+
 	c.incrementMisses()
 	return nil, false
 }
@@ -85,9 +86,9 @@ func (c *LRUCache) Get(key string) (interface{}, bool) {
 func (c *LRUCache) Set(key string, value interface{}, ttl time.Duration) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	expiresAt := time.Now().Add(ttl)
-	
+
 	// 如果键已存在，更新值并移到前面
 	if elem, ok := c.items[key]; ok {
 		c.evictList.MoveToFront(elem)
@@ -97,22 +98,22 @@ func (c *LRUCache) Set(key string, value interface{}, ttl time.Duration) {
 		c.incrementSets()
 		return
 	}
-	
+
 	// 添加新条目
 	entry := &cacheEntry{
 		key:       key,
 		value:     value,
 		expiresAt: expiresAt,
 	}
-	
+
 	elem := c.evictList.PushFront(entry)
 	c.items[key] = elem
-	
+
 	// 如果超过容量，移除最久未使用的条目
 	if c.evictList.Len() > c.capacity {
 		c.removeOldest()
 	}
-	
+
 	c.incrementSets()
 	c.updateSize()
 }
@@ -121,14 +122,14 @@ func (c *LRUCache) Set(key string, value interface{}, ttl time.Duration) {
 func (c *LRUCache) Delete(key string) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	if elem, ok := c.items[key]; ok {
 		c.removeElement(elem)
 		c.incrementDeletes()
 		c.updateSize()
 		return true
 	}
-	
+
 	return false
 }
 
@@ -136,14 +137,14 @@ func (c *LRUCache) Delete(key string) bool {
 func (c *LRUCache) Clear() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	if c.onEvicted != nil {
 		for _, elem := range c.items {
 			entry := elem.Value.(*cacheEntry)
 			c.onEvicted(entry.key, entry.value)
 		}
 	}
-	
+
 	c.evictList.Init()
 	c.items = make(map[string]*list.Element)
 	c.resetStats()
@@ -170,7 +171,7 @@ func (c *LRUCache) removeElement(elem *list.Element) {
 	c.evictList.Remove(elem)
 	entry := elem.Value.(*cacheEntry)
 	delete(c.items, entry.key)
-	
+
 	if c.onEvicted != nil {
 		c.onEvicted(entry.key, entry.value)
 	}
@@ -180,7 +181,7 @@ func (c *LRUCache) removeElement(elem *list.Element) {
 func (c *LRUCache) Cleanup() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	now := time.Now()
 	for key, elem := range c.items {
 		entry := elem.Value.(*cacheEntry)
@@ -189,7 +190,7 @@ func (c *LRUCache) Cleanup() {
 			c.logger.Debug("Removed expired entry", zap.String("key", key))
 		}
 	}
-	
+
 	c.updateSize()
 }
 
@@ -213,7 +214,7 @@ func (c *LRUCache) StartCleanupTimer(ctx context.Context, interval time.Duration
 func (c *LRUCache) GetStats() CacheStats {
 	c.stats.mu.RLock()
 	defer c.stats.mu.RUnlock()
-	
+
 	return CacheStats{
 		Hits:      c.stats.Hits,
 		Misses:    c.stats.Misses,
@@ -276,7 +277,7 @@ func (c *LRUCache) resetStats() {
 func (s *CacheStats) HitRate() float64 {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	total := s.Hits + s.Misses
 	if total == 0 {
 		return 0
@@ -307,7 +308,7 @@ func (a *LRUCacheAdapter) Get(ctx context.Context, key string, dest interface{})
 	if !ok {
 		return ErrCacheNotFound
 	}
-	
+
 	// 简单的类型断言，实际使用中可能需要更复杂的反序列化
 	switch v := dest.(type) {
 	case *string:
@@ -320,7 +321,7 @@ func (a *LRUCacheAdapter) Get(ctx context.Context, key string, dest interface{})
 		// 对于复杂类型，可能需要使用反射或JSON序列化
 		return fmt.Errorf("unsupported destination type")
 	}
-	
+
 	return nil
 }
 
