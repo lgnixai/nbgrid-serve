@@ -214,6 +214,10 @@ func (r *FieldTypeRegistry) registerBuiltinHandlers() {
 	r.handlers[FieldTypeLookup] = NewLookupFieldHandler()
 	r.handlers[FieldTypeRollup] = NewRollupFieldHandler()
 	r.handlers[FieldTypeFormula] = NewFormulaFieldHandler()
+	
+	// 虚拟字段类型
+	r.handlers[FieldTypeVirtualFormula] = NewFormulaFieldHandler()
+	// Note: AI handler requires provider, will be registered separately via RegisterHandler
 
 	// 特殊类型
 	r.handlers[FieldTypeAutoNumber] = NewAutoNumberFieldHandler()

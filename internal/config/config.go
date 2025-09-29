@@ -18,6 +18,7 @@ type Config struct {
 	Logger    LoggerConfig    `mapstructure:"logger"`
 	Queue     QueueConfig     `mapstructure:"queue"`
 	WebSocket WebSocketConfig `mapstructure:"websocket"`
+	AI        AIConfig        `mapstructure:"ai"`
 }
 
 // ServerConfig 服务器配置

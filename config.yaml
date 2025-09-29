@@ -65,3 +65,27 @@ websocket:
   connection_timeout: "60s"
   max_connections: 1000
   enable_presence: true
+
+# AI配置
+ai:
+  default_provider: openai
+  providers:
+    openai:
+      type: openai
+      api_key: ${OPENAI_API_KEY}  # 从环境变量获取
+      default_model: gpt-3.5-turbo
+      timeout: 30
+      rate_limit:
+        requests_per_minute: 60
+        tokens_per_minute: 90000
+        concurrent_requests: 10
+    deepseek:
+      type: deepseek
+      api_key: ${DEEPSEEK_API_KEY}  # 从环境变量获取
+      base_url: https://api.deepseek.com/v1
+      default_model: deepseek-chat
+      timeout: 30
+      rate_limit:
+        requests_per_minute: 60
+        tokens_per_minute: 90000
+        concurrent_requests: 10
