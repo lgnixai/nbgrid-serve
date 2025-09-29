@@ -14,11 +14,11 @@ import (
 
 // LoggingConfig 日志中间件配置
 type LoggingConfig struct {
-	SkipPaths      []string
-	SkipPathPrefix []string
-	LogRequestBody bool
+	SkipPaths       []string
+	SkipPathPrefix  []string
+	LogRequestBody  bool
 	LogResponseBody bool
-	MaxBodySize    int64
+	MaxBodySize     int64
 }
 
 // DefaultLoggingConfig 默认日志配置
@@ -46,7 +46,7 @@ func RequestIDMiddleware() gin.HandlerFunc {
 		if requestID == "" {
 			requestID = uuid.New().String()
 		}
-		
+
 		c.Set("request_id", requestID)
 		c.Header("X-Request-ID", requestID)
 		c.Next()
@@ -126,7 +126,7 @@ func DetailedLoggingMiddleware(config ...LoggingConfig) gin.HandlerFunc {
 		}
 
 		start := time.Now()
-		
+
 		// 读取请求体
 		var requestBody []byte
 		if cfg.LogRequestBody && c.Request.Body != nil {
@@ -138,9 +138,9 @@ func DetailedLoggingMiddleware(config ...LoggingConfig) gin.HandlerFunc {
 		var responseBody bytes.Buffer
 		bodyWriter := &bodyLogWriter{
 			ResponseWriter: c.Writer,
-			body:          &responseBody,
-			logBody:       cfg.LogResponseBody,
-			maxSize:       cfg.MaxBodySize,
+			body:           &responseBody,
+			logBody:        cfg.LogResponseBody,
+			maxSize:        cfg.MaxBodySize,
 		}
 		c.Writer = bodyWriter
 
@@ -222,7 +222,7 @@ func (w *bodyLogWriter) Write(data []byte) (int, error) {
 			w.body.Write(data[:remaining])
 		}
 	}
-	
+
 	// 写入实际响应
 	return w.ResponseWriter.Write(data)
 }

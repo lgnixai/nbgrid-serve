@@ -336,27 +336,10 @@ export class ViewClient {
     share_url: string;
     expires_at?: string;
   }> {
-    return this.httpClient.post(`/api/views/${viewId}/share`, options);
+    return this.httpClient.post(`/api/view-shares/${viewId}/share`, options);
   }
 
-  /**
-   * 获取视图共享信息
-   */
-  public async getShareInfo(viewId: string): Promise<{
-    share_id?: string;
-    share_url?: string;
-    expires_at?: string;
-    is_public: boolean;
-  }> {
-    return this.httpClient.get(`/api/views/${viewId}/share`);
-  }
-
-  /**
-   * 删除视图共享
-   */
-  public async deleteShare(viewId: string): Promise<void> {
-    await this.httpClient.delete(`/api/views/${viewId}/share`);
-  }
+  // 后端未提供获取/删除视图分享详情的公开路由，此处移除
 
   // ==================== 视图模板 ====================
 

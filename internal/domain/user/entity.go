@@ -6,7 +6,7 @@ import (
 	"unicode"
 
 	"golang.org/x/crypto/bcrypt"
-	
+
 	"teable-go-backend/pkg/utils"
 )
 
@@ -122,7 +122,7 @@ func NewUser(name, email string) (*User, error) {
 	if err := validateUserName(name); err != nil {
 		return nil, err
 	}
-	
+
 	if err := validateEmail(email); err != nil {
 		return nil, err
 	}
@@ -225,21 +225,21 @@ func (u *User) UpdateProfile(name, phone *string, avatar *string) error {
 		}
 		u.Name = *name
 	}
-	
+
 	if phone != nil {
 		if err := validatePhone(*phone); err != nil {
 			return err
 		}
 		u.Phone = phone
 	}
-	
+
 	if avatar != nil {
 		if err := validateAvatar(*avatar); err != nil {
 			return err
 		}
 		u.Avatar = avatar
 	}
-	
+
 	u.updateModifiedTime()
 	return nil
 }
@@ -323,12 +323,12 @@ func (u *User) ValidateForUpdate() error {
 	if u.DeletedTime != nil {
 		return ErrUserDeleted
 	}
-	
+
 	// 系统用户不能被普通操作修改
 	if u.IsSystem {
 		return DomainError{Code: "SYSTEM_USER_READONLY", Message: "system user cannot be modified"}
 	}
-	
+
 	return nil
 }
 
@@ -337,12 +337,12 @@ func (u *User) ValidateForDeletion() error {
 	if u.DeletedTime != nil {
 		return ErrUserDeleted
 	}
-	
+
 	// 系统用户不能被删除
 	if u.IsSystem {
 		return DomainError{Code: "SYSTEM_USER_UNDELETABLE", Message: "system user cannot be deleted"}
 	}
-	
+
 	return nil
 }
 
@@ -362,7 +362,7 @@ func (u *User) IsPasswordExpired(maxAge time.Duration) bool {
 	if u.LastModifiedTime == nil {
 		return false
 	}
-	
+
 	// 如果密码修改时间超过最大年龄，则认为过期
 	return time.Since(*u.LastModifiedTime) > maxAge
 }
@@ -373,7 +373,7 @@ func (u *User) ShouldChangePassword() bool {
 	if u.Password == nil {
 		return true
 	}
-	
+
 	// 检查密码是否过期（90天）
 	return u.IsPasswordExpired(90 * 24 * time.Hour)
 }
@@ -406,14 +406,14 @@ func validateUserName(name string) error {
 	if len(name) > 100 {
 		return DomainError{Code: "NAME_TOO_LONG", Message: "user name cannot exceed 100 characters"}
 	}
-	
+
 	// 检查是否包含非法字符
 	for _, char := range name {
 		if char < 32 || char == 127 { // 控制字符
 			return DomainError{Code: "INVALID_NAME_CHARS", Message: "user name contains invalid characters"}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -425,13 +425,13 @@ func validateEmail(email string) error {
 	if len(email) > 255 {
 		return DomainError{Code: "EMAIL_TOO_LONG", Message: "email cannot exceed 255 characters"}
 	}
-	
+
 	// 使用正则表达式验证邮箱格式
 	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 	if !emailRegex.MatchString(email) {
 		return ErrInvalidEmail
 	}
-	
+
 	return nil
 }
 
@@ -494,13 +494,13 @@ func validatePhone(phone string) error {
 	if len(phone) > 50 {
 		return DomainError{Code: "PHONE_TOO_LONG", Message: "phone number cannot exceed 50 characters"}
 	}
-	
+
 	// 简单的手机号验证，支持国际格式
 	phoneRegex := regexp.MustCompile(`^\+?[1-9]\d{1,14}$`)
 	if !phoneRegex.MatchString(phone) {
 		return ErrInvalidPhone
 	}
-	
+
 	return nil
 }
 
@@ -512,31 +512,31 @@ func validateAvatar(avatar string) error {
 	if len(avatar) > 500 {
 		return DomainError{Code: "AVATAR_URL_TOO_LONG", Message: "avatar URL cannot exceed 500 characters"}
 	}
-	
+
 	// 简单的URL验证
 	urlRegex := regexp.MustCompile(`^https?://[^\s/$.?#].[^\s]*$`)
 	if !urlRegex.MatchString(avatar) {
 		return DomainError{Code: "INVALID_AVATAR_URL", Message: "invalid avatar URL format"}
 	}
-	
+
 	return nil
 }
 
 // isAdminPermission 检查是否为管理员权限
 func isAdminPermission(permission string) bool {
 	adminPermissions := map[string]bool{
-		"user:manage":        true,
-		"user:create":        true,
-		"user:delete":        true,
-		"user:promote":       true,
-		"space:manage":       true,
-		"space:delete":       true,
-		"base:manage":        true,
-		"base:delete":        true,
-		"table:manage":       true,
-		"system:config":      true,
-		"system:monitor":     true,
-		"permission:manage":  true,
+		"user:manage":       true,
+		"user:create":       true,
+		"user:delete":       true,
+		"user:promote":      true,
+		"space:manage":      true,
+		"space:delete":      true,
+		"base:manage":       true,
+		"base:delete":       true,
+		"table:manage":      true,
+		"system:config":     true,
+		"system:monitor":    true,
+		"permission:manage": true,
 	}
 
 	return adminPermissions[permission]

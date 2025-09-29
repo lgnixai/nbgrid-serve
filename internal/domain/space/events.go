@@ -44,17 +44,17 @@ func (e BaseDomainEvent) EventData() interface{} {
 
 // 空间相关事件类型常量
 const (
-	SpaceCreatedEventType              = "space.created"
-	SpaceUpdatedEventType              = "space.updated"
-	SpaceDeletedEventType              = "space.deleted"
-	SpaceSettingsUpdatedEventType      = "space.settings_updated"
-	SpaceCollaboratorAddedEventType    = "space.collaborator_added"
-	SpaceCollaboratorRemovedEventType  = "space.collaborator_removed"
+	SpaceCreatedEventType                 = "space.created"
+	SpaceUpdatedEventType                 = "space.updated"
+	SpaceDeletedEventType                 = "space.deleted"
+	SpaceSettingsUpdatedEventType         = "space.settings_updated"
+	SpaceCollaboratorAddedEventType       = "space.collaborator_added"
+	SpaceCollaboratorRemovedEventType     = "space.collaborator_removed"
 	SpaceCollaboratorRoleUpdatedEventType = "space.collaborator_role_updated"
-	SpaceCollaboratorInvitedEventType  = "space.collaborator_invited"
-	SpaceCollaboratorAcceptedEventType = "space.collaborator_accepted"
-	SpaceCollaboratorRejectedEventType = "space.collaborator_rejected"
-	SpaceMetricsUpdatedEventType       = "space.metrics_updated"
+	SpaceCollaboratorInvitedEventType     = "space.collaborator_invited"
+	SpaceCollaboratorAcceptedEventType    = "space.collaborator_accepted"
+	SpaceCollaboratorRejectedEventType    = "space.collaborator_rejected"
+	SpaceMetricsUpdatedEventType          = "space.metrics_updated"
 )
 
 // SpaceCreatedEvent 空间创建事件
@@ -139,10 +139,10 @@ func NewSpaceDeletedEvent(space *Space, deletedBy, reason string) *SpaceDeletedE
 // SpaceSettingsUpdatedEvent 空间设置更新事件
 type SpaceSettingsUpdatedEvent struct {
 	BaseDomainEvent
-	SpaceID            string                 `json:"space_id"`
-	UpdatedSettings    map[string]interface{} `json:"updated_settings"`
-	PreviousSettings   map[string]interface{} `json:"previous_settings,omitempty"`
-	UpdatedBy          string                 `json:"updated_by,omitempty"`
+	SpaceID          string                 `json:"space_id"`
+	UpdatedSettings  map[string]interface{} `json:"updated_settings"`
+	PreviousSettings map[string]interface{} `json:"previous_settings,omitempty"`
+	UpdatedBy        string                 `json:"updated_by,omitempty"`
 }
 
 // NewSpaceSettingsUpdatedEvent 创建空间设置更新事件
@@ -164,11 +164,11 @@ func NewSpaceSettingsUpdatedEvent(spaceID string, updated, previous map[string]i
 // SpaceCollaboratorAddedEvent 空间协作者添加事件
 type SpaceCollaboratorAddedEvent struct {
 	BaseDomainEvent
-	SpaceID         string           `json:"space_id"`
-	CollaboratorID  string           `json:"collaborator_id"`
-	UserID          string           `json:"user_id"`
-	Role            CollaboratorRole `json:"role"`
-	InvitedBy       string           `json:"invited_by"`
+	SpaceID        string           `json:"space_id"`
+	CollaboratorID string           `json:"collaborator_id"`
+	UserID         string           `json:"user_id"`
+	Role           CollaboratorRole `json:"role"`
+	InvitedBy      string           `json:"invited_by"`
 }
 
 // NewSpaceCollaboratorAddedEvent 创建空间协作者添加事件

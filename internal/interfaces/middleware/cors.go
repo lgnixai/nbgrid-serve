@@ -66,7 +66,7 @@ func CORS(config ...CORSConfig) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
-		
+
 		// 检查Origin是否被允许
 		if isOriginAllowed(origin, cfg.AllowOrigins) {
 			c.Header("Access-Control-Allow-Origin", origin)
@@ -124,7 +124,7 @@ func joinStrings(strs []string, sep string) string {
 	if len(strs) == 0 {
 		return ""
 	}
-	
+
 	result := strs[0]
 	for i := 1; i < len(strs); i++ {
 		result += sep + strs[i]

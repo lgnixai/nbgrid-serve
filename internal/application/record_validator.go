@@ -30,7 +30,7 @@ func (v *RecordValidator) ValidateForCreate(ctx context.Context, rec *record.Rec
 	if err := v.ValidateData(ctx, rec, tableSchema); err != nil {
 		return err
 	}
-	
+
 	// 创建时的特殊验证
 	return v.validateUniqueConstraints(ctx, rec, tableSchema, true)
 }
@@ -40,7 +40,7 @@ func (v *RecordValidator) ValidateForUpdate(ctx context.Context, rec *record.Rec
 	if err := v.ValidateData(ctx, rec, tableSchema); err != nil {
 		return err
 	}
-	
+
 	// 更新时的特殊验证
 	return v.validateUniqueConstraints(ctx, rec, tableSchema, false)
 }
@@ -65,7 +65,7 @@ func (v *RecordValidator) ValidateData(ctx context.Context, rec *record.Record, 
 		}
 
 		value, exists := rec.Data[field.Name]
-		
+
 		// 验证必填字段
 		if field.IsRequired {
 			if !exists || v.isEmpty(value) {
@@ -297,7 +297,7 @@ func (v *RecordValidator) validateSelectField(field *table.Field, value interfac
 // validateMultiSelectField 验证多选字段
 func (v *RecordValidator) validateMultiSelectField(field *table.Field, value interface{}) error {
 	var values []string
-	
+
 	switch v := value.(type) {
 	case []interface{}:
 		values = make([]string, len(v))
@@ -325,7 +325,7 @@ func (v *RecordValidator) validateMultiSelectField(field *table.Field, value int
 						validChoices[choiceStr] = true
 					}
 				}
-				
+
 				for _, value := range values {
 					if !validChoices[value] {
 						return fmt.Errorf("字段 '%s' 的值 '%s' 不在有效选项中", field.Name, value)
@@ -354,7 +354,7 @@ func (v *RecordValidator) validateBooleanField(field *table.Field, value interfa
 			return nil
 		}
 	}
-	
+
 	return fmt.Errorf("字段 '%s' 必须是布尔类型", field.Name)
 }
 
@@ -398,7 +398,7 @@ func (v *RecordValidator) validatePhoneField(field *table.Field, value interface
 	// 简单的电话号码验证（支持国际格式）
 	phoneRegex := regexp.MustCompile(`^[\+]?[1-9][\d]{0,15}$`)
 	cleanPhone := regexp.MustCompile(`[^\d\+]`).ReplaceAllString(str, "")
-	
+
 	if !phoneRegex.MatchString(cleanPhone) {
 		return fmt.Errorf("字段 '%s' 的电话号码格式无效", field.Name)
 	}
@@ -469,7 +469,7 @@ func (v *RecordValidator) isEmpty(value interface{}) bool {
 	if value == nil {
 		return true
 	}
-	
+
 	switch v := value.(type) {
 	case string:
 		return strings.TrimSpace(v) == ""
@@ -484,8 +484,8 @@ func (v *RecordValidator) isEmpty(value interface{}) bool {
 
 // ValidationError 验证错误
 type ValidationError struct {
-	Message string                     `json:"message"`
-	Errors  []record.ValidationError   `json:"errors"`
+	Message string                   `json:"message"`
+	Errors  []record.ValidationError `json:"errors"`
 }
 
 func (e *ValidationError) Error() string {

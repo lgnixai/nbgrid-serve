@@ -87,6 +87,8 @@ export interface AuthResponse {
   access_token: string;
   refresh_token: string;
   expires_in: number;
+  token_type?: string;
+  session_id?: string;
 }
 
 // ==================== 空间相关类型 ====================
@@ -616,6 +618,7 @@ export interface TeableConfig {
   retryDelay?: number;
   userAgent?: string;
   debug?: boolean;
+  disableProxy?: boolean;
 }
 
 export type JsonObject = { [key: string]: any };

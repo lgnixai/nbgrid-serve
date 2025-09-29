@@ -1,3 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+DIR="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$DIR"
+
+echo "Building teable-sdk..."
+npm run -s build
+echo "Build complete."
 #!/bin/bash
 
 # Teable SDK 构建脚本

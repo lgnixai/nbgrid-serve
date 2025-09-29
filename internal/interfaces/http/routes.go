@@ -32,6 +32,7 @@ type RouterConfig struct {
 	RecordService        recdomain.Service
 	ViewService          view.Service
 	PermissionService    permission.Service
+	PermissionAppService *application.PermissionService
 	ShareService         share.Service
 	AttachmentService    attachment.Service
 	NotificationService  notification.Service
@@ -82,7 +83,7 @@ func SetupRoutes(router *gin.Engine, config RouterConfig) {
 	router.Use(middleware.RequestIDMiddleware())
 	router.Use(middleware.ErrorHandler())
 	router.Use(middleware.PanicRecovery())
-	router.Use(middleware.LoggingMiddleware())
+	router.Use(middleware.DetailedLoggingMiddleware(middleware.LoggingConfig{LogRequestBody: true, LogResponseBody: false, MaxBodySize: 1024 * 1024}))
 
 	// 系统健康检查路由 (无需认证)
 	router.GET("/health", healthHandler.HealthCheck)
@@ -113,24 +114,27 @@ func SetupRoutes(router *gin.Engine, config RouterConfig) {
 			userGroup.PUT("/preferences", userHandler.UpdateUserPreferences)
 		}
 
+		// 构建权限中间件（基于应用层权限服务）
+		permMW := middleware.NewPermissionMiddleware(config.PermissionAppService)
+
 		// 空间相关路由 (需要认证)
 		spaceGroup := v1.Group("/spaces")
 		spaceGroup.Use(middleware.AuthMiddleware(config.AuthService))
 		{
 			spaceGroup.POST("", spaceHandler.CreateSpace)
 			spaceGroup.GET("", spaceHandler.ListSpaces)
-			spaceGroup.GET(":id", spaceHandler.GetSpace)
-			spaceGroup.PUT(":id", spaceHandler.UpdateSpace)
-			spaceGroup.DELETE(":id", spaceHandler.DeleteSpace)
+			spaceGroup.GET(":id", permMW.RequirePermission("space", permission.ActionSpaceRead), spaceHandler.GetSpace)
+			spaceGroup.PUT(":id", permMW.RequirePermission("space", permission.ActionSpaceUpdate), spaceHandler.UpdateSpace)
+			spaceGroup.DELETE(":id", permMW.RequirePermission("space", permission.ActionSpaceDelete), spaceHandler.DeleteSpace)
 
 			// 协作者管理
-			spaceGroup.POST(":id/collaborators", spaceHandler.AddCollaborator)
-			spaceGroup.GET(":id/collaborators", spaceHandler.ListCollaborators)
-			spaceGroup.DELETE(":id/collaborators/:collab_id", spaceHandler.RemoveCollaborator)
-			spaceGroup.PUT(":id/collaborators/:collab_id/role", spaceHandler.UpdateCollaboratorRole)
+			spaceGroup.POST(":id/collaborators", permMW.RequirePermission("space", permission.ActionSpaceInviteEmail), spaceHandler.AddCollaborator)
+			spaceGroup.GET(":id/collaborators", permMW.RequirePermission("space", permission.ActionSpaceRead), spaceHandler.ListCollaborators)
+			spaceGroup.DELETE(":id/collaborators/:collab_id", permMW.RequirePermission("space", permission.ActionSpaceUpdate), spaceHandler.RemoveCollaborator)
+			spaceGroup.PUT(":id/collaborators/:collab_id/role", permMW.RequirePermission("space", permission.ActionSpaceGrantRole), spaceHandler.UpdateCollaboratorRole)
 
 			// 权限管理
-			spaceGroup.GET(":id/permissions", spaceHandler.CheckUserPermission)
+			spaceGroup.GET(":id/permissions", permMW.RequirePermission("space", permission.ActionSpaceRead), spaceHandler.CheckUserPermission)
 
 			// 统计信息
 			spaceGroup.GET(":id/stats", spaceHandler.GetSpaceStats)
@@ -150,12 +154,12 @@ func SetupRoutes(router *gin.Engine, config RouterConfig) {
 		{
 			baseGroup.POST("", baseHandler.CreateBase)
 			baseGroup.GET("", baseHandler.ListBases)
-			baseGroup.GET(":id", baseHandler.GetBase)
-			baseGroup.PUT(":id", baseHandler.UpdateBase)
-			baseGroup.DELETE(":id", baseHandler.DeleteBase)
+			baseGroup.GET(":id", permMW.RequirePermission("base", permission.ActionBaseRead), baseHandler.GetBase)
+			baseGroup.PUT(":id", permMW.RequirePermission("base", permission.ActionBaseUpdate), baseHandler.UpdateBase)
+			baseGroup.DELETE(":id", permMW.RequirePermission("base", permission.ActionBaseDelete), baseHandler.DeleteBase)
 
 			// 权限管理
-			baseGroup.GET(":id/permissions", baseHandler.CheckUserPermission)
+			baseGroup.GET(":id/permissions", permMW.RequirePermission("base", permission.ActionBaseRead), baseHandler.CheckUserPermission)
 
 			// 统计信息
 			baseGroup.GET(":id/stats", baseHandler.GetBaseStats)
@@ -170,8 +174,8 @@ func SetupRoutes(router *gin.Engine, config RouterConfig) {
 			baseGroup.POST("import", baseHandler.ImportBases)
 
 			// 基础表下的数据表路由
-			baseGroup.POST(":id/tables", tableHandler.CreateTable)
-			baseGroup.GET(":id/tables", tableHandler.ListTables)
+			baseGroup.POST(":id/tables", permMW.RequirePermission("base", permission.ActionBaseUpdate), tableHandler.CreateTable)
+			baseGroup.GET(":id/tables", permMW.RequirePermission("base", permission.ActionBaseRead), tableHandler.ListTables)
 		}
 
 		// 数据表相关路由 (需要认证)
@@ -180,25 +184,25 @@ func SetupRoutes(router *gin.Engine, config RouterConfig) {
 		{
 			tableGroup.POST("", tableHandler.CreateTable)
 			tableGroup.GET("", tableHandler.ListTables)
-			tableGroup.GET(":id", tableHandler.GetTable)
-			tableGroup.PUT(":id", tableHandler.UpdateTable)
-			tableGroup.DELETE(":id", tableHandler.DeleteTable)
+			tableGroup.GET(":id", permMW.RequirePermission("table", permission.ActionTableRead), tableHandler.GetTable)
+			tableGroup.PUT(":id", permMW.RequirePermission("table", permission.ActionTableUpdate), tableHandler.UpdateTable)
+			tableGroup.DELETE(":id", permMW.RequirePermission("table", permission.ActionTableDelete), tableHandler.DeleteTable)
 		}
 
 		// 字段相关路由 (需要认证)
 		fieldGroup := v1.Group("/fields")
 		fieldGroup.Use(middleware.AuthMiddleware(config.AuthService))
 		{
-			fieldGroup.POST("", tableHandler.CreateField)
-			fieldGroup.GET("", tableHandler.ListFields)
-			fieldGroup.GET(":id", tableHandler.GetField)
-			fieldGroup.PUT(":id", tableHandler.UpdateField)
-			fieldGroup.DELETE(":id", tableHandler.DeleteField)
+			fieldGroup.POST("", permMW.RequirePermission("table", permission.ActionFieldCreate), tableHandler.CreateField)
+			fieldGroup.GET("", permMW.RequirePermission("table", permission.ActionFieldRead), tableHandler.ListFields)
+			fieldGroup.GET(":id", permMW.RequirePermission("table", permission.ActionFieldRead), tableHandler.GetField)
+			fieldGroup.PUT(":id", permMW.RequirePermission("table", permission.ActionFieldUpdate), tableHandler.UpdateField)
+			fieldGroup.DELETE(":id", permMW.RequirePermission("table", permission.ActionFieldDelete), tableHandler.DeleteField)
 
 			// 字段类型和验证
-			fieldGroup.GET("types", tableHandler.GetFieldTypes)
-			fieldGroup.GET("types/:type", tableHandler.GetFieldTypeInfo)
-			fieldGroup.POST(":field_id/validate", tableHandler.ValidateFieldValue)
+			fieldGroup.GET("types", permMW.RequirePermission("table", permission.ActionFieldRead), tableHandler.GetFieldTypes)
+			fieldGroup.GET("types/:type", permMW.RequirePermission("table", permission.ActionFieldRead), tableHandler.GetFieldTypeInfo)
+			fieldGroup.POST(":field_id/validate", permMW.RequirePermission("table", permission.ActionFieldRead), tableHandler.ValidateFieldValue)
 		}
 
 		// 记录相关路由 (需要认证)

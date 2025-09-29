@@ -30,27 +30,27 @@ func NewPermissionService(
 
 // PermissionCheckRequest 权限检查请求
 type PermissionCheckRequest struct {
-	UserID       string                `json:"user_id"`
-	ResourceType string                `json:"resource_type"`
-	ResourceID   string                `json:"resource_id"`
-	Action       permission.Action     `json:"action"`
-	Actions      []permission.Action   `json:"actions,omitempty"`
+	UserID       string                 `json:"user_id"`
+	ResourceType string                 `json:"resource_type"`
+	ResourceID   string                 `json:"resource_id"`
+	Action       permission.Action      `json:"action"`
+	Actions      []permission.Action    `json:"actions,omitempty"`
 	Context      map[string]interface{} `json:"context,omitempty"`
 }
 
 // PermissionCheckResponse 权限检查响应
 type PermissionCheckResponse struct {
-	Allowed     bool                  `json:"allowed"`
-	Role        permission.Role       `json:"role,omitempty"`
-	Permissions []permission.Action   `json:"permissions,omitempty"`
-	Reason      string                `json:"reason,omitempty"`
-	CachedAt    *time.Time            `json:"cached_at,omitempty"`
+	Allowed     bool                `json:"allowed"`
+	Role        permission.Role     `json:"role,omitempty"`
+	Permissions []permission.Action `json:"permissions,omitempty"`
+	Reason      string              `json:"reason,omitempty"`
+	CachedAt    *time.Time          `json:"cached_at,omitempty"`
 }
 
 // BatchPermissionCheckRequest 批量权限检查请求
 type BatchPermissionCheckRequest struct {
-	UserID   string                       `json:"user_id"`
-	Requests []PermissionCheckRequest     `json:"requests"`
+	UserID   string                   `json:"user_id"`
+	Requests []PermissionCheckRequest `json:"requests"`
 }
 
 // BatchPermissionCheckResponse 批量权限检查响应
@@ -62,7 +62,7 @@ type BatchPermissionCheckResponse struct {
 func (s *PermissionService) CheckPermission(ctx context.Context, req *PermissionCheckRequest) (*PermissionCheckResponse, error) {
 	// 构建缓存键
 	cacheKey := s.buildPermissionCacheKey(req.UserID, req.ResourceType, req.ResourceID, req.Action)
-	
+
 	// 尝试从缓存获取
 	var cachedResult PermissionCheckResponse
 	if err := s.cacheService.Get(ctx, cacheKey, &cachedResult); err == nil {
@@ -170,7 +170,7 @@ func (s *PermissionService) BatchCheckPermissions(ctx context.Context, req *Batc
 	for i, checkReq := range req.Requests {
 		// 确保用户ID一致
 		checkReq.UserID = req.UserID
-		
+
 		key := fmt.Sprintf("%d", i)
 		if checkReq.ResourceType != "" && checkReq.ResourceID != "" {
 			key = fmt.Sprintf("%s:%s", checkReq.ResourceType, checkReq.ResourceID)
@@ -210,7 +210,7 @@ func (s *PermissionService) BatchCheckPermissions(ctx context.Context, req *Batc
 func (s *PermissionService) GetUserResourcePermissions(ctx context.Context, userID, resourceType, resourceID string) (*PermissionCheckResponse, error) {
 	// 构建缓存键
 	cacheKey := s.buildUserResourcePermissionsCacheKey(userID, resourceType, resourceID)
-	
+
 	// 尝试从缓存获取
 	var cachedResult PermissionCheckResponse
 	if err := s.cacheService.Get(ctx, cacheKey, &cachedResult); err == nil {
@@ -252,7 +252,7 @@ func (s *PermissionService) GetUserResourcePermissions(ctx context.Context, user
 func (s *PermissionService) GetUserAccessibleResources(ctx context.Context, userID, resourceType string) ([]string, error) {
 	// 构建缓存键
 	cacheKey := s.buildUserResourcesCacheKey(userID, resourceType)
-	
+
 	// 尝试从缓存获取
 	var cachedResources []string
 	if err := s.cacheService.Get(ctx, cacheKey, &cachedResources); err == nil {
@@ -306,7 +306,7 @@ func (s *PermissionService) InvalidateUserPermissionCache(ctx context.Context, u
 func (s *PermissionService) InvalidateResourcePermissionCache(ctx context.Context, resourceType, resourceID string) error {
 	// 构建缓存键模式
 	pattern := s.buildResourcePermissionCachePattern(resourceType, resourceID)
-	
+
 	if err := s.cacheService.DeletePattern(ctx, pattern); err != nil {
 		logger.Warn("Failed to invalidate resource permission cache",
 			logger.String("resource_type", resourceType),
@@ -391,11 +391,11 @@ func (s *PermissionService) getPermissionReason(allowed bool, role permission.Ro
 	if allowed {
 		return fmt.Sprintf("User has %s role which allows %s action", role, action)
 	}
-	
+
 	if role == "" {
 		return "User has no role for this resource"
 	}
-	
+
 	return fmt.Sprintf("User has %s role which does not allow %s action", role, action)
 }
 
@@ -404,14 +404,14 @@ func (s *PermissionService) getMultiplePermissionReason(allowed bool, role permi
 	for i, action := range actions {
 		actionNames[i] = string(action)
 	}
-	
+
 	if allowed {
 		return fmt.Sprintf("User has %s role which allows all requested actions: %s", role, strings.Join(actionNames, ", "))
 	}
-	
+
 	if role == "" {
 		return "User has no role for this resource"
 	}
-	
+
 	return fmt.Sprintf("User has %s role which does not allow some of the requested actions: %s", role, strings.Join(actionNames, ", "))
 }

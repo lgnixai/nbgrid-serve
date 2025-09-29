@@ -23,13 +23,13 @@ func (p *ViewDataProcessor) ProcessViewData(ctx context.Context, view *View, req
 	if !p.registry.IsSupported(view.Type) {
 		return nil, fmt.Errorf("不支持的视图类型: %s", view.Type)
 	}
-	
+
 	// 获取处理器
 	handler, err := p.registry.GetHandler(view.Type)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// 处理数据
 	return handler.ProcessData(ctx, view, request)
 }
@@ -40,7 +40,7 @@ func (p *ViewDataProcessor) ValidateViewConfig(viewType ViewType, config ViewCon
 	if err != nil {
 		return err
 	}
-	
+
 	return handler.ValidateConfig(config)
 }
 
@@ -50,7 +50,7 @@ func (p *ViewDataProcessor) CreateDefaultConfig(viewType ViewType) (ViewConfig, 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return handler.CreateDefaultConfig(), nil
 }
 
@@ -61,23 +61,23 @@ func (p *ViewDataProcessor) TransformView(view *View, targetType ViewType) (*Vie
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if !handler.CanTransformTo(targetType) {
 		return nil, fmt.Errorf("不支持从 %s 视图转换为 %s 视图", view.Type, targetType)
 	}
-	
+
 	// 转换配置
 	newConfig, err := handler.TransformConfig(view.GetParsedConfig(), targetType)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// 创建新视图
 	newView := view.Clone(view.Name+" (转换)", view.CreatedBy)
 	newView.Type = targetType
 	newView.Config = newConfig.ToMap()
 	newView.parsedConfig = newConfig
-	
+
 	return newView, nil
 }
 
@@ -87,7 +87,7 @@ func (p *ViewDataProcessor) GetViewTypeInfo(viewType ViewType) (ViewTypeInfo, er
 	if err != nil {
 		return ViewTypeInfo{}, err
 	}
-	
+
 	return handler.GetInfo(), nil
 }
 
@@ -102,7 +102,7 @@ func (p *ViewDataProcessor) CheckFeatureSupport(viewType ViewType, feature strin
 	if err != nil {
 		return false, err
 	}
-	
+
 	return handler.SupportsFeature(feature), nil
 }
 
@@ -112,7 +112,7 @@ func (p *ViewDataProcessor) GetSupportedFeatures(viewType ViewType) ([]string, e
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return handler.GetSupportedFeatures(), nil
 }
 
@@ -167,21 +167,21 @@ func NewCachedViewDataProcessor() *CachedViewDataProcessor {
 func (p *CachedViewDataProcessor) ProcessViewData(ctx context.Context, view *View, request ViewDataRequest) (ViewDataResponse, error) {
 	// 生成缓存键
 	cacheKey := fmt.Sprintf("%s:%s:%v", view.ID, view.Type, request)
-	
+
 	// 尝试从缓存获取
 	if data, exists := p.cache.Get(cacheKey); exists {
 		return data, nil
 	}
-	
+
 	// 处理数据
 	data, err := p.processor.ProcessViewData(ctx, view, request)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// 缓存结果
 	p.cache.Set(cacheKey, data)
-	
+
 	return data, nil
 }
 
@@ -220,10 +220,10 @@ func (s *ViewDataSynchronizer) SyncViewConfig(ctx context.Context, view *View) e
 	if err := s.processor.ValidateViewConfig(view.Type, view.GetParsedConfig()); err != nil {
 		return fmt.Errorf("视图配置验证失败: %v", err)
 	}
-	
+
 	// 这里应该实现配置同步逻辑
 	// 例如：更新数据库、通知相关服务等
-	
+
 	return nil
 }
 
@@ -260,7 +260,7 @@ func (o *ViewDataOptimizer) optimizeGridQuery(view *View, request ViewDataReques
 	if !ok {
 		return request, nil
 	}
-	
+
 	// 优化分页大小
 	if gridRequest.PageSize > 1000 {
 		gridRequest.PageSize = 1000
@@ -268,12 +268,12 @@ func (o *ViewDataOptimizer) optimizeGridQuery(view *View, request ViewDataReques
 	if gridRequest.PageSize <= 0 {
 		gridRequest.PageSize = 50
 	}
-	
+
 	// 优化排序条件
 	if len(gridRequest.Sorts) > 5 {
 		gridRequest.Sorts = gridRequest.Sorts[:5] // 限制排序字段数量
 	}
-	
+
 	return gridRequest, nil
 }
 
@@ -307,7 +307,7 @@ func (v *ViewDataValidator) ValidateViewData(view *View, data ViewDataResponse) 
 	if data.GetType() != view.Type {
 		return fmt.Errorf("数据类型不匹配: 期望 %s，实际 %s", view.Type, data.GetType())
 	}
-	
+
 	// 根据视图类型进行具体验证
 	switch view.Type {
 	case ViewTypeGrid:
@@ -327,7 +327,7 @@ func (v *ViewDataValidator) validateGridData(view *View, data ViewDataResponse) 
 	if !ok {
 		return fmt.Errorf("网格视图数据类型错误")
 	}
-	
+
 	// 验证分页信息
 	if gridData.Page < 1 {
 		return fmt.Errorf("页码必须大于0")
@@ -335,7 +335,7 @@ func (v *ViewDataValidator) validateGridData(view *View, data ViewDataResponse) 
 	if gridData.PageSize < 1 || gridData.PageSize > 1000 {
 		return fmt.Errorf("每页大小必须在1-1000之间")
 	}
-	
+
 	return nil
 }
 
@@ -345,12 +345,12 @@ func (v *ViewDataValidator) validateKanbanData(view *View, data ViewDataResponse
 	if !ok {
 		return fmt.Errorf("看板视图数据类型错误")
 	}
-	
+
 	// 验证分组数据
 	if len(kanbanData.Groups) == 0 {
 		return fmt.Errorf("看板视图必须有至少一个分组")
 	}
-	
+
 	return nil
 }
 
@@ -360,7 +360,7 @@ func (v *ViewDataValidator) validateCalendarData(view *View, data ViewDataRespon
 	if !ok {
 		return fmt.Errorf("日历视图数据类型错误")
 	}
-	
+
 	// 验证事件数据
 	for _, event := range calendarData.Events {
 		if event.ID == "" {
@@ -370,6 +370,6 @@ func (v *ViewDataValidator) validateCalendarData(view *View, data ViewDataRespon
 			return fmt.Errorf("日历事件必须有标题")
 		}
 	}
-	
+
 	return nil
 }

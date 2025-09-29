@@ -45,25 +45,25 @@ func NewService(repo Repository) Service {
 // CreateRecord 创建记录
 func (s *ServiceImpl) CreateRecord(ctx context.Context, req CreateRecordRequest) (*Record, error) {
 	record := NewRecord(req)
-	
+
 	// 获取表格schema进行验证
 	tableSchema, err := s.getTableSchema(ctx, req.TableID)
 	if err != nil {
 		return nil, fmt.Errorf("获取表格schema失败: %v", err)
 	}
-	
+
 	record.SetTableSchema(tableSchema)
-	
+
 	// 应用字段默认值
 	if err := record.ApplyFieldDefaults(); err != nil {
 		return nil, fmt.Errorf("应用字段默认值失败: %v", err)
 	}
-	
+
 	// 验证记录数据
 	if err := record.ValidateData(); err != nil {
 		return nil, fmt.Errorf("记录数据验证失败: %v", err)
 	}
-	
+
 	if err := s.repo.Create(ctx, record); err != nil {
 		return nil, err
 	}
@@ -97,15 +97,15 @@ func (s *ServiceImpl) UpdateRecord(ctx context.Context, id string, req UpdateRec
 	if err != nil {
 		return nil, fmt.Errorf("获取表格schema失败: %v", err)
 	}
-	
+
 	record.SetTableSchema(tableSchema)
-	
+
 	// 更新记录数据
 	updatedBy := req.UpdatedBy
 	if updatedBy == "" {
 		updatedBy = record.CreatedBy // 如果没有指定更新者，使用创建者
 	}
-	
+
 	if err := record.Update(req, updatedBy); err != nil {
 		return nil, fmt.Errorf("更新记录失败: %v", err)
 	}

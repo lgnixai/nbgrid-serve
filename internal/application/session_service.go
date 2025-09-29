@@ -39,10 +39,10 @@ type UserSession struct {
 func (s *SessionService) CreateSession(ctx context.Context, userID string, session *UserSession) (string, error) {
 	sessionID := generateSessionID()
 	sessionKey := s.buildSessionKey(sessionID)
-	
+
 	// 设置会话过期时间为24小时
 	expiration := 24 * time.Hour
-	
+
 	if err := s.cacheService.Set(ctx, sessionKey, session, expiration); err != nil {
 		logger.Error("Failed to create user session",
 			logger.String("user_id", userID),
@@ -72,7 +72,7 @@ func (s *SessionService) CreateSession(ctx context.Context, userID string, sessi
 // GetSession 获取用户会话
 func (s *SessionService) GetSession(ctx context.Context, sessionID string) (*UserSession, error) {
 	sessionKey := s.buildSessionKey(sessionID)
-	
+
 	var session UserSession
 	if err := s.cacheService.Get(ctx, sessionKey, &session); err != nil {
 		return nil, err
@@ -90,7 +90,7 @@ func (s *SessionService) UpdateSessionActivity(ctx context.Context, sessionID st
 
 	session.LastActivity = time.Now()
 	sessionKey := s.buildSessionKey(sessionID)
-	
+
 	// 延长会话过期时间
 	expiration := 24 * time.Hour
 	return s.cacheService.Set(ctx, sessionKey, session, expiration)
@@ -201,7 +201,7 @@ func (s *SessionService) buildUserSessionsKey(userID string) string {
 
 func (s *SessionService) addToUserSessions(ctx context.Context, userID, sessionID string) error {
 	key := s.buildUserSessionsKey(userID)
-	
+
 	// 获取现有会话列表
 	var sessionIDs []string
 	if err := s.cacheService.Get(ctx, key, &sessionIDs); err != nil {
@@ -211,13 +211,13 @@ func (s *SessionService) addToUserSessions(ctx context.Context, userID, sessionI
 
 	// 添加新会话ID
 	sessionIDs = append(sessionIDs, sessionID)
-	
+
 	// 限制每个用户最多保持10个活跃会话
 	if len(sessionIDs) > 10 {
 		// 移除最旧的会话
 		oldSessionID := sessionIDs[0]
 		sessionIDs = sessionIDs[1:]
-		
+
 		// 删除旧会话
 		oldSessionKey := s.buildSessionKey(oldSessionID)
 		s.cacheService.Delete(ctx, oldSessionKey)
@@ -229,7 +229,7 @@ func (s *SessionService) addToUserSessions(ctx context.Context, userID, sessionI
 
 func (s *SessionService) removeFromUserSessions(ctx context.Context, userID, sessionID string) error {
 	key := s.buildUserSessionsKey(userID)
-	
+
 	var sessionIDs []string
 	if err := s.cacheService.Get(ctx, key, &sessionIDs); err != nil {
 		return nil // 列表不存在，无需处理
@@ -254,7 +254,7 @@ func (s *SessionService) removeFromUserSessions(ctx context.Context, userID, ses
 
 func (s *SessionService) getUserSessions(ctx context.Context, userID string) ([]string, error) {
 	key := s.buildUserSessionsKey(userID)
-	
+
 	var sessionIDs []string
 	if err := s.cacheService.Get(ctx, key, &sessionIDs); err != nil {
 		return []string{}, nil // 返回空列表而不是错误

@@ -22,7 +22,7 @@ func (acs *AccessControlService) CheckSpaceAccess(ctx context.Context, space *Sp
 	if !space.IsActive() {
 		return false
 	}
-	
+
 	// 检查用户是否有读取权限
 	return acs.memberService.CheckPermission(space, userID, PermissionRead, collaborator)
 }
@@ -33,7 +33,7 @@ func (acs *AccessControlService) CheckSpaceOperation(ctx context.Context, space 
 	if operation != PermissionRestore && !space.IsActive() {
 		return false
 	}
-	
+
 	// 检查用户是否有指定操作权限
 	return acs.memberService.CheckPermission(space, userID, operation, collaborator)
 }
@@ -44,7 +44,7 @@ func (acs *AccessControlService) CheckBaseAccess(ctx context.Context, space *Spa
 	if !acs.CheckSpaceAccess(ctx, space, userID, collaborator) {
 		return false
 	}
-	
+
 	// 基础表访问权限继承自空间权限
 	return true
 }
@@ -58,7 +58,7 @@ func (acs *AccessControlService) CheckBaseOperation(ctx context.Context, space *
 // GetUserAccessLevel 获取用户的访问级别
 func (acs *AccessControlService) GetUserAccessLevel(space *Space, userID string, collaborator *SpaceCollaborator) AccessLevel {
 	role := acs.memberService.GetUserRole(space, userID, collaborator)
-	
+
 	switch role {
 	case RoleOwner:
 		return AccessLevelOwner

@@ -39,7 +39,7 @@ func (a *UserAggregate) CreateUser(name, email, password string, createdBy strin
 	if err := validateUserName(name); err != nil {
 		return err
 	}
-	
+
 	if err := validateEmail(email); err != nil {
 		return err
 	}

@@ -15,7 +15,7 @@ func NewSpaceName(name string) (*SpaceName, error) {
 	if err := validateSpaceName(name); err != nil {
 		return nil, err
 	}
-	
+
 	return &SpaceName{value: name}, nil
 }
 
@@ -36,36 +36,36 @@ func (sn SpaceName) Equals(other SpaceName) bool {
 
 // SpaceSettings 空间设置值对象
 type SpaceSettings struct {
-	AllowPublicAccess    bool                   `json:"allow_public_access"`
-	DefaultRole          CollaboratorRole       `json:"default_role"`
-	EnableComments       bool                   `json:"enable_comments"`
-	EnableNotifications  bool                   `json:"enable_notifications"`
-	TimeZone             string                 `json:"timezone"`
-	Language             string                 `json:"language"`
-	Theme                string                 `json:"theme"`
-	CustomFields         map[string]interface{} `json:"custom_fields"`
-	IntegrationSettings  IntegrationSettings    `json:"integration_settings"`
-	SecuritySettings     SecuritySettings       `json:"security_settings"`
+	AllowPublicAccess   bool                   `json:"allow_public_access"`
+	DefaultRole         CollaboratorRole       `json:"default_role"`
+	EnableComments      bool                   `json:"enable_comments"`
+	EnableNotifications bool                   `json:"enable_notifications"`
+	TimeZone            string                 `json:"timezone"`
+	Language            string                 `json:"language"`
+	Theme               string                 `json:"theme"`
+	CustomFields        map[string]interface{} `json:"custom_fields"`
+	IntegrationSettings IntegrationSettings    `json:"integration_settings"`
+	SecuritySettings    SecuritySettings       `json:"security_settings"`
 }
 
 // IntegrationSettings 集成设置
 type IntegrationSettings struct {
-	EnableWebhooks    bool              `json:"enable_webhooks"`
-	WebhookURL        string            `json:"webhook_url"`
-	EnableAPIAccess   bool              `json:"enable_api_access"`
-	APIRateLimit      int               `json:"api_rate_limit"`
-	AllowedDomains    []string          `json:"allowed_domains"`
-	ExternalServices  map[string]string `json:"external_services"`
+	EnableWebhooks   bool              `json:"enable_webhooks"`
+	WebhookURL       string            `json:"webhook_url"`
+	EnableAPIAccess  bool              `json:"enable_api_access"`
+	APIRateLimit     int               `json:"api_rate_limit"`
+	AllowedDomains   []string          `json:"allowed_domains"`
+	ExternalServices map[string]string `json:"external_services"`
 }
 
 // SecuritySettings 安全设置
 type SecuritySettings struct {
-	RequireTwoFactor     bool     `json:"require_two_factor"`
-	AllowedIPRanges      []string `json:"allowed_ip_ranges"`
-	SessionTimeout       int      `json:"session_timeout"` // 分钟
-	PasswordPolicy       string   `json:"password_policy"`
-	EnableAuditLog       bool     `json:"enable_audit_log"`
-	DataRetentionDays    int      `json:"data_retention_days"`
+	RequireTwoFactor  bool     `json:"require_two_factor"`
+	AllowedIPRanges   []string `json:"allowed_ip_ranges"`
+	SessionTimeout    int      `json:"session_timeout"` // 分钟
+	PasswordPolicy    string   `json:"password_policy"`
+	EnableAuditLog    bool     `json:"enable_audit_log"`
+	DataRetentionDays int      `json:"data_retention_days"`
 }
 
 // NewDefaultSpaceSettings 创建默认空间设置
@@ -311,7 +311,7 @@ type SpaceMetrics struct {
 	TotalTables        int64     `json:"total_tables"`
 	TotalRecords       int64     `json:"total_records"`
 	TotalCollaborators int64     `json:"total_collaborators"`
-	StorageUsed        int64     `json:"storage_used"`        // 字节
+	StorageUsed        int64     `json:"storage_used"` // 字节
 	APICallsThisMonth  int64     `json:"api_calls_this_month"`
 	LastActivityAt     time.Time `json:"last_activity_at"`
 	CreatedAt          time.Time `json:"created_at"`

@@ -157,6 +157,7 @@ func setupRouter(container *container.Container) *gin.Engine {
 		RecordService:        container.RecordService(),
 		ViewService:          container.ViewService(),
 		PermissionService:    container.PermissionService(),
+		PermissionAppService: container.PermissionAppService(),
 		ShareService:         container.ShareService(),
 		AttachmentService:    container.AttachmentService(),
 		WebSocketService:     container.WebSocketService(),

@@ -161,7 +161,7 @@ func (pc *PerformanceCache) Delete(ctx context.Context, keys ...string) error {
 // DeletePattern 按模式删除缓存
 func (pc *PerformanceCache) DeletePattern(ctx context.Context, pattern string) error {
 	fullPattern := pc.buildKey(pattern)
-	
+
 	// 删除Redis缓存
 	if err := pc.redis.DeletePattern(ctx, fullPattern); err != nil {
 		pc.logger.Error("Failed to delete Redis cache by pattern",

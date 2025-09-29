@@ -130,10 +130,10 @@ func (s *ShareView) RequireLoginForSubmit() bool {
 
 // ShareViewInfo 分享视图信息
 type ShareViewInfo struct {
-	ShareView *ShareView `json:"share_view"`
-	View      interface{} `json:"view"`      // 视图数据
-	Table     interface{} `json:"table"`     // 表格数据
-	Fields    []interface{} `json:"fields"`  // 字段数据
+	ShareView *ShareView    `json:"share_view"`
+	View      interface{}   `json:"view"`   // 视图数据
+	Table     interface{}   `json:"table"`  // 表格数据
+	Fields    []interface{} `json:"fields"` // 字段数据
 }
 
 // ShareAuthRequest 分享认证请求
@@ -194,8 +194,8 @@ type ShareLinkRecordsResponse struct {
 
 // ShareStats 分享统计信息
 type ShareStats struct {
-	TotalShares     int64     `json:"total_shares"`
-	ActiveShares    int64     `json:"active_shares"`
-	PasswordProtected int64   `json:"password_protected"`
-	LastAccessed    time.Time `json:"last_accessed"`
+	TotalShares       int64     `json:"total_shares"`
+	ActiveShares      int64     `json:"active_shares"`
+	PasswordProtected int64     `json:"password_protected"`
+	LastAccessed      time.Time `json:"last_accessed"`
 }

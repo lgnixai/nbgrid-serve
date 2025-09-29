@@ -105,7 +105,7 @@ export class Teable {
    */
   public async login(credentials: LoginRequest): Promise<AuthResponse> {
     const response = await this.authClient.login(credentials);
-    
+    console.log('登录成功:', response);
     // 登录成功后初始化 WebSocket 连接
     if (this.wsClient) {
       await this.wsClient.connect();

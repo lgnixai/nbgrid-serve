@@ -1,0 +1,22 @@
+{
+  "id": "teable-go-backend-global",
+  "name": "Teable Backend - Global",
+  "_postman_variable_scope": "globals",
+  "_postman_exported_using": "Postman",
+  "values": [
+    { "key": "base_url", "value": "http://localhost:3000", "enabled": true },
+    { "key": "access_token", "value": "", "enabled": true },
+    { "key": "refresh_token", "value": "", "enabled": true },
+    { "key": "user_id", "value": "", "enabled": true },
+    { "key": "space_id", "value": "", "enabled": true },
+    { "key": "base_id", "value": "", "enabled": true },
+    { "key": "table_id", "value": "", "enabled": true },
+    { "key": "record_id", "value": "", "enabled": true },
+    { "key": "view_id", "value": "", "enabled": true },
+    { "key": "field_id", "value": "", "enabled": true },
+    { "key": "attachment_id", "value": "", "enabled": true },
+    { "key": "notification_id", "value": "", "enabled": true },
+    { "key": "template_id", "value": "", "enabled": true }
+  ]
+}
+

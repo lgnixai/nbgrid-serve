@@ -1,11 +1,10 @@
 package http
 
 import (
-	"net/http"
-
 	"teable-go-backend/internal/interfaces/middleware"
 	"teable-go-backend/pkg/errors"
 	"teable-go-backend/pkg/logger"
+	"teable-go-backend/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -50,9 +49,7 @@ func (h *PinHandler) ListPins(c *gin.Context) {
 	// TODO: 实现真正的 pin 数据获取逻辑
 	pins := []PinItem{}
 
-	c.JSON(http.StatusOK, SuccessResponse{
-		Data: pins,
-	})
+	response.SuccessWithMessage(c, pins, "")
 }
 
 // handleError 统一错误处理
@@ -65,13 +62,7 @@ func (h *PinHandler) handleError(c *gin.Context, err error) {
 			logger.String("code", appErr.Code),
 			logger.String("trace_id", traceID),
 		)
-
-		c.JSON(appErr.HTTPStatus, ErrorResponse{
-			Error:   appErr.Message,
-			Code:    appErr.Code,
-			Details: appErr.Details,
-			TraceID: traceID,
-		})
+		response.Error(c, appErr)
 		return
 	}
 
@@ -80,9 +71,5 @@ func (h *PinHandler) handleError(c *gin.Context, err error) {
 		logger.String("trace_id", traceID),
 	)
 
-	c.JSON(http.StatusInternalServerError, ErrorResponse{
-		Error:   "服务器内部错误",
-		Code:    "INTERNAL_SERVER_ERROR",
-		TraceID: traceID,
-	})
+	response.Error(c, errors.ErrInternalServer)
 }

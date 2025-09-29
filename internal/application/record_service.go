@@ -8,7 +8,7 @@ import (
 	"teable-go-backend/internal/domain/permission"
 	"teable-go-backend/internal/domain/record"
 	"teable-go-backend/internal/domain/table"
-	"teable-go-backend/pkg/errors"
+	pkgerrors "teable-go-backend/pkg/errors"
 	"teable-go-backend/pkg/logger"
 )
 
@@ -42,11 +42,11 @@ func NewRecordService(
 // CreateRecord 创建记录 - 支持动态schema验证和权限控制
 func (s *RecordService) CreateRecord(ctx context.Context, req record.CreateRecordRequest, userID string) (*record.Record, error) {
 	// 1. 权限检查
-	if err := s.checkPermission(ctx, userID, req.TableID, "record:create"); err != nil {
+	if err := s.checkPermission(ctx, userID, req.TableID, permission.ActionRecordCreate); err != nil {
 		// 如果权限检查失败，尝试自动分配权限（如果用户是表的创建者）
 		if s.autoGrantPermissionIfOwner(ctx, userID, req.TableID) {
 			// 重新检查权限
-			if err := s.checkPermission(ctx, userID, req.TableID, "record:create"); err != nil {
+			if err := s.checkPermission(ctx, userID, req.TableID, permission.ActionRecordCreate); err != nil {
 				return nil, err
 			}
 		} else {
@@ -57,7 +57,10 @@ func (s *RecordService) CreateRecord(ctx context.Context, req record.CreateRecor
 	// 2. 获取表格schema
 	tableSchema, err := s.tableService.GetTable(ctx, req.TableID)
 	if err != nil {
-		return nil, fmt.Errorf("获取表格schema失败: %v", err)
+		if appErr, ok := pkgerrors.IsAppError(err); ok {
+			return nil, appErr
+		}
+		return nil, pkgerrors.ErrInternalServer.WithDetails(fmt.Sprintf("获取表格schema失败: %v", err))
 	}
 
 	// 3. 创建记录实体
@@ -67,17 +70,17 @@ func (s *RecordService) CreateRecord(ctx context.Context, req record.CreateRecor
 
 	// 4. 动态schema验证
 	if err := s.validator.ValidateForCreate(ctx, newRecord, tableSchema); err != nil {
-		return nil, fmt.Errorf("记录验证失败: %v", err)
+		return nil, pkgerrors.ErrValidationFailed.WithDetails(fmt.Sprintf("记录验证失败: %v", err))
 	}
 
 	// 5. 应用字段默认值和系统字段
 	if err := newRecord.ApplyFieldDefaults(); err != nil {
-		return nil, fmt.Errorf("应用字段默认值失败: %v", err)
+		return nil, pkgerrors.ErrInvalidRecordData.WithDetails(fmt.Sprintf("应用字段默认值失败: %v", err))
 	}
 
 	// 6. 保存记录
 	if err := s.recordRepo.Create(ctx, newRecord); err != nil {
-		return nil, fmt.Errorf("保存记录失败: %v", err)
+		return nil, pkgerrors.ErrDatabaseOperation.WithDetails(fmt.Sprintf("保存记录失败: %v", err))
 	}
 
 	// 7. 记录变更事件
@@ -108,11 +111,11 @@ func (s *RecordService) GetRecord(ctx context.Context, recordID string, userID s
 		return nil, err
 	}
 	if rec == nil {
-		return nil, errors.ErrNotFound.WithDetails("记录未找到")
+		return nil, pkgerrors.ErrNotFound.WithDetails("记录未找到")
 	}
 
 	// 2. 权限检查
-	if err := s.checkPermission(ctx, userID, rec.TableID, "record:read"); err != nil {
+	if err := s.checkPermission(ctx, userID, rec.TableID, permission.ActionRecordRead); err != nil {
 		return nil, err
 	}
 
@@ -135,18 +138,21 @@ func (s *RecordService) UpdateRecord(ctx context.Context, recordID string, req r
 		return nil, err
 	}
 	if existingRecord == nil {
-		return nil, errors.ErrNotFound.WithDetails("记录未找到")
+		return nil, pkgerrors.ErrNotFound.WithDetails("记录未找到")
 	}
 
 	// 2. 权限检查
-	if err := s.checkPermission(ctx, userID, existingRecord.TableID, "record:update"); err != nil {
+	if err := s.checkPermission(ctx, userID, existingRecord.TableID, permission.ActionRecordUpdate); err != nil {
 		return nil, err
 	}
 
 	// 3. 获取表格schema
 	tableSchema, err := s.tableService.GetTable(ctx, existingRecord.TableID)
 	if err != nil {
-		return nil, fmt.Errorf("获取表格schema失败: %v", err)
+		if appErr, ok := pkgerrors.IsAppError(err); ok {
+			return nil, appErr
+		}
+		return nil, pkgerrors.ErrInternalServer.WithDetails(fmt.Sprintf("获取表格schema失败: %v", err))
 	}
 
 	// 4. 保存旧数据用于变更追踪
@@ -160,17 +166,17 @@ func (s *RecordService) UpdateRecord(ctx context.Context, recordID string, req r
 	req.UpdatedBy = userID
 
 	if err := existingRecord.Update(req, userID); err != nil {
-		return nil, fmt.Errorf("更新记录失败: %v", err)
+		return nil, pkgerrors.ErrInvalidRecordData.WithDetails(fmt.Sprintf("更新记录失败: %v", err))
 	}
 
 	// 6. 动态schema验证
 	if err := s.validator.ValidateForUpdate(ctx, existingRecord, tableSchema); err != nil {
-		return nil, fmt.Errorf("记录验证失败: %v", err)
+		return nil, pkgerrors.ErrValidationFailed.WithDetails(fmt.Sprintf("记录验证失败: %v", err))
 	}
 
 	// 7. 保存更新
 	if err := s.recordRepo.Update(ctx, existingRecord); err != nil {
-		return nil, fmt.Errorf("保存记录更新失败: %v", err)
+		return nil, pkgerrors.ErrDatabaseOperation.WithDetails(fmt.Sprintf("保存记录更新失败: %v", err))
 	}
 
 	// 8. 记录变更事件
@@ -202,11 +208,11 @@ func (s *RecordService) DeleteRecord(ctx context.Context, recordID string, userI
 		return err
 	}
 	if rec == nil {
-		return errors.ErrNotFound.WithDetails("记录未找到")
+		return pkgerrors.ErrNotFound.WithDetails("记录未找到")
 	}
 
 	// 2. 权限检查
-	if err := s.checkPermission(ctx, userID, rec.TableID, "record:delete"); err != nil {
+	if err := s.checkPermission(ctx, userID, rec.TableID, permission.ActionRecordDelete); err != nil {
 		return err
 	}
 
@@ -219,7 +225,7 @@ func (s *RecordService) DeleteRecord(ctx context.Context, recordID string, userI
 	// 4. 软删除记录
 	rec.SoftDelete()
 	if err := s.recordRepo.Update(ctx, rec); err != nil {
-		return fmt.Errorf("删除记录失败: %v", err)
+		return pkgerrors.ErrDatabaseOperation.WithDetails(fmt.Sprintf("删除记录失败: %v", err))
 	}
 
 	// 5. 记录变更事件
@@ -246,7 +252,7 @@ func (s *RecordService) DeleteRecord(ctx context.Context, recordID string, userI
 func (s *RecordService) ListRecords(ctx context.Context, filter record.ListRecordFilter, userID string) ([]*record.Record, int64, error) {
 	// 1. 权限检查 - 如果指定了表ID，检查表的读取权限
 	if filter.TableID != nil {
-		if err := s.checkPermission(ctx, userID, *filter.TableID, "record:read"); err != nil {
+		if err := s.checkPermission(ctx, userID, *filter.TableID, permission.ActionRecordRead); err != nil {
 			return nil, 0, err
 		}
 	}
@@ -287,11 +293,11 @@ func (s *RecordService) GetRecordHistory(ctx context.Context, recordID string, u
 		return nil, err
 	}
 	if rec == nil {
-		return nil, errors.ErrNotFound.WithDetails("记录未找到")
+		return nil, pkgerrors.ErrNotFound.WithDetails("记录未找到")
 	}
 
 	// 2. 权限检查
-	if err := s.checkPermission(ctx, userID, rec.TableID, "record:read"); err != nil {
+	if err := s.checkPermission(ctx, userID, rec.TableID, permission.ActionRecordRead); err != nil {
 		return nil, err
 	}
 
@@ -307,11 +313,11 @@ func (s *RecordService) RestoreRecordVersion(ctx context.Context, recordID strin
 		return nil, err
 	}
 	if rec == nil {
-		return nil, errors.ErrNotFound.WithDetails("记录未找到")
+		return nil, pkgerrors.ErrNotFound.WithDetails("记录未找到")
 	}
 
 	// 2. 权限检查
-	if err := s.checkPermission(ctx, userID, rec.TableID, "record:update"); err != nil {
+	if err := s.checkPermission(ctx, userID, rec.TableID, permission.ActionRecordUpdate); err != nil {
 		return nil, err
 	}
 
@@ -344,7 +350,7 @@ func (s *RecordService) GetRecordChanges(ctx context.Context, recordID string, u
 		return nil, err
 	}
 	if rec == nil {
-		return nil, errors.ErrNotFound.WithDetails("记录未找到")
+		return nil, pkgerrors.ErrNotFound.WithDetails("记录未找到")
 	}
 
 	// 2. 权限检查
@@ -361,7 +367,10 @@ func (s *RecordService) ValidateRecordData(ctx context.Context, tableID string, 
 	// 1. 获取表格schema
 	tableSchema, err := s.tableService.GetTable(ctx, tableID)
 	if err != nil {
-		return fmt.Errorf("获取表格schema失败: %v", err)
+		if appErr, ok := pkgerrors.IsAppError(err); ok {
+			return appErr
+		}
+		return pkgerrors.ErrInternalServer.WithDetails(fmt.Sprintf("获取表格schema失败: %v", err))
 	}
 
 	// 2. 创建临时记录进行验证
@@ -372,17 +381,31 @@ func (s *RecordService) ValidateRecordData(ctx context.Context, tableID string, 
 	tempRecord.SetTableSchema(tableSchema)
 
 	// 3. 执行验证
-	return s.validator.ValidateData(ctx, tempRecord, tableSchema)
+	if err := s.validator.ValidateData(ctx, tempRecord, tableSchema); err != nil {
+		return pkgerrors.ErrValidationFailed.WithDetails(err.Error())
+	}
+	return nil
 }
 
 // checkPermission 检查用户权限
-func (s *RecordService) checkPermission(ctx context.Context, userID, tableID, action string) error {
-	hasPermission, err := s.permissionSvc.CheckPermission(ctx, userID, "table", tableID, permission.Action(action))
+
+func (s *RecordService) checkPermission(ctx context.Context, userID, tableID string, action permission.Action) error {
+	// 0) 创建者快速通道：表创建者拥有所有记录操作权限
+	if tableID != "" {
+		if tbl, err := s.tableService.GetTable(ctx, tableID); err == nil && tbl != nil {
+			if tbl.CreatedBy == userID {
+				return nil
+			}
+		}
+	}
+
+	// 1) 走权限服务
+	hasPermission, err := s.permissionSvc.CheckPermission(ctx, userID, "table", tableID, action)
 	if err != nil {
 		return fmt.Errorf("权限检查失败: %v", err)
 	}
 	if !hasPermission {
-		return errors.ErrForbidden.WithDetails(fmt.Sprintf("用户 %s 没有权限执行操作 %s", userID, action))
+		return pkgerrors.ErrForbidden.WithDetails(fmt.Sprintf("用户 %s 没有权限执行操作 %s", userID, string(action)))
 	}
 	return nil
 }

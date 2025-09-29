@@ -13,24 +13,24 @@ import (
 const (
 	// Alphabet nanoid字母表
 	Alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	
+
 	// DefaultIDLength 默认ID长度
 	DefaultIDLength = 21
-	
+
 	// ID前缀
-	UserIDPrefix        = "usr"
-	AccountIDPrefix     = "acc"
-	SpaceIDPrefix       = "spc"
-	BaseIDPrefix        = "bse"
-	TableIDPrefix       = "tbl"
-	FieldIDPrefix       = "fld"
-	RecordIDPrefix      = "rec"
-	ViewIDPrefix        = "viw"
-	DashboardIDPrefix   = "dsb"
-	PluginIDPrefix      = "plg"
-	AttachmentIDPrefix  = "att"
-	TokenIDPrefix       = "tkn"
-	SessionIDPrefix     = "ses"
+	UserIDPrefix       = "usr"
+	AccountIDPrefix    = "acc"
+	SpaceIDPrefix      = "spc"
+	BaseIDPrefix       = "bse"
+	TableIDPrefix      = "tbl"
+	FieldIDPrefix      = "fld"
+	RecordIDPrefix     = "rec"
+	ViewIDPrefix       = "viw"
+	DashboardIDPrefix  = "dsb"
+	PluginIDPrefix     = "plg"
+	AttachmentIDPrefix = "att"
+	TokenIDPrefix      = "tkn"
+	SessionIDPrefix    = "ses"
 )
 
 // IDGenerator ID生成器接口
@@ -70,20 +70,20 @@ func (g *NanoIDGenerator) GenerateNanoID(length int) string {
 	if length <= 0 {
 		length = DefaultIDLength
 	}
-	
+
 	alphabetLen := int64(len(g.alphabet))
 	mask := (2 << uint(findMSB(alphabetLen-1))) - 1
 	step := int(float64(mask*length) / float64(alphabetLen) * 1.6)
-	
+
 	id := make([]byte, length)
-	
+
 	for i := 0; i < length; {
 		randomBytes := make([]byte, step)
 		if _, err := rand.Read(randomBytes); err != nil {
 			// 如果随机数生成失败，使用时间戳+随机字符
 			return g.fallbackID(length)
 		}
-		
+
 		for j := 0; j < step && i < length; j++ {
 			byteValue := int(randomBytes[j]) & mask
 			if byteValue < len(g.alphabet) {
@@ -92,7 +92,7 @@ func (g *NanoIDGenerator) GenerateNanoID(length int) string {
 			}
 		}
 	}
-	
+
 	return string(id)
 }
 
@@ -112,11 +112,11 @@ func (g *NanoIDGenerator) fallbackID(length int) string {
 	timestamp := time.Now().UnixNano()
 	timeStr := base64.URLEncoding.EncodeToString([]byte(fmt.Sprintf("%d", timestamp)))
 	timeStr = strings.ReplaceAll(timeStr, "=", "")
-	
+
 	if len(timeStr) >= length {
 		return timeStr[:length]
 	}
-	
+
 	// 补充随机字符
 	remaining := length - len(timeStr)
 	randomPart := make([]byte, remaining)
@@ -124,7 +124,7 @@ func (g *NanoIDGenerator) fallbackID(length int) string {
 		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(g.alphabet))))
 		randomPart[i] = g.alphabet[n.Int64()]
 	}
-	
+
 	return timeStr + string(randomPart)
 }
 
@@ -220,17 +220,17 @@ func ValidateID(id string) bool {
 	if len(id) == 0 {
 		return false
 	}
-	
+
 	// 检查是否包含前缀
 	if strings.Contains(id, "_") {
 		parts := strings.SplitN(id, "_", 2)
 		if len(parts) != 2 {
 			return false
 		}
-		
+
 		prefix := parts[0]
 		idPart := parts[1]
-		
+
 		// 验证前缀
 		validPrefixes := []string{
 			UserIDPrefix, AccountIDPrefix, SpaceIDPrefix, BaseIDPrefix,
@@ -238,7 +238,7 @@ func ValidateID(id string) bool {
 			DashboardIDPrefix, PluginIDPrefix, AttachmentIDPrefix,
 			TokenIDPrefix, SessionIDPrefix,
 		}
-		
+
 		validPrefix := false
 		for _, validPref := range validPrefixes {
 			if prefix == validPref {
@@ -246,15 +246,15 @@ func ValidateID(id string) bool {
 				break
 			}
 		}
-		
+
 		if !validPrefix {
 			return false
 		}
-		
+
 		// 验证ID部分
 		return validateIDPart(idPart)
 	}
-	
+
 	// 没有前缀，直接验证整个ID
 	return validateIDPart(id)
 }
@@ -264,7 +264,7 @@ func validateIDPart(idPart string) bool {
 	if len(idPart) < 10 || len(idPart) > 30 {
 		return false
 	}
-	
+
 	// 检查字符是否都在字母表中
 	for _, char := range idPart {
 		found := false
@@ -278,7 +278,7 @@ func validateIDPart(idPart string) bool {
 			return false
 		}
 	}
-	
+
 	return true
 }
 

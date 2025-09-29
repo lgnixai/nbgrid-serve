@@ -1,7 +1,10 @@
 package middleware
 
 import (
-	"net/http"
+	"bytes"
+	"encoding/json"
+	"io"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -9,6 +12,7 @@ import (
 	"teable-go-backend/internal/domain/permission"
 	"teable-go-backend/pkg/errors"
 	"teable-go-backend/pkg/logger"
+	"teable-go-backend/pkg/response"
 )
 
 // PermissionMiddleware 权限检查中间件
@@ -28,10 +32,7 @@ func (m *PermissionMiddleware) RequirePermission(resourceType string, action per
 	return func(c *gin.Context) {
 		userID, err := GetCurrentUserID(c)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Authentication required",
-				"code":  "AUTH_REQUIRED",
-			})
+			response.Error(c, errors.ErrUnauthorized.WithDetails("Authentication required"))
 			c.Abort()
 			return
 		}
@@ -39,10 +40,7 @@ func (m *PermissionMiddleware) RequirePermission(resourceType string, action per
 		// 从路径参数获取资源ID
 		resourceID := m.extractResourceID(c, resourceType)
 		if resourceID == "" {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Resource ID required",
-				"code":  "RESOURCE_ID_REQUIRED",
-			})
+			response.Error(c, errors.ErrBadRequest.WithDetails("Resource ID required"))
 			c.Abort()
 			return
 		}
@@ -64,20 +62,13 @@ func (m *PermissionMiddleware) RequirePermission(resourceType string, action per
 				logger.String("action", string(action)),
 				logger.ErrorField(err),
 			)
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Permission check failed",
-				"code":  "PERMISSION_CHECK_FAILED",
-			})
+			response.Error(c, errors.ErrInternalServer.WithDetails("Permission check failed"))
 			c.Abort()
 			return
 		}
 
 		if !result.Allowed {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error":  "Permission denied",
-				"code":   "PERMISSION_DENIED",
-				"reason": result.Reason,
-			})
+			response.Error(c, errors.ErrForbidden.WithDetails(result.Reason))
 			c.Abort()
 			return
 		}
@@ -95,20 +86,14 @@ func (m *PermissionMiddleware) RequireAnyPermission(resourceType string, actions
 	return func(c *gin.Context) {
 		userID, err := GetCurrentUserID(c)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Authentication required",
-				"code":  "AUTH_REQUIRED",
-			})
+			response.Error(c, errors.ErrUnauthorized.WithDetails("Authentication required"))
 			c.Abort()
 			return
 		}
 
 		resourceID := m.extractResourceID(c, resourceType)
 		if resourceID == "" {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Resource ID required",
-				"code":  "RESOURCE_ID_REQUIRED",
-			})
+			response.Error(c, errors.ErrBadRequest.WithDetails("Resource ID required"))
 			c.Abort()
 			return
 		}
@@ -145,16 +130,11 @@ func (m *PermissionMiddleware) RequireAnyPermission(resourceType string, actions
 		}
 
 		if !allowed {
-			reason := "Permission denied for all requested actions"
+			_reason := "Permission denied for all requested actions"
 			if lastResult != nil {
-				reason = lastResult.Reason
+				_reason = lastResult.Reason
 			}
-
-			c.JSON(http.StatusForbidden, gin.H{
-				"error":  "Permission denied",
-				"code":   "PERMISSION_DENIED",
-				"reason": reason,
-			})
+			response.Error(c, errors.ErrForbidden.WithDetails(_reason))
 			c.Abort()
 			return
 		}
@@ -174,20 +154,14 @@ func (m *PermissionMiddleware) RequireAllPermissions(resourceType string, action
 	return func(c *gin.Context) {
 		userID, err := GetCurrentUserID(c)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Authentication required",
-				"code":  "AUTH_REQUIRED",
-			})
+			response.Error(c, errors.ErrUnauthorized.WithDetails("Authentication required"))
 			c.Abort()
 			return
 		}
 
 		resourceID := m.extractResourceID(c, resourceType)
 		if resourceID == "" {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Resource ID required",
-				"code":  "RESOURCE_ID_REQUIRED",
-			})
+			response.Error(c, errors.ErrBadRequest.WithDetails("Resource ID required"))
 			c.Abort()
 			return
 		}
@@ -208,20 +182,13 @@ func (m *PermissionMiddleware) RequireAllPermissions(resourceType string, action
 				logger.String("resource_id", resourceID),
 				logger.ErrorField(err),
 			)
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Permission check failed",
-				"code":  "PERMISSION_CHECK_FAILED",
-			})
+			response.Error(c, errors.ErrInternalServer.WithDetails("Permission check failed"))
 			c.Abort()
 			return
 		}
 
 		if !result.Allowed {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error":  "Permission denied",
-				"code":   "PERMISSION_DENIED",
-				"reason": result.Reason,
-			})
+			response.Error(c, errors.ErrForbidden.WithDetails(result.Reason))
 			c.Abort()
 			return
 		}
@@ -239,20 +206,14 @@ func (m *PermissionMiddleware) RequireRole(resourceType string, roles ...permiss
 	return func(c *gin.Context) {
 		userID, err := GetCurrentUserID(c)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Authentication required",
-				"code":  "AUTH_REQUIRED",
-			})
+			response.Error(c, errors.ErrUnauthorized.WithDetails("Authentication required"))
 			c.Abort()
 			return
 		}
 
 		resourceID := m.extractResourceID(c, resourceType)
 		if resourceID == "" {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Resource ID required",
-				"code":  "RESOURCE_ID_REQUIRED",
-			})
+			response.Error(c, errors.ErrBadRequest.WithDetails("Resource ID required"))
 			c.Abort()
 			return
 		}
@@ -266,10 +227,7 @@ func (m *PermissionMiddleware) RequireRole(resourceType string, roles ...permiss
 				logger.String("resource_id", resourceID),
 				logger.ErrorField(err),
 			)
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Permission check failed",
-				"code":  "PERMISSION_CHECK_FAILED",
-			})
+			response.Error(c, errors.ErrInternalServer.WithDetails("Permission check failed"))
 			c.Abort()
 			return
 		}
@@ -284,12 +242,7 @@ func (m *PermissionMiddleware) RequireRole(resourceType string, roles ...permiss
 		}
 
 		if !hasRole {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error":      "Insufficient role",
-				"code":       "INSUFFICIENT_ROLE",
-				"user_role":  result.Role,
-				"required_roles": roles,
-			})
+			response.Error(c, errors.ErrForbidden.WithDetails("Insufficient role"))
 			c.Abort()
 			return
 		}
@@ -366,46 +319,91 @@ func (m *PermissionMiddleware) OptionalPermission(resourceType string, action pe
 // 私有方法
 
 func (m *PermissionMiddleware) extractResourceID(c *gin.Context, resourceType string) string {
-	// 根据资源类型从不同的路径参数中提取资源ID
+	// 1) 优先从资源类型特定的路径参数中提取（仅在非空时返回）
+	var id string
 	switch resourceType {
 	case "space":
-		if spaceID := c.Param("spaceId"); spaceID != "" {
-			return spaceID
+		if v := c.Param("spaceId"); v != "" {
+			return v
 		}
-		return c.Param("space_id")
+		if v := c.Param("space_id"); v != "" {
+			return v
+		}
 	case "base":
-		if baseID := c.Param("baseId"); baseID != "" {
-			return baseID
+		if v := c.Param("baseId"); v != "" {
+			return v
 		}
-		return c.Param("base_id")
+		if v := c.Param("base_id"); v != "" {
+			return v
+		}
 	case "table":
-		if tableID := c.Param("tableId"); tableID != "" {
-			return tableID
+		if v := c.Param("tableId"); v != "" {
+			return v
 		}
-		return c.Param("table_id")
+		if v := c.Param("table_id"); v != "" {
+			return v
+		}
 	case "view":
-		if viewID := c.Param("viewId"); viewID != "" {
-			return viewID
+		if v := c.Param("viewId"); v != "" {
+			return v
 		}
-		return c.Param("view_id")
+		if v := c.Param("view_id"); v != "" {
+			return v
+		}
 	case "record":
-		if recordID := c.Param("recordId"); recordID != "" {
-			return recordID
+		if v := c.Param("recordId"); v != "" {
+			return v
 		}
-		return c.Param("record_id")
+		if v := c.Param("record_id"); v != "" {
+			return v
+		}
 	case "field":
-		if fieldID := c.Param("fieldId"); fieldID != "" {
-			return fieldID
+		if v := c.Param("fieldId"); v != "" {
+			return v
 		}
-		return c.Param("field_id")
-	default:
-		// 尝试通用的ID参数
-		if id := c.Param("id"); id != "" {
-			return id
+		if v := c.Param("field_id"); v != "" {
+			return v
 		}
-		// 尝试从查询参数获取
-		return c.Query(resourceType + "_id")
 	}
+
+	// 2) 通用路径参数 id
+	if id = c.Param("id"); id != "" {
+		return id
+	}
+
+	// 3) 查询参数 <resourceType>_id
+	if id = c.Query(resourceType + "_id"); id != "" {
+		return id
+	}
+
+	// 4) 尝试从 JSON 请求体读取（保持 body 可再次读取）
+	if c.Request != nil && c.Request.Body != nil {
+		ct := strings.ToLower(c.GetHeader("Content-Type"))
+		if strings.Contains(ct, "application/json") {
+			data, _ := io.ReadAll(io.LimitReader(c.Request.Body, 64*1024))
+			c.Request.Body = io.NopCloser(bytes.NewReader(data))
+
+			var body map[string]interface{}
+			if len(data) > 0 && json.Unmarshal(data, &body) == nil {
+				// 4.1) 优先 <resourceType>_id
+				if v, ok := body[resourceType+"_id"]; ok {
+					if s, ok2 := v.(string); ok2 && s != "" {
+						return s
+					}
+				}
+				// 4.2) 常见别名
+				for _, k := range []string{"table_id", "base_id", "space_id", "view_id", "field_id", "record_id", "id"} {
+					if v, ok := body[k]; ok {
+						if s, ok2 := v.(string); ok2 && s != "" {
+							return s
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return ""
 }
 
 // GetCurrentUserRole 获取当前用户角色

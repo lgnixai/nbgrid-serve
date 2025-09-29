@@ -127,7 +127,7 @@ func (s *ServiceImpl) CreateBase(ctx context.Context, req CreateBaseRequest) (*B
 	if err != nil {
 		return nil, err
 	}
-	
+
 	base.Description = req.Description
 	base.Icon = req.Icon
 

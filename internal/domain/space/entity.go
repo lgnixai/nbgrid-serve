@@ -19,13 +19,13 @@ func (e DomainError) Error() string {
 
 // 业务规则错误
 var (
-	ErrInvalidSpaceName     = DomainError{Code: "INVALID_SPACE_NAME", Message: "invalid space name"}
-	ErrSpaceNameTooLong     = DomainError{Code: "SPACE_NAME_TOO_LONG", Message: "space name too long"}
-	ErrSpaceNameEmpty       = DomainError{Code: "SPACE_NAME_EMPTY", Message: "space name cannot be empty"}
-	ErrInvalidIcon          = DomainError{Code: "INVALID_ICON", Message: "invalid icon format"}
-	ErrInvalidCreatedBy     = DomainError{Code: "INVALID_CREATED_BY", Message: "invalid created by user ID"}
-	ErrSpaceDeleted         = DomainError{Code: "SPACE_DELETED", Message: "space is deleted"}
-	ErrInvalidRole          = DomainError{Code: "INVALID_ROLE", Message: "invalid collabor role"}
+	ErrInvalidSpaceName   = DomainError{Code: "INVALID_SPACE_NAME", Message: "invalid space name"}
+	ErrSpaceNameTooLong   = DomainError{Code: "SPACE_NAME_TOO_LONG", Message: "space name too long"}
+	ErrSpaceNameEmpty     = DomainError{Code: "SPACE_NAME_EMPTY", Message: "space name cannot be empty"}
+	ErrInvalidIcon        = DomainError{Code: "INVALID_ICON", Message: "invalid icon format"}
+	ErrInvalidCreatedBy   = DomainError{Code: "INVALID_CREATED_BY", Message: "invalid created by user ID"}
+	ErrSpaceDeleted       = DomainError{Code: "SPACE_DELETED", Message: "space is deleted"}
+	ErrInvalidRole        = DomainError{Code: "INVALID_ROLE", Message: "invalid collabor role"}
 	ErrCollaboratorExists = DomainError{Code: "COLLABORATOR_EXISTS", Message: "collaborator already exists"}
 )
 
@@ -39,10 +39,10 @@ type Space struct {
 	CreatedTime      time.Time  `json:"created_at"`
 	DeletedTime      *time.Time `json:"deleted_time"`
 	LastModifiedTime *time.Time `json:"updated_at"`
-	
+
 	// 业务状态
 	status SpaceStatus `json:"status"`
-	
+
 	// 成员管理相关
 	memberCount int `json:"-"` // 不序列化到JSON，由聚合根管理
 }
@@ -53,7 +53,7 @@ func NewSpace(name string, createdBy string) (*Space, error) {
 	if err := validateSpaceName(name); err != nil {
 		return nil, err
 	}
-	
+
 	if err := validateUserID(createdBy); err != nil {
 		return nil, err
 	}
@@ -78,21 +78,21 @@ func (s *Space) Update(name *string, description *string, icon *string) error {
 		}
 		s.Name = *name
 	}
-	
+
 	if description != nil {
 		if err := validateDescription(*description); err != nil {
 			return err
 		}
 		s.Description = description
 	}
-	
+
 	if icon != nil {
 		if err := validateIcon(*icon); err != nil {
 			return err
 		}
 		s.Icon = icon
 	}
-	
+
 	s.updateModifiedTime()
 	return nil
 }
@@ -130,12 +130,12 @@ func (s *Space) CanUserAccess(userID string) bool {
 	if s.IsDeleted() || s.status != SpaceStatusActive {
 		return false
 	}
-	
+
 	// 创建者可以访问
 	if s.CreatedBy == userID {
 		return true
 	}
-	
+
 	// TODO: 检查协作者权限 - 需要通过聚合根或领域服务检查
 	return false
 }
@@ -145,11 +145,11 @@ func (s *Space) Archive() error {
 	if s.IsDeleted() {
 		return ErrSpaceDeleted
 	}
-	
+
 	if s.status == SpaceStatusArchived {
 		return DomainError{Code: "SPACE_ALREADY_ARCHIVED", Message: "space is already archived"}
 	}
-	
+
 	s.status = SpaceStatusArchived
 	s.updateModifiedTime()
 	return nil
@@ -160,11 +160,11 @@ func (s *Space) Restore() error {
 	if s.IsDeleted() {
 		return ErrSpaceDeleted
 	}
-	
+
 	if s.status == SpaceStatusActive {
 		return DomainError{Code: "SPACE_ALREADY_ACTIVE", Message: "space is already active"}
 	}
-	
+
 	s.status = SpaceStatusActive
 	s.updateModifiedTime()
 	return nil
@@ -253,16 +253,16 @@ func (r CollaboratorRole) IsValid() bool {
 
 // 权限常量定义
 const (
-	PermissionRead             = "read"
-	PermissionWrite            = "write"
-	PermissionCreate           = "create"
-	PermissionUpdate           = "update"
-	PermissionDelete           = "delete"
-	PermissionManageMembers    = "manage_members"
-	PermissionManageSettings   = "manage_settings"
+	PermissionRead              = "read"
+	PermissionWrite             = "write"
+	PermissionCreate            = "create"
+	PermissionUpdate            = "update"
+	PermissionDelete            = "delete"
+	PermissionManageMembers     = "manage_members"
+	PermissionManageSettings    = "manage_settings"
 	PermissionTransferOwnership = "transfer_ownership"
-	PermissionArchive          = "archive"
-	PermissionRestore          = "restore"
+	PermissionArchive           = "archive"
+	PermissionRestore           = "restore"
 )
 
 // HasPermission 检查角色是否有指定权限 - 重构后的版本
@@ -310,17 +310,17 @@ func (r CollaboratorRole) CanManageRole(targetRole CollaboratorRole) bool {
 	if targetRole == RoleAdmin {
 		return r == RoleOwner
 	}
-	
+
 	// Owner和Admin可以管理Editor和Viewer
 	if targetRole == RoleEditor || targetRole == RoleViewer {
 		return r == RoleOwner || r == RoleAdmin
 	}
-	
+
 	// 只有Owner可以管理Owner
 	if targetRole == RoleOwner {
 		return r == RoleOwner
 	}
-	
+
 	return false
 }
 
@@ -355,7 +355,7 @@ type SpaceCollaborator struct {
 	AcceptedAt  *time.Time         `json:"accepted_at"`
 	RevokedAt   *time.Time         `json:"revoked_at"`
 	Status      CollaboratorStatus `json:"status"`
-	
+
 	// 权限相关
 	permissions []string `json:"-"` // 不序列化，由角色动态计算
 }
@@ -366,15 +366,15 @@ func NewSpaceCollaborator(spaceID, userID string, role CollaboratorRole, invited
 	if err := validateUserID(spaceID); err != nil {
 		return nil, err
 	}
-	
+
 	if err := validateUserID(userID); err != nil {
 		return nil, err
 	}
-	
+
 	if !role.IsValid() {
 		return nil, ErrInvalidRole
 	}
-	
+
 	if err := validateUserID(invitedBy); err != nil {
 		return nil, err
 	}
@@ -388,10 +388,10 @@ func NewSpaceCollaborator(spaceID, userID string, role CollaboratorRole, invited
 		CreatedTime: time.Now(),
 		Status:      CollaboratorStatusPending,
 	}
-	
+
 	// 初始化权限
 	collaborator.refreshPermissions()
-	
+
 	return collaborator, nil
 }
 
@@ -400,7 +400,7 @@ func (sc *SpaceCollaborator) Accept() error {
 	if sc.Status != CollaboratorStatusPending {
 		return DomainError{Code: "INVALID_COLLABORATOR_STATUS", Message: "can only accept pending invitations"}
 	}
-	
+
 	now := time.Now()
 	sc.AcceptedAt = &now
 	sc.Status = CollaboratorStatusAccepted
@@ -413,7 +413,7 @@ func (sc *SpaceCollaborator) Reject() error {
 	if sc.Status != CollaboratorStatusPending {
 		return DomainError{Code: "INVALID_COLLABORATOR_STATUS", Message: "can only reject pending invitations"}
 	}
-	
+
 	sc.Status = CollaboratorStatusRejected
 	return nil
 }
@@ -423,7 +423,7 @@ func (sc *SpaceCollaborator) Revoke() error {
 	if sc.Status == CollaboratorStatusRevoked {
 		return DomainError{Code: "COLLABORATOR_ALREADY_REVOKED", Message: "collaborator is already revoked"}
 	}
-	
+
 	now := time.Now()
 	sc.RevokedAt = &now
 	sc.Status = CollaboratorStatusRevoked
@@ -436,11 +436,11 @@ func (sc *SpaceCollaborator) UpdateRole(newRole CollaboratorRole) error {
 	if !newRole.IsValid() {
 		return ErrInvalidRole
 	}
-	
+
 	if sc.Status != CollaboratorStatusAccepted {
 		return DomainError{Code: "COLLABORATOR_NOT_ACTIVE", Message: "can only update role for active collaborators"}
 	}
-	
+
 	sc.Role = newRole
 	sc.refreshPermissions()
 	return nil
@@ -451,14 +451,14 @@ func (sc *SpaceCollaborator) HasPermission(permission string) bool {
 	if sc.Status != CollaboratorStatusAccepted {
 		return false
 	}
-	
+
 	// 检查缓存的权限列表
 	for _, p := range sc.permissions {
 		if p == permission {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -497,14 +497,14 @@ func validateSpaceName(name string) error {
 	if len(name) > 255 {
 		return ErrSpaceNameTooLong
 	}
-	
+
 	// 检查是否包含非法字符
 	for _, char := range name {
 		if char < 32 || char == 127 { // 控制字符
 			return DomainError{Code: "INVALID_NAME_CHARS", Message: "space name contains invalid characters"}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -524,7 +524,7 @@ func validateIcon(icon string) error {
 	if len(icon) > 100 {
 		return DomainError{Code: "ICON_TOO_LONG", Message: "icon cannot exceed 100 characters"}
 	}
-	
+
 	// 简单的图标格式验证（可以是emoji或图标名称）
 	if len(icon) > 10 {
 		// 如果长度超过10，可能是URL，验证URL格式
@@ -533,7 +533,7 @@ func validateIcon(icon string) error {
 			return ErrInvalidIcon
 		}
 	}
-	
+
 	return nil
 }
 
@@ -545,14 +545,12 @@ func validateUserID(userID string) error {
 	if len(userID) > 50 {
 		return DomainError{Code: "USER_ID_TOO_LONG", Message: "user ID too long"}
 	}
-	
+
 	// 简单的ID格式验证
 	idRegex := regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 	if !idRegex.MatchString(userID) {
 		return ErrInvalidCreatedBy
 	}
-	
+
 	return nil
 }
-
-

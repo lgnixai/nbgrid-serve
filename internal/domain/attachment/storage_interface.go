@@ -11,31 +11,31 @@ import (
 type StorageProvider interface {
 	// Upload 上传文件
 	Upload(ctx context.Context, request UploadRequest) (*UploadResult, error)
-	
+
 	// Download 下载文件
 	Download(ctx context.Context, path string) (*DownloadResult, error)
-	
+
 	// Delete 删除文件
 	Delete(ctx context.Context, path string) error
-	
+
 	// Exists 检查文件是否存在
 	Exists(ctx context.Context, path string) (bool, error)
-	
+
 	// GetURL 获取文件访问URL
 	GetURL(ctx context.Context, path string, options URLOptions) (string, error)
-	
+
 	// GetMetadata 获取文件元数据
 	GetMetadata(ctx context.Context, path string) (*FileMetadata, error)
-	
+
 	// Copy 复制文件
 	Copy(ctx context.Context, sourcePath, destPath string) error
-	
+
 	// Move 移动文件
 	Move(ctx context.Context, sourcePath, destPath string) error
-	
+
 	// List 列出文件
 	List(ctx context.Context, prefix string, options ListOptions) (*ListResult, error)
-	
+
 	// GetStorageInfo 获取存储信息
 	GetStorageInfo(ctx context.Context) (*StorageInfo, error)
 }
@@ -52,34 +52,34 @@ type UploadRequest struct {
 
 // UploadOptions 上传选项
 type UploadOptions struct {
-	Overwrite    bool              `json:"overwrite"`
-	CreateDir    bool              `json:"create_dir"`
-	Permissions  string            `json:"permissions"`
-	Encryption   bool              `json:"encryption"`
-	Compression  bool              `json:"compression"`
+	Overwrite     bool              `json:"overwrite"`
+	CreateDir     bool              `json:"create_dir"`
+	Permissions   string            `json:"permissions"`
+	Encryption    bool              `json:"encryption"`
+	Compression   bool              `json:"compression"`
 	CustomHeaders map[string]string `json:"custom_headers"`
 }
 
 // UploadResult 上传结果
 type UploadResult struct {
-	Path         string            `json:"path"`
-	Size         int64             `json:"size"`
-	ContentType  string            `json:"content_type"`
-	ETag         string            `json:"etag"`
-	VersionID    string            `json:"version_id"`
-	URL          string            `json:"url"`
-	Metadata     map[string]string `json:"metadata"`
-	UploadedAt   time.Time         `json:"uploaded_at"`
+	Path        string            `json:"path"`
+	Size        int64             `json:"size"`
+	ContentType string            `json:"content_type"`
+	ETag        string            `json:"etag"`
+	VersionID   string            `json:"version_id"`
+	URL         string            `json:"url"`
+	Metadata    map[string]string `json:"metadata"`
+	UploadedAt  time.Time         `json:"uploaded_at"`
 }
 
 // DownloadResult 下载结果
 type DownloadResult struct {
-	Reader      io.ReadCloser     `json:"-"`
-	Size        int64             `json:"size"`
-	ContentType string            `json:"content_type"`
-	ETag        string            `json:"etag"`
-	LastModified time.Time        `json:"last_modified"`
-	Metadata    map[string]string `json:"metadata"`
+	Reader       io.ReadCloser     `json:"-"`
+	Size         int64             `json:"size"`
+	ContentType  string            `json:"content_type"`
+	ETag         string            `json:"etag"`
+	LastModified time.Time         `json:"last_modified"`
+	Metadata     map[string]string `json:"metadata"`
 }
 
 // URLOptions URL选项
@@ -111,7 +111,7 @@ type ListOptions struct {
 	Offset      int    `json:"offset"`
 	Recursive   bool   `json:"recursive"`
 	IncludeSize bool   `json:"include_size"`
-	SortBy      string `json:"sort_by"` // name, size, modified
+	SortBy      string `json:"sort_by"`    // name, size, modified
 	SortOrder   string `json:"sort_order"` // asc, desc
 }
 
@@ -126,15 +126,15 @@ type ListResult struct {
 
 // StorageInfo 存储信息
 type StorageInfo struct {
-	Provider     string            `json:"provider"`
-	Region       string            `json:"region"`
-	Bucket       string            `json:"bucket"`
-	TotalSize    int64             `json:"total_size"`
-	UsedSize     int64             `json:"used_size"`
-	FileCount    int64             `json:"file_count"`
-	Features     []string          `json:"features"`
-	Limits       map[string]int64  `json:"limits"`
-	Metadata     map[string]string `json:"metadata"`
+	Provider  string            `json:"provider"`
+	Region    string            `json:"region"`
+	Bucket    string            `json:"bucket"`
+	TotalSize int64             `json:"total_size"`
+	UsedSize  int64             `json:"used_size"`
+	FileCount int64             `json:"file_count"`
+	Features  []string          `json:"features"`
+	Limits    map[string]int64  `json:"limits"`
+	Metadata  map[string]string `json:"metadata"`
 }
 
 // StorageType 存储类型
@@ -218,7 +218,7 @@ func (m *StorageManager) CreateProvider(name string, config StorageConfig) error
 	if err != nil {
 		return err
 	}
-	
+
 	m.providers[name] = provider
 	m.config[name] = config
 	return nil
@@ -261,7 +261,7 @@ func (m *MultiStorageProvider) Upload(ctx context.Context, request UploadRequest
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// 根据策略复制到辅助存储
 	switch m.strategy {
 	case ReplicationStrategySync:
@@ -279,7 +279,7 @@ func (m *MultiStorageProvider) Upload(ctx context.Context, request UploadRequest
 			}
 		}()
 	}
-	
+
 	return result, nil
 }
 
@@ -290,14 +290,14 @@ func (m *MultiStorageProvider) Download(ctx context.Context, path string) (*Down
 	if err == nil {
 		return result, nil
 	}
-	
+
 	// 如果主存储失败，尝试从辅助存储下载
 	for _, provider := range m.secondary {
 		if result, err := provider.Download(ctx, path); err == nil {
 			return result, nil
 		}
 	}
-	
+
 	return nil, err
 }
 
@@ -305,17 +305,17 @@ func (m *MultiStorageProvider) Download(ctx context.Context, path string) (*Down
 func (m *MultiStorageProvider) Delete(ctx context.Context, path string) error {
 	// 从所有存储中删除
 	var lastErr error
-	
+
 	if err := m.primary.Delete(ctx, path); err != nil {
 		lastErr = err
 	}
-	
+
 	for _, provider := range m.secondary {
 		if err := provider.Delete(ctx, path); err != nil {
 			lastErr = err
 		}
 	}
-	
+
 	return lastErr
 }
 
@@ -353,4 +353,3 @@ func (m *MultiStorageProvider) List(ctx context.Context, prefix string, options 
 func (m *MultiStorageProvider) GetStorageInfo(ctx context.Context) (*StorageInfo, error) {
 	return m.primary.GetStorageInfo(ctx)
 }
-

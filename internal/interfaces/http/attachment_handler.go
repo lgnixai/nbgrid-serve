@@ -8,7 +8,7 @@ import (
 
 	"teable-go-backend/internal/domain/attachment"
 	"teable-go-backend/pkg/errors"
-	"teable-go-backend/pkg/logger"
+	resp "teable-go-backend/pkg/response"
 )
 
 // AttachmentHandler 附件HTTP处理器
@@ -49,13 +49,13 @@ func (h *AttachmentHandler) GenerateSignature(c *gin.Context) {
 		return
 	}
 
-	response, err := h.attachmentService.GenerateSignature(c.Request.Context(), userID, &req)
+	respData, err := h.attachmentService.GenerateSignature(c.Request.Context(), userID, &req)
 	if err != nil {
 		h.handleError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: response})
+	resp.SuccessWithMessage(c, respData, "")
 }
 
 // UploadFile 上传文件
@@ -99,7 +99,7 @@ func (h *AttachmentHandler) UploadFile(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	resp.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // NotifyUpload 通知上传完成
@@ -123,13 +123,13 @@ func (h *AttachmentHandler) NotifyUpload(c *gin.Context) {
 
 	filename := c.Query("filename")
 
-	response, err := h.attachmentService.NotifyUpload(c.Request.Context(), token, filename)
+	respData2, err := h.attachmentService.NotifyUpload(c.Request.Context(), token, filename)
 	if err != nil {
 		h.handleError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: response})
+	resp.SuccessWithMessage(c, respData2, "")
 }
 
 // ReadFile 读取文件
@@ -203,7 +203,7 @@ func (h *AttachmentHandler) DeleteFile(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	resp.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // GetAttachment 获取附件信息
@@ -229,7 +229,7 @@ func (h *AttachmentHandler) GetAttachment(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: attachment})
+	resp.SuccessWithMessage(c, attachment, "")
 }
 
 // ListAttachments 列出附件
@@ -260,7 +260,7 @@ func (h *AttachmentHandler) ListAttachments(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: attachments})
+	resp.SuccessWithMessage(c, attachments, "")
 }
 
 // GetAttachmentStats 获取附件统计
@@ -286,7 +286,7 @@ func (h *AttachmentHandler) GetAttachmentStats(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Data: stats})
+	resp.SuccessWithMessage(c, stats, "")
 }
 
 // CleanupExpiredTokens 清理过期令牌
@@ -304,42 +304,9 @@ func (h *AttachmentHandler) CleanupExpiredTokens(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	resp.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 func (h *AttachmentHandler) handleError(c *gin.Context, err error) {
-	traceID := c.GetString("request_id")
-
-	if appErr, ok := errors.IsAppError(err); ok {
-		logger.Error("Application error",
-			logger.String("error", appErr.Message),
-			logger.String("code", appErr.Code),
-			logger.String("trace_id", traceID),
-		)
-
-		c.JSON(appErr.HTTPStatus, gin.H{
-			"success": false,
-			"error": gin.H{
-				"code":    appErr.Code,
-				"message": appErr.Message,
-				"details": appErr.Details,
-			},
-			"trace_id": traceID,
-		})
-		return
-	}
-
-	logger.Error("Internal server error",
-		logger.ErrorField(err),
-		logger.String("trace_id", traceID),
-	)
-
-	c.JSON(http.StatusInternalServerError, gin.H{
-		"success": false,
-		"error": gin.H{
-			"code":    "INTERNAL_SERVER_ERROR",
-			"message": "服务器内部错误",
-		},
-		"trace_id": traceID,
-	})
+	resp.Error(c, err)
 }

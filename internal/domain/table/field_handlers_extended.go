@@ -35,7 +35,7 @@ func (h *MultiSelectFieldHandler) ValidateValue(value interface{}, options *Fiel
 	if value == nil || value == "" {
 		return nil
 	}
-	
+
 	var values []string
 	switch v := value.(type) {
 	case string:
@@ -56,18 +56,18 @@ func (h *MultiSelectFieldHandler) ValidateValue(value interface{}, options *Fiel
 	default:
 		return fmt.Errorf("多选字段值必须是字符串数组或逗号分隔的字符串")
 	}
-	
+
 	if options == nil || len(options.Choices) == 0 {
 		return fmt.Errorf("多选字段必须配置选项")
 	}
-	
+
 	// 检查每个值是否在选项中
 	for _, val := range values {
 		val = strings.TrimSpace(val)
 		if val == "" {
 			continue
 		}
-		
+
 		found := false
 		for _, choice := range options.Choices {
 			if choice.Value == val {
@@ -79,7 +79,7 @@ func (h *MultiSelectFieldHandler) ValidateValue(value interface{}, options *Fiel
 			return fmt.Errorf("选择的值 %s 不在有效选项中", val)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -88,11 +88,11 @@ func (h *MultiSelectFieldHandler) ValidateOptions(options *FieldOptions) error {
 	if err := h.BaseFieldHandler.ValidateOptions(options); err != nil {
 		return err
 	}
-	
+
 	if options == nil || len(options.Choices) == 0 {
 		return fmt.Errorf("多选字段必须配置至少一个选项")
 	}
-	
+
 	// 检查选项值的唯一性
 	valueMap := make(map[string]bool)
 	for _, choice := range options.Choices {
@@ -104,7 +104,7 @@ func (h *MultiSelectFieldHandler) ValidateOptions(options *FieldOptions) error {
 		}
 		valueMap[choice.Value] = true
 	}
-	
+
 	return nil
 }
 
@@ -134,7 +134,7 @@ func (h *MultiSelectFieldHandler) IsCompatibleWith(targetType FieldType) bool {
 	compatibleTypes := []FieldType{
 		FieldTypeMultiSelect, FieldTypeSelect, FieldTypeCheckbox, FieldTypeText,
 	}
-	
+
 	for _, t := range compatibleTypes {
 		if t == targetType {
 			return true
@@ -148,7 +148,7 @@ func (h *MultiSelectFieldHandler) ConvertValue(value interface{}, targetType Fie
 	if value == nil {
 		return nil, nil
 	}
-	
+
 	var values []string
 	switch v := value.(type) {
 	case string:
@@ -166,7 +166,7 @@ func (h *MultiSelectFieldHandler) ConvertValue(value interface{}, targetType Fie
 	default:
 		return nil, fmt.Errorf("无法转换多选值")
 	}
-	
+
 	switch targetType {
 	case FieldTypeMultiSelect, FieldTypeCheckbox:
 		return values, nil
@@ -211,7 +211,7 @@ func (h *BooleanFieldHandler) ValidateValue(value interface{}, options *FieldOpt
 	if value == nil {
 		return nil
 	}
-	
+
 	switch v := value.(type) {
 	case bool:
 		return nil
@@ -240,7 +240,7 @@ func (h *BooleanFieldHandler) IsCompatibleWith(targetType FieldType) bool {
 	compatibleTypes := []FieldType{
 		FieldTypeBoolean, FieldTypeText,
 	}
-	
+
 	for _, t := range compatibleTypes {
 		if t == targetType {
 			return true
@@ -254,7 +254,7 @@ func (h *BooleanFieldHandler) ConvertValue(value interface{}, targetType FieldTy
 	if value == nil {
 		return nil, nil
 	}
-	
+
 	var boolVal bool
 	switch v := value.(type) {
 	case bool:
@@ -266,7 +266,7 @@ func (h *BooleanFieldHandler) ConvertValue(value interface{}, targetType FieldTy
 	default:
 		return nil, fmt.Errorf("无法转换布尔值")
 	}
-	
+
 	switch targetType {
 	case FieldTypeBoolean:
 		return boolVal, nil
@@ -307,17 +307,17 @@ func (h *URLFieldHandler) ValidateValue(value interface{}, options *FieldOptions
 	if value == nil || value == "" {
 		return nil
 	}
-	
+
 	str, ok := value.(string)
 	if !ok {
 		return fmt.Errorf("URL字段值必须是字符串")
 	}
-	
+
 	urlRegex := regexp.MustCompile(`^https?://[^\s/$.?#].[^\s]*$`)
 	if !urlRegex.MatchString(str) {
 		return fmt.Errorf("URL格式不正确")
 	}
-	
+
 	return nil
 }
 
@@ -331,7 +331,7 @@ func (h *URLFieldHandler) IsCompatibleWith(targetType FieldType) bool {
 	compatibleTypes := []FieldType{
 		FieldTypeURL, FieldTypeText, FieldTypeEmail,
 	}
-	
+
 	for _, t := range compatibleTypes {
 		if t == targetType {
 			return true
@@ -367,17 +367,17 @@ func (h *PhoneFieldHandler) ValidateValue(value interface{}, options *FieldOptio
 	if value == nil || value == "" {
 		return nil
 	}
-	
+
 	str, ok := value.(string)
 	if !ok {
 		return fmt.Errorf("电话字段值必须是字符串")
 	}
-	
+
 	phoneRegex := regexp.MustCompile(`^[\+]?[1-9][\d]{0,15}$`)
 	if !phoneRegex.MatchString(str) {
 		return fmt.Errorf("电话格式不正确")
 	}
-	
+
 	return nil
 }
 
@@ -391,7 +391,7 @@ func (h *PhoneFieldHandler) IsCompatibleWith(targetType FieldType) bool {
 	compatibleTypes := []FieldType{
 		FieldTypePhone, FieldTypeText,
 	}
-	
+
 	for _, t := range compatibleTypes {
 		if t == targetType {
 			return true
@@ -441,7 +441,7 @@ func (h *CurrencyFieldHandler) IsCompatibleWith(targetType FieldType) bool {
 	compatibleTypes := []FieldType{
 		FieldTypeCurrency, FieldTypeNumber, FieldTypePercent,
 	}
-	
+
 	for _, t := range compatibleTypes {
 		if t == targetType {
 			return true
@@ -484,7 +484,7 @@ func (h *PercentFieldHandler) ValidateValue(value interface{}, options *FieldOpt
 	if value == nil || value == "" {
 		return nil
 	}
-	
+
 	var num float64
 	switch v := value.(type) {
 	case float64:
@@ -500,11 +500,11 @@ func (h *PercentFieldHandler) ValidateValue(value interface{}, options *FieldOpt
 	default:
 		return fmt.Errorf("百分比字段值必须是数字")
 	}
-	
+
 	if num < 0 || num > 100 {
 		return fmt.Errorf("百分比值必须在0-100之间")
 	}
-	
+
 	return nil
 }
 
@@ -522,7 +522,7 @@ func (h *PercentFieldHandler) IsCompatibleWith(targetType FieldType) bool {
 	compatibleTypes := []FieldType{
 		FieldTypePercent, FieldTypeNumber, FieldTypeCurrency, FieldTypeProgress,
 	}
-	
+
 	for _, t := range compatibleTypes {
 		if t == targetType {
 			return true
@@ -536,7 +536,7 @@ func (h *PercentFieldHandler) ConvertValue(value interface{}, targetType FieldTy
 	if value == nil {
 		return nil, nil
 	}
-	
+
 	var num float64
 	switch v := value.(type) {
 	case float64:
@@ -552,7 +552,7 @@ func (h *PercentFieldHandler) ConvertValue(value interface{}, targetType FieldTy
 	default:
 		return nil, fmt.Errorf("无法转换非数字值")
 	}
-	
+
 	switch targetType {
 	case FieldTypePercent, FieldTypeProgress:
 		// 确保在0-100范围内
@@ -640,22 +640,22 @@ func (h *DateTimeFieldHandler) ValidateValue(value interface{}, options *FieldOp
 	if value == nil || value == "" {
 		return nil
 	}
-	
+
 	str, ok := value.(string)
 	if !ok {
 		return fmt.Errorf("日期时间字段值必须是字符串")
 	}
-	
+
 	format := "2006-01-02 15:04:05"
 	if options != nil && options.DateFormat != "" {
 		format = options.DateFormat
 	}
-	
+
 	_, err := time.Parse(format, str)
 	if err != nil {
 		return fmt.Errorf("日期时间格式不正确，期望格式: %s", format)
 	}
-	
+
 	return nil
 }
 
@@ -671,7 +671,7 @@ func (h *DateTimeFieldHandler) IsCompatibleWith(targetType FieldType) bool {
 	compatibleTypes := []FieldType{
 		FieldTypeDateTime, FieldTypeDate, FieldTypeTime, FieldTypeText,
 	}
-	
+
 	for _, t := range compatibleTypes {
 		if t == targetType {
 			return true
@@ -690,22 +690,22 @@ func (h *TimeFieldHandler) ValidateValue(value interface{}, options *FieldOption
 	if value == nil || value == "" {
 		return nil
 	}
-	
+
 	str, ok := value.(string)
 	if !ok {
 		return fmt.Errorf("时间字段值必须是字符串")
 	}
-	
+
 	format := "15:04:05"
 	if options != nil && options.TimeFormat != "" {
 		format = options.TimeFormat
 	}
-	
+
 	_, err := time.Parse(format, str)
 	if err != nil {
 		return fmt.Errorf("时间格式不正确，期望格式: %s", format)
 	}
-	
+
 	return nil
 }
 
@@ -721,7 +721,7 @@ func (h *TimeFieldHandler) IsCompatibleWith(targetType FieldType) bool {
 	compatibleTypes := []FieldType{
 		FieldTypeTime, FieldTypeDateTime, FieldTypeText,
 	}
-	
+
 	for _, t := range compatibleTypes {
 		if t == targetType {
 			return true

@@ -170,4 +170,3 @@ type PubSubError struct {
 func (e *PubSubError) Error() string {
 	return e.Message
 }
-

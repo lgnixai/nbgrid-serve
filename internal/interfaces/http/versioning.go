@@ -5,6 +5,9 @@ import (
 	"strconv"
 	"strings"
 
+	"teable-go-backend/pkg/errors"
+	"teable-go-backend/pkg/response"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -35,19 +38,19 @@ func (v APIVersion) IsCompatibleWith(other APIVersion) bool {
 	if v.Major != other.Major {
 		return false
 	}
-	
+
 	// 次版本号向后兼容
 	if v.Minor < other.Minor {
 		return false
 	}
-	
+
 	return true
 }
 
 // VersionManager 版本管理器
 type VersionManager struct {
-	currentVersion APIVersion
-	supportedVersions []APIVersion
+	currentVersion     APIVersion
+	supportedVersions  []APIVersion
 	deprecatedVersions map[string]string // version -> deprecation message
 }
 
@@ -79,9 +82,9 @@ func (vm *VersionManager) GetSupportedVersions() []APIVersion {
 // IsVersionSupported 检查版本是否支持
 func (vm *VersionManager) IsVersionSupported(version APIVersion) bool {
 	for _, supported := range vm.supportedVersions {
-		if version.Major == supported.Major && 
-		   version.Minor == supported.Minor && 
-		   version.Patch == supported.Patch {
+		if version.Major == supported.Major &&
+			version.Minor == supported.Minor &&
+			version.Patch == supported.Patch {
 			return true
 		}
 	}
@@ -109,41 +112,41 @@ func (vm *VersionManager) DeprecateVersion(version APIVersion, message string) {
 func ParseVersion(versionStr string) (APIVersion, error) {
 	// 移除 'v' 前缀
 	versionStr = strings.TrimPrefix(versionStr, "v")
-	
+
 	// 分离预发布和构建信息
 	var preRelease, build string
-	
+
 	if idx := strings.Index(versionStr, "+"); idx != -1 {
 		build = versionStr[idx+1:]
 		versionStr = versionStr[:idx]
 	}
-	
+
 	if idx := strings.Index(versionStr, "-"); idx != -1 {
 		preRelease = versionStr[idx+1:]
 		versionStr = versionStr[:idx]
 	}
-	
+
 	// 解析主版本号.次版本号.修订号
 	parts := strings.Split(versionStr, ".")
 	if len(parts) != 3 {
 		return APIVersion{}, fmt.Errorf("invalid version format: %s", versionStr)
 	}
-	
+
 	major, err := strconv.Atoi(parts[0])
 	if err != nil {
 		return APIVersion{}, fmt.Errorf("invalid major version: %s", parts[0])
 	}
-	
+
 	minor, err := strconv.Atoi(parts[1])
 	if err != nil {
 		return APIVersion{}, fmt.Errorf("invalid minor version: %s", parts[1])
 	}
-	
+
 	patch, err := strconv.Atoi(parts[2])
 	if err != nil {
 		return APIVersion{}, fmt.Errorf("invalid patch version: %s", parts[2])
 	}
-	
+
 	return APIVersion{
 		Major:      major,
 		Minor:      minor,
@@ -159,7 +162,7 @@ func VersionMiddleware(vm *VersionManager) gin.HandlerFunc {
 		// 从多个来源获取版本信息
 		var requestedVersion APIVersion
 		var err error
-		
+
 		// 1. 从URL路径获取版本 (如 /api/v1/...)
 		if pathVersion := extractVersionFromPath(c.Request.URL.Path); pathVersion != "" {
 			requestedVersion, err = ParseVersion(pathVersion)
@@ -173,46 +176,39 @@ func VersionMiddleware(vm *VersionManager) gin.HandlerFunc {
 			// 4. 使用默认版本
 			requestedVersion = vm.GetCurrentVersion()
 		}
-		
+
 		if err != nil {
-			c.JSON(400, ErrorResponse{
-			Error: "Invalid API version format",
-			Code: "INVALID_VERSION_FORMAT",
-			Details: err.Error(),
-		})
+			response.Error(c, errors.ErrBadRequest.WithDetails("Invalid API version format: "+err.Error()))
 			c.Abort()
 			return
 		}
-		
+
 		// 检查版本是否支持
 		if !vm.IsVersionSupported(requestedVersion) {
-		c.JSON(400, ErrorResponse{
-			Error: "Unsupported API version",
-			Code: "UNSUPPORTED_VERSION",
-			Details: map[string]interface{}{
-				"requested_version": requestedVersion.String(),
+			response.Error(c, errors.ErrBadRequest.WithDetails(map[string]interface{}{
+				"error":              "Unsupported API version",
+				"requested_version":  requestedVersion.String(),
 				"supported_versions": vm.GetSupportedVersions(),
-			},
-		})
+			}))
 			c.Abort()
 			return
 		}
-		
+
 		// 检查版本是否已弃用
 		if deprecated, message := vm.IsVersionDeprecated(requestedVersion); deprecated {
 			c.Header("API-Deprecated", "true")
 			c.Header("API-Deprecation-Message", message)
 			c.Header("API-Current-Version", vm.GetCurrentVersion().String())
 		}
-		
+
 		// 设置版本信息到上下文
 		c.Set("api_version", requestedVersion)
 		c.Set("api_version_string", requestedVersion.String())
-		
+
 		// 设置响应头
 		c.Header("API-Version", requestedVersion.String())
 		c.Header("API-Current-Version", vm.GetCurrentVersion().String())
-		
+
 		c.Next()
 	}
 }
@@ -256,14 +252,14 @@ func GetVersionInfo(vm *VersionManager) gin.HandlerFunc {
 		for version := range vm.deprecatedVersions {
 			deprecated = append(deprecated, version)
 		}
-		
+
 		info := VersionInfo{
 			Current:    vm.GetCurrentVersion(),
 			Supported:  vm.GetSupportedVersions(),
 			Deprecated: deprecated,
 		}
-		
-		c.JSON(200, SuccessResponse{Success: true, Data: info, Message: "API version information"})
+
+		response.SuccessWithMessage(c, info, "API version information")
 	}
 }
 

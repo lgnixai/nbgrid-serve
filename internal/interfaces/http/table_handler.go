@@ -2,13 +2,12 @@ package http
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 
 	"teable-go-backend/internal/domain/table"
 	"teable-go-backend/pkg/errors"
-	"teable-go-backend/pkg/logger"
+	"teable-go-backend/pkg/response"
 )
 
 // TableHandler 数据表处理器
@@ -60,7 +59,7 @@ func (h *TableHandler) CreateTable(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, SuccessResponse{Data: newTable})
+	response.SuccessWithMessage(c, newTable, "")
 }
 
 // GetTable 获取数据表详情
@@ -81,7 +80,7 @@ func (h *TableHandler) GetTable(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, SuccessResponse{Data: t})
+	response.SuccessWithMessage(c, t, "")
 }
 
 // UpdateTable 更新数据表
@@ -112,7 +111,7 @@ func (h *TableHandler) UpdateTable(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, SuccessResponse{Data: updatedTable})
+	response.SuccessWithMessage(c, updatedTable, "")
 }
 
 // DeleteTable 删除数据表
@@ -133,7 +132,7 @@ func (h *TableHandler) DeleteTable(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // ListTables 列出数据表
@@ -178,12 +177,12 @@ func (h *TableHandler) ListTables(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, PaginatedResponse{
-		Data:   tables,
-		Total:  total,
-		Limit:  filter.Limit,
-		Offset: filter.Offset,
-	})
+	response.PaginatedSuccess(c, tables, response.Pagination{
+		Page:       0,
+		Limit:      filter.Limit,
+		Total:      int(total),
+		TotalPages: 0,
+	}, "")
 }
 
 // CreateField 创建字段
@@ -226,7 +225,7 @@ func (h *TableHandler) CreateField(c *gin.Context) {
 	// 添加调试日志
 	fmt.Printf("Created field: %+v\n", newField)
 
-	c.JSON(http.StatusCreated, SuccessResponse{Data: newField})
+	response.SuccessWithMessage(c, newField, "")
 }
 
 // GetField 获取字段详情
@@ -247,7 +246,7 @@ func (h *TableHandler) GetField(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, SuccessResponse{Data: f})
+	response.SuccessWithMessage(c, f, "")
 }
 
 // UpdateField 更新字段
@@ -278,7 +277,7 @@ func (h *TableHandler) UpdateField(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, SuccessResponse{Data: updatedField})
+	response.SuccessWithMessage(c, updatedField, "")
 }
 
 // DeleteField 删除字段
@@ -299,7 +298,7 @@ func (h *TableHandler) DeleteField(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, SuccessResponse{Success: true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // ListFields 列出字段
@@ -344,12 +343,12 @@ func (h *TableHandler) ListFields(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, PaginatedResponse{
-		Data:   fields,
-		Total:  total,
-		Limit:  filter.Limit,
-		Offset: filter.Offset,
-	})
+	response.PaginatedSuccess(c, fields, response.Pagination{
+		Page:       0,
+		Limit:      filter.Limit,
+		Total:      int(total),
+		TotalPages: 0,
+	}, "")
 }
 
 // GetFieldTypes 获取字段类型列表
@@ -367,7 +366,7 @@ func (h *TableHandler) GetFieldTypes(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, SuccessResponse{Data: types})
+	response.SuccessWithMessage(c, types, "")
 }
 
 // GetFieldTypeInfo 获取字段类型信息
@@ -384,10 +383,7 @@ func (h *TableHandler) GetFieldTypes(c *gin.Context) {
 func (h *TableHandler) GetFieldTypeInfo(c *gin.Context) {
 	fieldType := c.Param("type")
 	if fieldType == "" {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "字段类型不能为空",
-			Code:  "MISSING_FIELD_TYPE",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("字段类型不能为空"))
 		return
 	}
 
@@ -396,7 +392,7 @@ func (h *TableHandler) GetFieldTypeInfo(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, SuccessResponse{Data: info})
+	response.SuccessWithMessage(c, info, "")
 }
 
 // ValidateFieldValue 验证字段值
@@ -415,10 +411,7 @@ func (h *TableHandler) GetFieldTypeInfo(c *gin.Context) {
 func (h *TableHandler) ValidateFieldValue(c *gin.Context) {
 	fieldID := c.Param("field_id")
 	if fieldID == "" {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "字段ID不能为空",
-			Code:  "MISSING_FIELD_ID",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("字段ID不能为空"))
 		return
 	}
 
@@ -426,11 +419,7 @@ func (h *TableHandler) ValidateFieldValue(c *gin.Context) {
 		Value interface{} `json:"value" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error:   "请求参数错误",
-			Code:    "INVALID_REQUEST",
-			Details: err.Error(),
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
@@ -444,46 +433,13 @@ func (h *TableHandler) ValidateFieldValue(c *gin.Context) {
 	// 验证字段值
 	err = h.tableService.ValidateFieldValue(c.Request.Context(), field, req.Value)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"valid": false,
-			"error": err.Error(),
-		})
+		response.SuccessWithMessage(c, gin.H{"valid": false, "error": err.Error()}, "")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"valid": true,
-		"error": nil,
-	})
+	response.SuccessWithMessage(c, gin.H{"valid": true, "error": nil}, "")
 }
 
 func (h *TableHandler) handleError(c *gin.Context, err error) {
-	traceID := c.GetString("request_id")
-
-	if appErr, ok := errors.IsAppError(err); ok {
-		logger.Error("Application error",
-			logger.String("error", appErr.Message),
-			logger.String("code", appErr.Code),
-			logger.String("trace_id", traceID),
-		)
-
-		c.JSON(appErr.HTTPStatus, ErrorResponse{
-			Error:   appErr.Message,
-			Code:    appErr.Code,
-			Details: appErr.Details,
-			TraceID: traceID,
-		})
-		return
-	}
-
-	logger.Error("Internal server error",
-		logger.ErrorField(err),
-		logger.String("trace_id", traceID),
-	)
-
-	c.JSON(http.StatusInternalServerError, ErrorResponse{
-		Error:   "服务器内部错误",
-		Code:    "INTERNAL_SERVER_ERROR",
-		TraceID: traceID,
-	})
+	response.Error(c, err)
 }

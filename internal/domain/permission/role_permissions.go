@@ -768,4 +768,3 @@ func IsLowerRole(roleA, roleB Role) bool {
 func IsEqualRole(roleA, roleB Role) bool {
 	return GetRoleLevel(roleA) == GetRoleLevel(roleB)
 }
-

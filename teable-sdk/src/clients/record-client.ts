@@ -44,7 +44,19 @@ export class RecordClient {
     filter?: FilterExpression;
     sort?: SortExpression[];
   }): Promise<PaginatedResponse<Record>> {
-    return this.httpClient.get<PaginatedResponse<Record>>('/api/records', params);
+    const resp = await this.httpClient.get<any>('/api/records', params);
+    // 适配后端统一分页结构 { data: { list, pagination } } → 已在 HttpClient 解包为 { list, pagination }
+    if (resp && resp.list && resp.pagination) {
+      const page = resp.pagination.page ?? 0;
+      const limit = resp.pagination.limit ?? (params?.limit ?? 20);
+      return {
+        data: resp.list as Record[],
+        total: resp.pagination.total ?? resp.list.length,
+        limit,
+        offset: resp.pagination.offset ?? ((page > 0 ? (page - 1) * limit : (params?.offset ?? 0)))
+      } as PaginatedResponse<Record>;
+    }
+    return resp as PaginatedResponse<Record>;
   }
 
   /**
@@ -54,7 +66,18 @@ export class RecordClient {
     filter?: FilterExpression;
     sort?: SortExpression[];
   }): Promise<PaginatedResponse<Record>> {
-    return this.httpClient.get<PaginatedResponse<Record>>(`/api/tables/${tableId}/records`, params);
+    const resp = await this.httpClient.get<any>(`/api/records`, { table_id: tableId, ...(params || {}) });
+    if (resp && resp.list && resp.pagination) {
+      const limit = resp.pagination.limit ?? (params?.limit ?? 20);
+      const page = resp.pagination.page ?? 0;
+      return {
+        data: resp.list as Record[],
+        total: resp.pagination.total ?? resp.list.length,
+        limit,
+        offset: resp.pagination.offset ?? ((page > 0 ? (page - 1) * limit : (params?.offset ?? 0)))
+      } as PaginatedResponse<Record>;
+    }
+    return resp as PaginatedResponse<Record>;
   }
 
   /**
@@ -84,7 +107,12 @@ export class RecordClient {
    * 批量创建记录
    */
   public async bulkCreate(bulkData: BulkCreateRecordRequest): Promise<Record[]> {
-    return this.httpClient.post<Record[]>('/api/records/bulk', bulkData);
+    // 后端期望请求体为 CreateRecordRequest[]
+    const payload = bulkData.records.map((data) => ({
+      table_id: bulkData.table_id,
+      data
+    }));
+    return this.httpClient.post<Record[]>('/api/records/bulk', payload);
   }
 
   /**
@@ -114,20 +142,24 @@ export class RecordClient {
    * 搜索记录
    */
   public async search(tableId: string, searchQuery: string, params?: PaginationParams): Promise<PaginatedResponse<Record>> {
-    return this.httpClient.get<PaginatedResponse<Record>>(`/api/tables/${tableId}/records/search`, {
+    return this.httpClient.get<PaginatedResponse<Record>>(`/api/search`, {
       query: searchQuery,
-      ...params
-    });
+      scope: 'records',
+      table_id: tableId,
+      ...(params || {})
+    } as any);
   }
 
   /**
    * 高级搜索
    */
   public async advancedSearch(tableId: string, filters: FilterExpression[], params?: PaginationParams): Promise<PaginatedResponse<Record>> {
-    return this.httpClient.post<PaginatedResponse<Record>>(`/api/tables/${tableId}/records/advanced-search`, {
+    return this.httpClient.post<PaginatedResponse<Record>>(`/api/search/advanced`, {
+      scope: 'records',
+      table_id: tableId,
       filters,
-      ...params
-    });
+      ...(params || {})
+    } as any);
   }
 
   // ==================== 统计和聚合 ====================
@@ -142,7 +174,7 @@ export class RecordClient {
     by_field: JsonObject;
     last_activity_at: string;
   }> {
-    return this.httpClient.get(`/api/tables/${tableId}/records/stats`);
+    return this.httpClient.get(`/api/records/stats`, { table_id: tableId });
   }
 
   /**
@@ -274,7 +306,8 @@ export class RecordClient {
     const query: any = { format };
     if (params?.filter) query.filter = JSON.stringify(params.filter);
     if (params?.fields) query.fields = params.fields.join(',');
-    return this.httpClient.downloadFile(`/api/tables/${tableId}/records/export`, { params: query } as any);
+    query.table_id = tableId;
+    return this.httpClient.downloadFile(`/api/records/export`, { params: query } as any);
   }
 
   /**
@@ -289,7 +322,7 @@ export class RecordClient {
     updated: number;
     errors: Array<{ row: number; error: string }>;
   }> {
-    return this.httpClient.uploadFile(`/api/tables/${tableId}/records/import`, file, 'file', options);
+    return this.httpClient.uploadFile(`/api/records/import`, file, 'file', { table_id: tableId, ...(options || {}) });
   }
 
   // ==================== 记录操作工具 ====================

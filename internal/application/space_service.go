@@ -20,17 +20,17 @@ type SpaceService interface {
 	UpdateSpace(ctx context.Context, id string, req UpdateSpaceRequest, userID string) (*SpaceResponse, error)
 	DeleteSpace(ctx context.Context, id string, userID string) error
 	ListSpaces(ctx context.Context, req ListSpacesRequest, userID string) (*ListSpacesResponse, error)
-	
+
 	// 软删除和恢复机制
 	RestoreSpace(ctx context.Context, id string, userID string) (*SpaceResponse, error)
 	ArchiveSpace(ctx context.Context, id string, userID string) (*SpaceResponse, error)
 	PermanentDeleteSpace(ctx context.Context, id string, userID string) error
-	
+
 	// 批量操作（支持事务管理）
 	BulkUpdateSpaces(ctx context.Context, updates []BulkUpdateSpaceRequest, userID string) error
 	BulkDeleteSpaces(ctx context.Context, spaceIDs []string, userID string) error
 	BulkRestoreSpaces(ctx context.Context, spaceIDs []string, userID string) error
-	
+
 	// 统计和查询
 	GetSpaceStats(ctx context.Context, spaceID string, userID string) (*SpaceStatsResponse, error)
 	GetDeletedSpaces(ctx context.Context, userID string, req ListDeletedSpacesRequest) (*ListSpacesResponse, error)
@@ -108,8 +108,8 @@ type ListSpacesResponse struct {
 // CreateSpace 创建空间 - 重构后的版本
 // 实现需求 1.1: 用户创建工作空间时生成唯一ID并设置创建者为所有者
 func (s *SpaceApplicationService) CreateSpace(ctx context.Context, req CreateSpaceRequest) (*SpaceResponse, error) {
-	s.logger.Info("Creating space", 
-		zap.String("name", req.Name), 
+	s.logger.Info("Creating space",
+		zap.String("name", req.Name),
 		zap.String("created_by", req.CreatedBy))
 
 	// 使用领域服务创建空间
@@ -628,14 +628,14 @@ type BulkUpdateSpaceRequest struct {
 
 // ListDeletedSpacesRequest 列出已删除空间请求
 type ListDeletedSpacesRequest struct {
-	Offset         int     `json:"offset" validate:"min=0"`
-	Limit          int     `json:"limit" validate:"min=1,max=100"`
-	OrderBy        string  `json:"order_by"`
-	Order          string  `json:"order" validate:"oneof=ASC DESC"`
-	Name           *string `json:"name,omitempty"`
-	DeletedAfter   *string `json:"deleted_after,omitempty"`  // ISO 8601 格式
-	DeletedBefore  *string `json:"deleted_before,omitempty"` // ISO 8601 格式
-	Search         string  `json:"search,omitempty"`
+	Offset        int     `json:"offset" validate:"min=0"`
+	Limit         int     `json:"limit" validate:"min=1,max=100"`
+	OrderBy       string  `json:"order_by"`
+	Order         string  `json:"order" validate:"oneof=ASC DESC"`
+	Name          *string `json:"name,omitempty"`
+	DeletedAfter  *string `json:"deleted_after,omitempty"`  // ISO 8601 格式
+	DeletedBefore *string `json:"deleted_before,omitempty"` // ISO 8601 格式
+	Search        string  `json:"search,omitempty"`
 }
 
 // SpaceStatsResponse 空间统计响应

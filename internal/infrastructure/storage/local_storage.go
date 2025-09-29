@@ -30,7 +30,7 @@ func NewLocalStorage(basePath string, logger *zap.Logger) *LocalStorage {
 // Upload 上传文件
 func (s *LocalStorage) Upload(ctx context.Context, path string, reader io.Reader, size int64, contentType string) error {
 	fullPath := filepath.Join(s.basePath, path)
-	
+
 	// 创建目录
 	dir := filepath.Dir(fullPath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -80,7 +80,7 @@ func (s *LocalStorage) Upload(ctx context.Context, path string, reader io.Reader
 // Download 下载文件
 func (s *LocalStorage) Download(ctx context.Context, path string) (io.ReadCloser, error) {
 	fullPath := filepath.Join(s.basePath, path)
-	
+
 	file, err := os.Open(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -99,7 +99,7 @@ func (s *LocalStorage) Download(ctx context.Context, path string) (io.ReadCloser
 // Delete 删除文件
 func (s *LocalStorage) Delete(ctx context.Context, path string) error {
 	fullPath := filepath.Join(s.basePath, path)
-	
+
 	if err := os.Remove(fullPath); err != nil {
 		if os.IsNotExist(err) {
 			return nil // 文件不存在，认为删除成功
@@ -120,7 +120,7 @@ func (s *LocalStorage) Delete(ctx context.Context, path string) error {
 // Exists 检查文件是否存在
 func (s *LocalStorage) Exists(ctx context.Context, path string) (bool, error) {
 	fullPath := filepath.Join(s.basePath, path)
-	
+
 	_, err := os.Stat(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -146,7 +146,7 @@ func (s *LocalStorage) GetURL(ctx context.Context, path string, expires time.Dur
 // GetSize 获取文件大小
 func (s *LocalStorage) GetSize(ctx context.Context, path string) (int64, error) {
 	fullPath := filepath.Join(s.basePath, path)
-	
+
 	stat, err := os.Stat(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -165,7 +165,7 @@ func (s *LocalStorage) GetSize(ctx context.Context, path string) (int64, error) 
 // GetMetadata 获取文件元数据
 func (s *LocalStorage) GetMetadata(ctx context.Context, path string) (map[string]string, error) {
 	fullPath := filepath.Join(s.basePath, path)
-	
+
 	stat, err := os.Stat(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -179,9 +179,9 @@ func (s *LocalStorage) GetMetadata(ctx context.Context, path string) (map[string
 	}
 
 	metadata := map[string]string{
-		"size":         fmt.Sprintf("%d", stat.Size()),
-		"modified":     stat.ModTime().Format(time.RFC3339),
-		"mode":         stat.Mode().String(),
+		"size":     fmt.Sprintf("%d", stat.Size()),
+		"modified": stat.ModTime().Format(time.RFC3339),
+		"mode":     stat.Mode().String(),
 	}
 
 	return metadata, nil

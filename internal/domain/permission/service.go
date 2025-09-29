@@ -593,4 +593,3 @@ func (s *service) GetPermissionStats(ctx context.Context) (*PermissionStats, err
 	}
 	return stats, nil
 }
-

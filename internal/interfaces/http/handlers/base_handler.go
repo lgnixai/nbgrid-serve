@@ -47,11 +47,10 @@ func (h *BaseHandler) HandleCreated(c *gin.Context, data interface{}, message ..
 	if len(message) > 0 {
 		msg = message[0]
 	}
-	c.JSON(http.StatusCreated, response.Response{
-		Success: true,
-		Data:    data,
+	c.JSON(http.StatusCreated, response.APIResponse{
+		Code:    errors.CodeOK,
 		Message: msg,
-		Code:    http.StatusCreated,
+		Data:    data,
 	})
 }
 
@@ -73,20 +72,20 @@ func (h *BaseHandler) HandleError(c *gin.Context, err error) {
 	// 处理特定错误类型
 	switch err {
 	case gorm.ErrRecordNotFound:
-		response.NotFound(c, "Resource not found")
+		response.Error(c, errors.ErrNotFound)
 	default:
-		response.InternalServerError(c, "Internal server error")
+		response.Error(c, errors.ErrInternalServer)
 	}
 }
 
 // HandleNotFound 处理资源未找到
 func (h *BaseHandler) HandleNotFound(c *gin.Context, resource string) {
-	response.NotFound(c, resource+" not found")
+	response.Error(c, errors.ErrNotFound.WithDetails(resource+" not found"))
 }
 
 // HandleBadRequest 处理错误请求
 func (h *BaseHandler) HandleBadRequest(c *gin.Context, message string) {
-	response.BadRequest(c, message)
+	response.Error(c, errors.ErrBadRequest.WithDetails(message))
 }
 
 // HandleUnauthorized 处理未授权
@@ -95,7 +94,7 @@ func (h *BaseHandler) HandleUnauthorized(c *gin.Context, message ...string) {
 	if len(message) > 0 {
 		msg = message[0]
 	}
-	response.Unauthorized(c, msg)
+	response.Error(c, errors.ErrUnauthorized.WithDetails(msg))
 }
 
 // HandleForbidden 处理禁止访问
@@ -104,7 +103,7 @@ func (h *BaseHandler) HandleForbidden(c *gin.Context, message ...string) {
 	if len(message) > 0 {
 		msg = message[0]
 	}
-	response.Forbidden(c, msg)
+	response.Error(c, errors.ErrForbidden.WithDetails(msg))
 }
 
 // GetCurrentUser 获取当前用户

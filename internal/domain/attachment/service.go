@@ -38,14 +38,14 @@ type Service interface {
 
 // service 附件服务实现
 type service struct {
-	repo              Repository
-	tokenRepo         UploadTokenRepository
-	storage           Storage
+	repo               Repository
+	tokenRepo          UploadTokenRepository
+	storage            Storage
 	thumbnailGenerator ThumbnailGenerator
-	validator         FileValidator
-	config            *AttachmentStorageConfig
-	thumbnailConfig   *ThumbnailConfig
-	logger            *zap.Logger
+	validator          FileValidator
+	config             *AttachmentStorageConfig
+	thumbnailConfig    *ThumbnailConfig
+	logger             *zap.Logger
 }
 
 // NewService 创建附件服务
@@ -60,14 +60,14 @@ func NewService(
 	logger *zap.Logger,
 ) Service {
 	return &service{
-		repo:              repo,
-		tokenRepo:         tokenRepo,
-		storage:           storage,
+		repo:               repo,
+		tokenRepo:          tokenRepo,
+		storage:            storage,
 		thumbnailGenerator: thumbnailGenerator,
-		validator:         validator,
-		config:            config,
-		thumbnailConfig:   thumbnailConfig,
-		logger:            logger,
+		validator:          validator,
+		config:             config,
+		thumbnailConfig:    thumbnailConfig,
+		logger:             logger,
 	}
 }
 
@@ -78,7 +78,7 @@ func (s *service) GenerateSignature(ctx context.Context, userID string, req *Sig
 	if maxSize == 0 {
 		maxSize = s.config.MaxFileSize
 	}
-	
+
 	allowedTypes := req.AllowedTypes
 	if len(allowedTypes) == 0 {
 		allowedTypes = s.config.AllowedTypes
@@ -86,7 +86,7 @@ func (s *service) GenerateSignature(ctx context.Context, userID string, req *Sig
 
 	// 创建上传令牌
 	uploadToken := NewUploadToken(userID, req.TableID, req.FieldID, req.RecordID, maxSize, allowedTypes)
-	
+
 	// 保存令牌
 	if err := s.tokenRepo.CreateUploadToken(ctx, uploadToken); err != nil {
 		s.logger.Error("Failed to create upload token",
@@ -463,12 +463,12 @@ func (s *service) generateFilePath(token *UploadToken, filename string) string {
 	// 生成基于时间戳的路径
 	now := time.Now()
 	datePath := now.Format("2006/01/02")
-	
+
 	// 生成唯一文件名
 	ext := filepath.Ext(filename)
 	name := strings.TrimSuffix(filename, ext)
 	uniqueName := fmt.Sprintf("%s_%s%s", name, token.Token[:8], ext)
-	
+
 	return fmt.Sprintf("attachments/%s/%s/%s/%s", token.TableID, token.FieldID, datePath, uniqueName)
 }
 
@@ -479,7 +479,7 @@ func (s *service) generateThumbnails(ctx context.Context, sourcePath, attachment
 	}
 
 	thumbnails := make(map[string]string)
-	
+
 	// 生成小缩略图
 	smallPath := fmt.Sprintf("thumbnails/small/%s.jpg", attachmentID)
 	if err := s.thumbnailGenerator.GenerateThumbnail(ctx, sourcePath, smallPath, s.thumbnailConfig.SmallWidth, s.thumbnailConfig.SmallHeight, s.thumbnailConfig.Quality); err != nil {

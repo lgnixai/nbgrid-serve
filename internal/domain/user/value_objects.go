@@ -15,7 +15,7 @@ func NewEmail(email string) (*Email, error) {
 	if err := validateEmail(email); err != nil {
 		return nil, err
 	}
-	
+
 	return &Email{value: email}, nil
 }
 
@@ -44,7 +44,7 @@ func NewPhone(phone string) (*Phone, error) {
 	if err := validatePhone(phone); err != nil {
 		return nil, err
 	}
-	
+
 	return &Phone{value: phone}, nil
 }
 

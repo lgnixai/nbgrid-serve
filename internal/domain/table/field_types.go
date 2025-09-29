@@ -472,7 +472,7 @@ func (ft FieldType) IsCompatibleWith(newType FieldType) bool {
 	if ft == newType {
 		return true
 	}
-	
+
 	// 定义类型兼容性矩阵
 	compatibilityMatrix := map[FieldType][]FieldType{
 		FieldTypeText: {
@@ -482,22 +482,22 @@ func (ft FieldType) IsCompatibleWith(newType FieldType) bool {
 		FieldTypeNumber: {
 			FieldTypeCurrency, FieldTypePercent, FieldTypeRating, FieldTypeProgress,
 		},
-		FieldTypeEmail: {FieldTypeText, FieldTypeURL},
-		FieldTypeURL:   {FieldTypeText, FieldTypeEmail},
-		FieldTypePhone: {FieldTypeText},
-		FieldTypeSelect: {FieldTypeText, FieldTypeMultiSelect, FieldTypeRadio},
+		FieldTypeEmail:       {FieldTypeText, FieldTypeURL},
+		FieldTypeURL:         {FieldTypeText, FieldTypeEmail},
+		FieldTypePhone:       {FieldTypeText},
+		FieldTypeSelect:      {FieldTypeText, FieldTypeMultiSelect, FieldTypeRadio},
 		FieldTypeMultiSelect: {FieldTypeText, FieldTypeSelect, FieldTypeCheckbox},
-		FieldTypeRadio: {FieldTypeSelect, FieldTypeText},
-		FieldTypeCheckbox: {FieldTypeMultiSelect, FieldTypeText},
-		FieldTypeCurrency: {FieldTypeNumber, FieldTypePercent},
-		FieldTypePercent: {FieldTypeNumber, FieldTypeCurrency, FieldTypeProgress},
-		FieldTypeRating: {FieldTypeNumber, FieldTypeProgress},
-		FieldTypeProgress: {FieldTypeNumber, FieldTypePercent, FieldTypeRating},
-		FieldTypeDate: {FieldTypeDateTime},
-		FieldTypeDateTime: {FieldTypeDate, FieldTypeTime},
-		FieldTypeTime: {FieldTypeDateTime},
+		FieldTypeRadio:       {FieldTypeSelect, FieldTypeText},
+		FieldTypeCheckbox:    {FieldTypeMultiSelect, FieldTypeText},
+		FieldTypeCurrency:    {FieldTypeNumber, FieldTypePercent},
+		FieldTypePercent:     {FieldTypeNumber, FieldTypeCurrency, FieldTypeProgress},
+		FieldTypeRating:      {FieldTypeNumber, FieldTypeProgress},
+		FieldTypeProgress:    {FieldTypeNumber, FieldTypePercent, FieldTypeRating},
+		FieldTypeDate:        {FieldTypeDateTime},
+		FieldTypeDateTime:    {FieldTypeDate, FieldTypeTime},
+		FieldTypeTime:        {FieldTypeDateTime},
 	}
-	
+
 	if compatibleTypes, exists := compatibilityMatrix[ft]; exists {
 		for _, compatibleType := range compatibleTypes {
 			if compatibleType == newType {
@@ -505,7 +505,7 @@ func (ft FieldType) IsCompatibleWith(newType FieldType) bool {
 			}
 		}
 	}
-	
+
 	return false
 }
 
@@ -513,11 +513,11 @@ func (ft FieldType) IsCompatibleWith(newType FieldType) bool {
 func (ft FieldType) SupportsUnique() bool {
 	switch ft {
 	case FieldTypeText, FieldTypeNumber, FieldTypeEmail, FieldTypeURL, FieldTypePhone,
-		 FieldTypeDate, FieldTypeDateTime, FieldTypeTime, FieldTypeSelect, FieldTypeRadio,
-		 FieldTypeCurrency, FieldTypeAutoNumber:
+		FieldTypeDate, FieldTypeDateTime, FieldTypeTime, FieldTypeSelect, FieldTypeRadio,
+		FieldTypeCurrency, FieldTypeAutoNumber:
 		return true
 	case FieldTypeMultiSelect, FieldTypeCheckbox, FieldTypeFile, FieldTypeImage,
-		 FieldTypeVideo, FieldTypeAudio, FieldTypeFormula, FieldTypeLookup, FieldTypeRollup:
+		FieldTypeVideo, FieldTypeAudio, FieldTypeFormula, FieldTypeLookup, FieldTypeRollup:
 		return false
 	default:
 		return false
@@ -528,7 +528,7 @@ func (ft FieldType) SupportsUnique() bool {
 func (ft FieldType) RequiresOptions() bool {
 	switch ft {
 	case FieldTypeSelect, FieldTypeMultiSelect, FieldTypeRadio, FieldTypeCheckbox,
-		 FieldTypeLink, FieldTypeLookup, FieldTypeRollup, FieldTypeFormula:
+		FieldTypeLink, FieldTypeLookup, FieldTypeRollup, FieldTypeFormula:
 		return true
 	default:
 		return false

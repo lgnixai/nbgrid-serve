@@ -476,6 +476,10 @@ func (r *PermissionRepository) CheckUserPermission(ctx context.Context, userID, 
 	// 获取用户有效角色
 	role, err := r.GetUserEffectiveRole(ctx, userID, resourceType, resourceID)
 	if err != nil {
+		// 将“未找到权限”视为无权限，而不是错误，避免上层变为 500
+		if errors.Is(err, permission.ErrPermissionNotFound) {
+			return false, nil
+		}
 		return false, err
 	}
 
@@ -497,12 +501,28 @@ func (r *PermissionRepository) GetUserEffectiveRole(ctx context.Context, userID,
 	// 如果没有直接权限，检查继承权限
 	switch resourceType {
 	case "base":
-		// 检查空间权限
-		// 这里需要查询基础表所属的空间，暂时返回空角色
+		// TODO: 可继续向上继承到 space
 		return "", permission.ErrPermissionNotFound
-	case "table", "view", "field", "record":
-		// 对于表、视图、字段、记录，暂时只检查直接权限
-		// TODO: 实现继承权限逻辑
+	case "table":
+		// 表 → 若用户是表创建者，视为拥有者
+		var tbl models.Table
+		if err := r.db.WithContext(ctx).Select("id, base_id, created_by").Where("id = ?", resourceID).First(&tbl).Error; err == nil {
+			if tbl.CreatedBy == userID {
+				return permission.RoleBaseOwner, nil
+			}
+		}
+		// 表 → 继承基础表角色
+		if tbl.BaseID != "" {
+			var basePerm models.Permission
+			if err := r.db.WithContext(ctx).Where("user_id = ? AND resource_type = ? AND resource_id = ? AND is_active = ?", userID, "base", tbl.BaseID, true).First(&basePerm).Error; err == nil {
+				if basePerm.ExpiresAt == nil || time.Now().Before(*basePerm.ExpiresAt) {
+					return permission.Role(basePerm.Role), nil
+				}
+			}
+		}
+		return "", permission.ErrPermissionNotFound
+	case "view", "field", "record":
+		// 这些资源通常隶属于表，这里可以按需补充向上查找逻辑
 		return "", permission.ErrPermissionNotFound
 	}
 

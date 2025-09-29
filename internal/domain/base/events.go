@@ -6,13 +6,13 @@ import (
 
 // 基础表相关事件类型常量
 const (
-	BaseCreatedEventType   = "base.created"
-	BaseUpdatedEventType   = "base.updated"
-	BaseDeletedEventType   = "base.deleted"
-	BaseArchivedEventType  = "base.archived"
-	BaseRestoredEventType  = "base.restored"
-	TableAddedEventType    = "base.table_added"
-	TableRemovedEventType  = "base.table_removed"
+	BaseCreatedEventType  = "base.created"
+	BaseUpdatedEventType  = "base.updated"
+	BaseDeletedEventType  = "base.deleted"
+	BaseArchivedEventType = "base.archived"
+	BaseRestoredEventType = "base.restored"
+	TableAddedEventType   = "base.table_added"
+	TableRemovedEventType = "base.table_removed"
 )
 
 // BaseDomainEvent 基础领域事件

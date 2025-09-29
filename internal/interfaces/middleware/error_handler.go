@@ -164,7 +164,7 @@ func logError(c *gin.Context, err error, requestID, userID interface{}, config E
 	if appErr, ok := pkgErrors.IsAppError(err); ok {
 		// 添加错误代码
 		fields = append(fields, zap.String("error_code", appErr.Code))
-		
+
 		// 对于4xx错误，只记录基本信息
 		if appErr.HTTPStatus < 500 {
 			zap.L().Warn("Client Error", fields...)
@@ -177,13 +177,13 @@ func logError(c *gin.Context, err error, requestID, userID interface{}, config E
 					zap.String("content_type", c.Request.Header.Get("Content-Type")),
 				)
 			}
-			
+
 			// 只在开发环境或明确配置时记录堆栈信息
 			if config.LogStackTrace {
 				stack := getStackTrace()
 				fields = append(fields, zap.String("stack", stack))
 			}
-			
+
 			zap.L().Error("Server Error", fields...)
 		}
 	} else {
@@ -195,12 +195,12 @@ func logError(c *gin.Context, err error, requestID, userID interface{}, config E
 				zap.String("content_type", c.Request.Header.Get("Content-Type")),
 			)
 		}
-		
+
 		if config.LogStackTrace {
 			stack := getStackTrace()
 			fields = append(fields, zap.String("stack", stack))
 		}
-		
+
 		zap.L().Error("Internal Error", fields...)
 	}
 }

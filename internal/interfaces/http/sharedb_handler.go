@@ -1,7 +1,6 @@
 package http
 
 import (
-	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -9,6 +8,7 @@ import (
 
 	"teable-go-backend/internal/domain/sharedb"
 	"teable-go-backend/pkg/errors"
+	"teable-go-backend/pkg/response"
 )
 
 // ShareDBHandler ShareDB HTTP处理器
@@ -31,29 +31,21 @@ func NewShareDBHandler(sharedbService sharedb.ShareDB, sharedbWSIntegration *sha
 func (h *ShareDBHandler) GetShareDBStats(c *gin.Context) {
 	stats := h.sharedbService.GetStats()
 
-	c.JSON(http.StatusOK, gin.H{
-		"status": "success",
-		"data":   stats,
-	})
+	response.SuccessWithMessage(c, stats, "")
 }
 
 // HandleSubmit 处理提交操作
 func (h *ShareDBHandler) HandleSubmit(c *gin.Context) {
 	var req SubmitRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Invalid request body",
-			"details": err.Error(),
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
 	// 从JWT中获取用户信息
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "User not authenticated",
-		})
+		response.Error(c, errors.ErrUnauthorized)
 		return
 	}
 
@@ -85,10 +77,7 @@ func (h *ShareDBHandler) HandleSubmit(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"status":  "success",
-		"message": "Operation submitted successfully",
-	})
+	response.SuccessWithMessage(c, map[string]string{"message": "Operation submitted successfully"}, "")
 }
 
 // GetSnapshot 获取快照
@@ -97,9 +86,7 @@ func (h *ShareDBHandler) GetSnapshot(c *gin.Context) {
 	id := c.Param("id")
 
 	if collection == "" || id == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Collection and ID are required",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("Collection and ID are required"))
 		return
 	}
 
@@ -109,28 +96,20 @@ func (h *ShareDBHandler) GetSnapshot(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"status": "success",
-		"data":   snapshot,
-	})
+	response.SuccessWithMessage(c, snapshot, "")
 }
 
 // Query 查询文档
 func (h *ShareDBHandler) Query(c *gin.Context) {
 	collection := c.Param("collection")
 	if collection == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Collection is required",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("Collection is required"))
 		return
 	}
 
 	var req QueryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Invalid request body",
-			"details": err.Error(),
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
@@ -155,13 +134,7 @@ func (h *ShareDBHandler) Query(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"status": "success",
-		"data": gin.H{
-			"snapshots": snapshots,
-			"extra":     extra,
-		},
-	})
+	response.SuccessWithMessage(c, gin.H{"snapshots": snapshots, "extra": extra}, "")
 }
 
 // GetOps 获取操作
@@ -170,9 +143,7 @@ func (h *ShareDBHandler) GetOps(c *gin.Context) {
 	id := c.Param("id")
 
 	if collection == "" || id == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Collection and ID are required",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("Collection and ID are required"))
 		return
 	}
 
@@ -182,17 +153,13 @@ func (h *ShareDBHandler) GetOps(c *gin.Context) {
 
 	from, err := strconv.Atoi(fromStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid from parameter",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("Invalid from parameter"))
 		return
 	}
 
 	to, err := strconv.Atoi(toStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid to parameter",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("Invalid to parameter"))
 		return
 	}
 
@@ -202,42 +169,12 @@ func (h *ShareDBHandler) GetOps(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"status": "success",
-		"data":   ops,
-	})
+	response.SuccessWithMessage(c, ops, "")
 }
 
 // handleError 处理错误
 func (h *ShareDBHandler) handleError(c *gin.Context, err error) {
-	traceID := c.GetString("request_id")
-
-	if appErr, ok := errors.IsAppError(err); ok {
-		h.logger.Error("Application error",
-			zap.String("error", appErr.Message),
-			zap.String("code", appErr.Code),
-			zap.String("trace_id", traceID),
-		)
-
-		c.JSON(appErr.HTTPStatus, ErrorResponse{
-			Error:   appErr.Message,
-			Code:    appErr.Code,
-			Details: appErr.Details,
-			TraceID: traceID,
-		})
-		return
-	}
-
-	h.logger.Error("Internal server error",
-		zap.Error(err),
-		zap.String("trace_id", traceID),
-	)
-
-	c.JSON(http.StatusInternalServerError, ErrorResponse{
-		Error:   "服务器内部错误",
-		Code:    "INTERNAL_SERVER_ERROR",
-		TraceID: traceID,
-	})
+	response.Error(c, err)
 }
 
 // 请求结构定义
@@ -267,4 +204,3 @@ type SortField struct {
 	Field string `json:"field"`
 	Order string `json:"order"` // "asc" or "desc"
 }
-

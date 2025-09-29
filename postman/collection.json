@@ -1,0 +1,152 @@
+{
+  "info": {
+    "name": "Teable Go Backend API - Complete",
+    "description": "Teable Go Backend API 完整测试集合，覆盖主要端点。",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "2.0.0"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000", "type": "string" },
+    { "key": "access_token", "value": "", "type": "string" },
+    { "key": "refresh_token", "value": "", "type": "string" },
+    { "key": "user_id", "value": "", "type": "string" },
+    { "key": "space_id", "value": "", "type": "string" },
+    { "key": "base_id", "value": "", "type": "string" },
+    { "key": "table_id", "value": "", "type": "string" },
+    { "key": "record_id", "value": "", "type": "string" },
+    { "key": "view_id", "value": "", "type": "string" },
+    { "key": "field_id", "value": "", "type": "string" },
+    { "key": "attachment_id", "value": "", "type": "string" },
+    { "key": "notification_id", "value": "", "type": "string" },
+    { "key": "template_id", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "系统健康",
+      "item": [
+        { "name": "Health", "request": { "method": "GET", "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] } } },
+        { "name": "Ready", "request": { "method": "GET", "url": { "raw": "{{base_url}}/ready", "host": ["{{base_url}}"], "path": ["ready"] } } },
+        { "name": "Alive", "request": { "method": "GET", "url": { "raw": "{{base_url}}/alive", "host": ["{{base_url}}"], "path": ["alive"] } } },
+        { "name": "Ping", "request": { "method": "GET", "url": { "raw": "{{base_url}}/ping", "host": ["{{base_url}}"], "path": ["ping"] } } },
+        { "name": "系统信息", "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/info", "host": ["{{base_url}}"], "path": ["api","info"] } } }
+      ]
+    },
+    {
+      "name": "认证",
+      "item": [
+        {
+          "name": "注册",
+          "event": [{"listen":"test","script":{"exec":["if (pm.response.code === 200) {","  const r = pm.response.json();","  pm.environment.set('access_token', r.data.access_token);","  pm.environment.set('refresh_token', r.data.refresh_token);","  pm.environment.set('user_id', r.data.user.id);","}"]}}],
+          "request": {"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"email\": \"test@example.com\",\n  \"password\": \"TestPassword123!\",\n  \"name\": \"测试用户\"\n}"},"url":{"raw":"{{base_url}}/api/auth/register","host":["{{base_url}}"],"path":["api","auth","register"]}}
+        },
+        {
+          "name": "登录",
+          "event": [{"listen":"test","script":{"exec":["if (pm.response.code === 200) {","  const r = pm.response.json();","  pm.environment.set('access_token', r.data.access_token);","  pm.environment.set('refresh_token', r.data.refresh_token);","  pm.environment.set('user_id', r.data.user.id);","}"]}}],
+          "request": {"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"email\": \"test@example.com\",\n  \"password\": \"TestPassword123!\"\n}"},"url":{"raw":"{{base_url}}/api/auth/login","host":["{{base_url}}"],"path":["api","auth","login"]}}
+        },
+        { "name": "刷新Token", "event": [{"listen":"test","script":{"exec":["if (pm.response.code === 200) {","  const r = pm.response.json();","  pm.environment.set('access_token', r.data.access_token);","}"]}}], "request": {"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"},"url":{"raw":"{{base_url}}/api/auth/refresh","host":["{{base_url}}"],"path":["api","auth","refresh"]}} },
+        { "name": "登出", "request": {"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"body":{"mode":"raw","raw":"{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"},"url":{"raw":"{{base_url}}/api/auth/logout","host":["{{base_url}}"],"path":["api","auth","logout"]}} }
+      ]
+    },
+    {
+      "name": "用户",
+      "item": [
+        { "name": "获取资料", "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/users/profile","host":["{{base_url}}"],"path":["api","users","profile"]}} },
+        { "name": "更新资料", "request": {"method":"PUT","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"body":{"mode":"raw","raw":"{\n  \"name\": \"更新后的姓名\"\n}"},"url":{"raw":"{{base_url}}/api/users/profile","host":["{{base_url}}"],"path":["api","users","profile"]}} },
+        { "name": "修改密码", "request": {"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"body":{"mode":"raw","raw":"{\n  \"current_password\": \"TestPassword123!\",\n  \"new_password\": \"NewPassword456!\",\n  \"confirm_password\": \"NewPassword456!\"\n}"},"url":{"raw":"{{base_url}}/api/users/change-password","host":["{{base_url}}"],"path":["api","users","change-password"]}} },
+        { "name": "用户活动", "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/users/{{user_id}}/activity?limit=10&offset=0","host":["{{base_url}}"],"path":["api","users","{{user_id}}","activity"],"query":[{"key":"limit","value":"10"},{"key":"offset","value":"0"}]}} }
+      ]
+    },
+    {
+      "name": "空间",
+      "item": [
+        { "name": "创建空间", "event":[{"listen":"test","script":{"exec":["if (pm.response.code === 200) {","  const r = pm.response.json();","  pm.environment.set('space_id', r.data.id);","}"]}}], "request": {"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"body":{"mode":"raw","raw":"{\n  \"name\": \"测试工作空间\"\n}"},"url":{"raw":"{{base_url}}/api/spaces","host":["{{base_url}}"],"path":["api","spaces"]}} },
+        { "name": "空间列表", "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/spaces?limit=20&offset=0","host":["{{base_url}}"],"path":["api","spaces"],"query":[{"key":"limit","value":"20"},{"key":"offset","value":"0"}]}} },
+        { "name": "空间详情", "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/spaces/{{space_id}}","host":["{{base_url}}"],"path":["api","spaces","{{space_id}}"]}} },
+        { "name": "更新空间", "request": {"method":"PUT","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"body":{"mode":"raw","raw":"{\n  \"name\": \"更新后的工作空间\"\n}"},"url":{"raw":"{{base_url}}/api/spaces/{{space_id}}","host":["{{base_url}}"],"path":["api","spaces","{{space_id}}"]}} },
+        { "name": "删除空间", "request": {"method":"DELETE","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/spaces/{{space_id}}","host":["{{base_url}}"],"path":["api","spaces","{{space_id}}"]}} },
+        { "name": "添加协作者", "request": {"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"body":{"mode":"raw","raw":"{\n  \"email\": \"collaborator@example.com\",\n  \"role\": \"member\"\n}"},"url":{"raw":"{{base_url}}/api/spaces/{{space_id}}/collaborators","host":["{{base_url}}"],"path":["api","spaces","{{space_id}}","collaborators"]}} },
+        { "name": "协作者列表", "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/spaces/{{space_id}}/collaborators","host":["{{base_url}}"],"path":["api","spaces","{{space_id}}","collaborators"]}} },
+        { "name": "移除协作者", "request": {"method":"DELETE","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/spaces/{{space_id}}/collaborators/{{user_id}}","host":["{{base_url}}"],"path":["api","spaces","{{space_id}}","collaborators","{{user_id}}"]}} }
+      ]
+    },
+    {
+      "name": "基础表",
+      "item": [
+        { "name": "创建基础表", "event":[{"listen":"test","script":{"exec":["if (pm.response.code === 200) {","  const r = pm.response.json();","  pm.environment.set('base_id', r.data.id);","}"]}}], "request": {"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"body":{"mode":"raw","raw":"{\n  \"name\": \"测试基础表\",\n  \"space_id\": \"{{space_id}}\"\n}"},"url":{"raw":"{{base_url}}/api/bases","host":["{{base_url}}"],"path":["api","bases"]}} },
+        { "name": "基础表列表", "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/bases?limit=20&offset=0","host":["{{base_url}}"],"path":["api","bases"],"query":[{"key":"limit","value":"20"},{"key":"offset","value":"0"}]}} },
+        { "name": "基础表详情", "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/bases/{{base_id}}","host":["{{base_url}}"],"path":["api","bases","{{base_id}}"]}} },
+        { "name": "更新基础表", "request": {"method":"PUT","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"body":{"mode":"raw","raw":"{\n  \"name\": \"更新后的基础表\"\n}"},"url":{"raw":"{{base_url}}/api/bases/{{base_id}}","host":["{{base_url}}"],"path":["api","bases","{{base_id}}"]}} },
+        { "name": "删除基础表", "request": {"method":"DELETE","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/bases/{{base_id}}","host":["{{base_url}}"],"path":["api","bases","{{base_id}}"]}} },
+        { "name": "批量删除基础表", "request": {"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"body":{"mode":"raw","raw":"{\n  \"ids\": [\"{{base_id}}\"]\n}"},"url":{"raw":"{{base_url}}/api/bases/bulk-delete","host":["{{base_url}}"],"path":["api","bases","bulk-delete"]}} }
+      ]
+    },
+    {
+      "name": "表",
+      "item": [
+        { "name": "创建表", "event":[{"listen":"test","script":{"exec":["if (pm.response.code === 200) {","  const r = pm.response.json();","  pm.environment.set('table_id', r.data.id);","}"]}}], "request": {"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"body":{"mode":"raw","raw":"{\n  \"name\": \"测试表\",\n  \"base_id\": \"{{base_id}}\"\n}"},"url":{"raw":"{{base_url}}/api/tables","host":["{{base_url}}"],"path":["api","tables"]}} },
+        { "name": "表列表", "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/tables?limit=20&offset=0","host":["{{base_url}}"],"path":["api","tables"],"query":[{"key":"limit","value":"20"},{"key":"offset","value":"0"}]}} },
+        { "name": "表详情", "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/tables/{{table_id}}","host":["{{base_url}}"],"path":["api","tables","{{table_id}}"]}} },
+        { "name": "更新表", "request": {"method":"PUT","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"body":{"mode":"raw","raw":"{\n  \"name\": \"更新后的表\"\n}"},"url":{"raw":"{{base_url}}/api/tables/{{table_id}}","host":["{{base_url}}"],"path":["api","tables","{{table_id}}"]}} },
+        { "name": "删除表", "request": {"method":"DELETE","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/tables/{{table_id}}","host":["{{base_url}}"],"path":["api","tables","{{table_id}}"]}} }
+      ]
+    },
+    {
+      "name": "字段",
+      "item": [
+        { "name": "创建字段", "event":[{"listen":"test","script":{"exec":["if (pm.response.code === 200) {","  const r = pm.response.json();","  pm.environment.set('field_id', r.data.id);","}"]}}], "request": {"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"body":{"mode":"raw","raw":"{\n  \"table_id\": \"{{table_id}}\",\n  \"name\": \"项目名称\",\n  \"type\": \"text\"\n}"},"url":{"raw":"{{base_url}}/api/fields","host":["{{base_url}}"],"path":["api","fields"]}} },
+        { "name": "字段列表", "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/fields?table_id={{table_id}}","host":["{{base_url}}"],"path":["api","fields"],"query":[{"key":"table_id","value":"{{table_id}}"}]}} },
+        { "name": "字段详情", "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/fields/{{field_id}}","host":["{{base_url}}"],"path":["api","fields","{{field_id}}"]}} },
+        { "name": "更新字段", "request": {"method":"PUT","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"body":{"mode":"raw","raw":"{\n  \"name\": \"更新后的字段名\"\n}"},"url":{"raw":"{{base_url}}/api/fields/{{field_id}}","host":["{{base_url}}"],"path":["api","fields","{{field_id}}"]}} },
+        { "name": "删除字段", "request": {"method":"DELETE","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/fields/{{field_id}}","host":["{{base_url}}"],"path":["api","fields","{{field_id}}"]}} },
+        { "name": "字段类型", "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/fields/types","host":["{{base_url}}"],"path":["api","fields","types"]}} }
+      ]
+    },
+    {
+      "name": "记录",
+      "item": [
+        { "name": "创建记录", "event":[{"listen":"test","script":{"exec":["if (pm.response.code === 200) {","  const r = pm.response.json();","  pm.environment.set('record_id', r.data.id);","}"]}}], "request": {"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"body":{"mode":"raw","raw":"{\n  \"table_id\": \"{{table_id}}\",\n  \"data\": {\n    \"title\": \"测试记录\"\n  }\n}"},"url":{"raw":"{{base_url}}/api/records","host":["{{base_url}}"],"path":["api","records"]}} },
+        { "name": "记录列表", "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/records?table_id={{table_id}}&limit=20&offset=0","host":["{{base_url}}"],"path":["api","records"],"query":[{"key":"table_id","value":"{{table_id}}"},{"key":"limit","value":"20"},{"key":"offset","value":"0"}]}} },
+        { "name": "记录详情", "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/records/{{record_id}}","host":["{{base_url}}"],"path":["api","records","{{record_id}}"]}} },
+        { "name": "更新记录", "request": {"method":"PUT","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"body":{"mode":"raw","raw":"{\n  \"data\": {\n    \"title\": \"更新后的记录\"\n  }\n}"},"url":{"raw":"{{base_url}}/api/records/{{record_id}}","host":["{{base_url}}"],"path":["api","records","{{record_id}}"]}} },
+        { "name": "删除记录", "request": {"method":"DELETE","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/records/{{record_id}}","host":["{{base_url}}"],"path":["api","records","{{record_id}}"]}} },
+        { "name": "批量删除记录", "request": {"method":"DELETE","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"body":{"mode":"raw","raw":"{\n  \"ids\": [\"{{record_id}}\"]\n}"},"url":{"raw":"{{base_url}}/api/records/bulk","host":["{{base_url}}"],"path":["api","records","bulk"]}} }
+      ]
+    },
+    {
+      "name": "视图",
+      "item": [
+        { "name": "创建视图", "event":[{"listen":"test","script":{"exec":["if (pm.response.code === 200) {","  const r = pm.response.json();","  pm.environment.set('view_id', r.data.id);","}"]}}], "request": {"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"body":{"mode":"raw","raw":"{\n  \"table_id\": \"{{table_id}}\",\n  \"name\": \"测试视图\",\n  \"type\": \"grid\"\n}"},"url":{"raw":"{{base_url}}/api/views","host":["{{base_url}}"],"path":["api","views"]}} },
+        { "name": "视图列表", "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/views?table_id={{table_id}}","host":["{{base_url}}"],"path":["api","views"],"query":[{"key":"table_id","value":"{{table_id}}"}]}} },
+        { "name": "视图详情", "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/views/{{view_id}}","host":["{{base_url}}"],"path":["api","views","{{view_id}}"]}} },
+        { "name": "更新视图", "request": {"method":"PUT","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"body":{"mode":"raw","raw":"{\n  \"name\": \"更新后的视图\"\n}"},"url":{"raw":"{{base_url}}/api/views/{{view_id}}","host":["{{base_url}}"],"path":["api","views","{{view_id}}"]}} },
+        { "name": "删除视图", "request": {"method":"DELETE","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/views/{{view_id}}","host":["{{base_url}}"],"path":["api","views","{{view_id}}"]}} }
+      ]
+    },
+    {
+      "name": "搜索",
+      "item": [
+        { "name": "基础搜索", "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/search?q=测试&limit=20","host":["{{base_url}}"],"path":["api","search"],"query":[{"key":"q","value":"测试"},{"key":"limit","value":"20"}]}} },
+        { "name": "删除索引", "request": {"method":"DELETE","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/search/indexes/{{table_id}}","host":["{{base_url}}"],"path":["api","search","indexes","{{table_id}}"]}} }
+      ]
+    },
+    {
+      "name": "协作",
+      "item": [
+        { "name": "移除在线状态", "request": {"method":"DELETE","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/collaboration/presence","host":["{{base_url}}"],"path":["api","collaboration","presence"]}} },
+        { "name": "移除光标", "request": {"method":"DELETE","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}/api/collaboration/cursor","host":["{{base_url}}"],"path":["api","collaboration","cursor"]}} }
+      ]
+    }
+  ]
+}
+

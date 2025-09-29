@@ -8,7 +8,7 @@ import (
 
 	"teable-go-backend/internal/domain/base"
 	"teable-go-backend/pkg/errors"
-	"teable-go-backend/pkg/logger"
+	"teable-go-backend/pkg/response"
 )
 
 // BaseHandler 基础表处理器
@@ -40,21 +40,14 @@ func NewBaseHandler(baseService base.Service) *BaseHandler {
 func (h *BaseHandler) CreateBase(c *gin.Context) {
 	var req base.CreateBaseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error:   "请求参数错误",
-			Code:    "INVALID_REQUEST",
-			Details: err.Error(),
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
 	// 从JWT中获取用户ID
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Error: "未授权",
-			Code:  "UNAUTHORIZED",
-		})
+		response.Error(c, errors.ErrUnauthorized)
 		return
 	}
 	req.CreatedBy = userID.(string)
@@ -65,7 +58,7 @@ func (h *BaseHandler) CreateBase(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"data": b})
+	response.SuccessWithMessage(c, b, "")
 }
 
 // GetBase 获取基础表详情
@@ -83,10 +76,7 @@ func (h *BaseHandler) CreateBase(c *gin.Context) {
 func (h *BaseHandler) GetBase(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "基础表ID不能为空",
-			Code:  "INVALID_REQUEST",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("基础表ID不能为空"))
 		return
 	}
 
@@ -96,7 +86,7 @@ func (h *BaseHandler) GetBase(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": b})
+	response.SuccessWithMessage(c, b, "")
 }
 
 // UpdateBase 更新基础表
@@ -117,20 +107,13 @@ func (h *BaseHandler) GetBase(c *gin.Context) {
 func (h *BaseHandler) UpdateBase(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "基础表ID不能为空",
-			Code:  "INVALID_REQUEST",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("基础表ID不能为空"))
 		return
 	}
 
 	var req base.UpdateBaseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error:   "请求参数错误",
-			Code:    "INVALID_REQUEST",
-			Details: err.Error(),
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
@@ -140,7 +123,7 @@ func (h *BaseHandler) UpdateBase(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": b})
+	response.SuccessWithMessage(c, b, "")
 }
 
 // DeleteBase 删除基础表
@@ -158,10 +141,7 @@ func (h *BaseHandler) UpdateBase(c *gin.Context) {
 func (h *BaseHandler) DeleteBase(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "基础表ID不能为空",
-			Code:  "INVALID_REQUEST",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("基础表ID不能为空"))
 		return
 	}
 
@@ -171,7 +151,7 @@ func (h *BaseHandler) DeleteBase(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"success": true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // ListBases 获取基础表列表
@@ -252,7 +232,7 @@ func (h *BaseHandler) ListBases(c *gin.Context) {
 		Offset: filter.Offset,
 	}
 
-	c.JSON(http.StatusOK, result)
+	response.PaginatedSuccess(c, result.Data, response.Pagination{Page: 0, Limit: result.Limit, Total: int(result.Total), TotalPages: 0}, "")
 }
 
 // BulkUpdateBases 批量更新基础表
@@ -270,11 +250,7 @@ func (h *BaseHandler) ListBases(c *gin.Context) {
 func (h *BaseHandler) BulkUpdateBases(c *gin.Context) {
 	var updates []base.BulkUpdateRequest
 	if err := c.ShouldBindJSON(&updates); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error:   "请求参数错误",
-			Code:    "INVALID_REQUEST",
-			Details: err.Error(),
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
@@ -283,9 +259,7 @@ func (h *BaseHandler) BulkUpdateBases(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "批量更新成功",
-	})
+	response.SuccessWithMessage(c, map[string]string{"message": "批量更新成功"}, "")
 }
 
 // BulkDeleteBases 批量删除基础表
@@ -303,11 +277,7 @@ func (h *BaseHandler) BulkUpdateBases(c *gin.Context) {
 func (h *BaseHandler) BulkDeleteBases(c *gin.Context) {
 	var baseIDs []string
 	if err := c.ShouldBindJSON(&baseIDs); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error:   "请求参数错误",
-			Code:    "INVALID_REQUEST",
-			Details: err.Error(),
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
@@ -316,9 +286,7 @@ func (h *BaseHandler) BulkDeleteBases(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "批量删除成功",
-	})
+	response.SuccessWithMessage(c, map[string]string{"message": "批量删除成功"}, "")
 }
 
 // CheckUserPermission 检查用户权限
@@ -338,28 +306,19 @@ func (h *BaseHandler) BulkDeleteBases(c *gin.Context) {
 func (h *BaseHandler) CheckUserPermission(c *gin.Context) {
 	baseID := c.Param("id")
 	if baseID == "" {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "基础表ID不能为空",
-			Code:  "MISSING_BASE_ID",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("基础表ID不能为空"))
 		return
 	}
 
 	userID := c.Query("user_id")
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "用户ID不能为空",
-			Code:  "MISSING_USER_ID",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("用户ID不能为空"))
 		return
 	}
 
 	permission := c.Query("permission")
 	if permission == "" {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "权限类型不能为空",
-			Code:  "MISSING_PERMISSION",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("权限类型不能为空"))
 		return
 	}
 
@@ -369,12 +328,12 @@ func (h *BaseHandler) CheckUserPermission(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	response.SuccessWithMessage(c, gin.H{
 		"has_permission": hasPermission,
 		"user_id":        userID,
 		"base_id":        baseID,
 		"permission":     permission,
-	})
+	}, "")
 }
 
 // GetBaseStats 获取基础表统计信息
@@ -392,10 +351,7 @@ func (h *BaseHandler) CheckUserPermission(c *gin.Context) {
 func (h *BaseHandler) GetBaseStats(c *gin.Context) {
 	baseID := c.Param("id")
 	if baseID == "" {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "基础表ID不能为空",
-			Code:  "MISSING_BASE_ID",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("基础表ID不能为空"))
 		return
 	}
 
@@ -405,7 +361,7 @@ func (h *BaseHandler) GetBaseStats(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, stats)
+	response.SuccessWithMessage(c, stats, "")
 }
 
 // GetSpaceBaseStats 获取空间基础表统计信息
@@ -423,10 +379,7 @@ func (h *BaseHandler) GetBaseStats(c *gin.Context) {
 func (h *BaseHandler) GetSpaceBaseStats(c *gin.Context) {
 	spaceID := c.Param("space_id")
 	if spaceID == "" {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "空间ID不能为空",
-			Code:  "MISSING_SPACE_ID",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("空间ID不能为空"))
 		return
 	}
 
@@ -436,7 +389,7 @@ func (h *BaseHandler) GetSpaceBaseStats(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, stats)
+	response.SuccessWithMessage(c, stats, "")
 }
 
 // ExportBases 导出基础表
@@ -492,21 +445,14 @@ func (h *BaseHandler) ExportBases(c *gin.Context) {
 func (h *BaseHandler) ImportBases(c *gin.Context) {
 	var baseReqs []base.CreateBaseRequest
 	if err := c.ShouldBindJSON(&baseReqs); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error:   "请求参数错误",
-			Code:    "INVALID_REQUEST",
-			Details: err.Error(),
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
 	// 从JWT中获取用户ID并设置到所有请求中
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Error: "未授权",
-			Code:  "UNAUTHORIZED",
-		})
+		response.Error(c, errors.ErrUnauthorized)
 		return
 	}
 
@@ -520,37 +466,10 @@ func (h *BaseHandler) ImportBases(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, bases)
+	response.SuccessWithMessage(c, bases, "")
 }
 
 // handleError 处理错误
 func (h *BaseHandler) handleError(c *gin.Context, err error) {
-	traceID := c.GetString("request_id")
-
-	if appErr, ok := errors.IsAppError(err); ok {
-		logger.Error("Application error",
-			logger.String("error", appErr.Message),
-			logger.String("code", appErr.Code),
-			logger.String("trace_id", traceID),
-		)
-
-		c.JSON(appErr.HTTPStatus, ErrorResponse{
-			Error:   appErr.Message,
-			Code:    appErr.Code,
-			Details: appErr.Details,
-			TraceID: traceID,
-		})
-		return
-	}
-
-	logger.Error("Internal server error",
-		logger.ErrorField(err),
-		logger.String("trace_id", traceID),
-	)
-
-	c.JSON(http.StatusInternalServerError, ErrorResponse{
-		Error:   "服务器内部错误",
-		Code:    "INTERNAL_SERVER_ERROR",
-		TraceID: traceID,
-	})
+	response.Error(c, err)
 }

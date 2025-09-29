@@ -7,8 +7,9 @@ import Teable from '../src/index';
 
 // 初始化 SDK
 const teable = new Teable({
-  baseUrl: 'http://localhost:3000',
-  debug: true
+  baseUrl: process.env.TEABLE_BASE_URL || 'http://127.0.0.1:3000',
+  debug: true,
+  disableProxy: true
 });
 
 const PREFIX = 'SDK Demo';
@@ -43,14 +44,18 @@ async function cleanupPreviousResources() {
 async function basicUsageExample() {
   try {
     // 0. 预清理，确保幂等
-    await cleanupPreviousResources();
+   // await cleanupPreviousResources();
 
     // 1. 用户登录（如用户不存在则自动注册后重试登录）
     console.log('=== 用户登录 ===');
-    const credentials = { email: 'test@example.com', password: 'TestPassword123!' };
+    const credentials = {
+      "email": "test@example.com",
+      "password": "TestPassword123!"
+    };
     let authResponse;
     try {
       authResponse = await teable.login(credentials);
+      console.log('登录成功:', authResponse);
     } catch (err: any) {
       if ((err?.status === 404) || (err?.code === 'NOT_FOUND')) {
         console.log('用户不存在，尝试自动注册...');
@@ -61,7 +66,7 @@ async function basicUsageExample() {
       }
     }
     console.log('登录成功:', authResponse.user.name);
-
+ 
     // 2. 获取当前用户信息
     console.log('\n=== 获取用户信息 ===');
     const currentUser = await teable.getCurrentUser();
@@ -76,7 +81,7 @@ async function basicUsageExample() {
     const spaceId = (space as any).id ?? (space as any).data?.id;
     const spaceName = (space as any).name ?? (space as any).data?.name;
     console.log('创建空间成功:', spaceName);
-
+     
     // 4. 创建基础表（带随机后缀）
     console.log('\n=== 创建基础表 ===');
     const base = await teable.createBase({
@@ -105,7 +110,7 @@ async function basicUsageExample() {
     const table = await safeCreateTable(baseTableName);
     const tableId = (table as any).id ?? (table as any).data?.id;
     console.log('创建数据表成功:', (table as any).name ?? (table as any).data?.name);
-
+    
     // 6. 创建字段
     console.log('\n=== 创建字段 ===');
     const titleField = await teable.createField({
@@ -133,7 +138,7 @@ async function basicUsageExample() {
       field_order: 2
     });
     console.log('创建状态字段成功:', (statusField as any).name ?? (statusField as any).data?.name);
-
+    
     const priorityField = await teable.createField({
       table_id: tableId,
       name: '优先级',
@@ -160,7 +165,7 @@ async function basicUsageExample() {
       }
     });
     console.log('创建记录1成功:', (record1 as any).id ?? (record1 as any).data?.id);
-
+   
     const record2 = await teable.createRecord({
       table_id: tableId,
       data: {
@@ -170,7 +175,7 @@ async function basicUsageExample() {
       }
     });
     console.log('创建记录2成功:', (record2 as any).id ?? (record2 as any).data?.id);
-
+  
     // 8. 批量创建记录
     console.log('\n=== 批量创建记录 ===');
     const records = await teable.bulkCreateRecords(tableId, [

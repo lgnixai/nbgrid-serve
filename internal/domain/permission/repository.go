@@ -71,4 +71,3 @@ type PermissionStats struct {
 	ActiveBaseCollaborators  int64          `json:"active_base_collaborators"`
 	RoleDistribution         map[Role]int64 `json:"role_distribution"`
 }
-

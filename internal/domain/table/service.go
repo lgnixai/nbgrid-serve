@@ -45,7 +45,7 @@ type Service interface {
 	GetFieldTypes(ctx context.Context) ([]FieldTypeInfo, error)
 	ValidateFieldValue(ctx context.Context, field *Field, value interface{}) error
 	GetFieldTypeInfo(ctx context.Context, fieldType FieldType) (FieldTypeInfo, error)
-	
+
 	// Schema管理
 	ValidateSchemaChange(ctx context.Context, tableID string, changes []SchemaChange) error
 	ApplySchemaChanges(ctx context.Context, req SchemaChangeRequest) (*SchemaChangeResult, error)
@@ -92,6 +92,14 @@ func (s *ServiceImpl) GetTable(ctx context.Context, id string) (*Table, error) {
 	if table == nil {
 		return nil, errors.ErrNotFound.WithDetails("数据表未找到")
 	}
+
+	// 载入该表的字段并设置到表的 schema 中，供上层校验使用
+	filter := ListFieldFilter{TableID: &id}
+	fields, err := s.repo.ListFields(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	table.SetFields(fields)
 	return table, nil
 }
 
@@ -208,7 +216,7 @@ func (s *ServiceImpl) UpdateField(ctx context.Context, id string, req UpdateFiel
 	if err := field.Update(req); err != nil {
 		return nil, errors.ErrValidationFailed.WithDetails(err.Error())
 	}
-	
+
 	if err := s.repo.UpdateField(ctx, field); err != nil {
 		return nil, err
 	}
@@ -384,13 +392,14 @@ func (s *ServiceImpl) ValidateFieldValue(ctx context.Context, field *Field, valu
 func (s *ServiceImpl) GetFieldTypeInfo(ctx context.Context, fieldType FieldType) (FieldTypeInfo, error) {
 	return GetFieldTypeInfo(fieldType), nil
 }
+
 // ValidateSchemaChange 验证schema变更
 func (s *ServiceImpl) ValidateSchemaChange(ctx context.Context, tableID string, changes []SchemaChange) error {
 	table, err := s.GetTable(ctx, tableID)
 	if err != nil {
 		return err
 	}
-	
+
 	return s.schemaService.ValidateSchemaChange(ctx, table, changes)
 }
 
@@ -405,6 +414,6 @@ func (s *ServiceImpl) PreviewSchemaChanges(ctx context.Context, tableID string, 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return s.schemaService.PreviewSchemaChanges(ctx, table, changes)
 }

@@ -101,14 +101,14 @@ func (r *AttachmentRepository) DeleteAttachment(ctx context.Context, id string) 
 func (r *AttachmentRepository) ListAttachments(ctx context.Context, tableID, fieldID, recordID string) ([]*attachment.AttachmentItem, error) {
 	var models []*models.Attachment
 	query := r.db.WithContext(ctx).Where("table_id = ?", tableID)
-	
+
 	if fieldID != "" {
 		query = query.Where("field_id = ?", fieldID)
 	}
 	if recordID != "" {
 		query = query.Where("record_id = ?", recordID)
 	}
-	
+
 	if err := query.Find(&models).Error; err != nil {
 		r.logger.Error("Failed to list attachments from DB", logger.ErrorField(err))
 		return nil, fmt.Errorf("failed to list attachments: %w", err)
@@ -165,7 +165,7 @@ func (r *AttachmentRepository) GetAttachmentStats(ctx context.Context, tableID s
 		"text/plain",
 		"text/csv",
 	}
-	
+
 	for _, docType := range documentTypes {
 		var count int64
 		if err := r.db.WithContext(ctx).Model(&models.Attachment{}).Where("table_id = ? AND mime_type = ?", tableID, docType).Count(&count).Error; err != nil {

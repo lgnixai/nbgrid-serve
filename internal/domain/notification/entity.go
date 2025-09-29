@@ -10,24 +10,24 @@ import (
 type NotificationType string
 
 const (
-	NotificationTypeSystem    NotificationType = "system"    // 系统通知
-	NotificationTypeUser      NotificationType = "user"      // 用户通知
-	NotificationTypeSpace     NotificationType = "space"     // 空间通知
-	NotificationTypeTable     NotificationType = "table"     // 表格通知
-	NotificationTypeRecord    NotificationType = "record"    // 记录通知
-	NotificationTypeComment   NotificationType = "comment"   // 评论通知
-	NotificationTypeMention   NotificationType = "mention"   // 提及通知
-	NotificationTypeShare     NotificationType = "share"     // 分享通知
-	NotificationTypeInvite    NotificationType = "invite"    // 邀请通知
-	NotificationTypeReminder  NotificationType = "reminder"  // 提醒通知
+	NotificationTypeSystem   NotificationType = "system"   // 系统通知
+	NotificationTypeUser     NotificationType = "user"     // 用户通知
+	NotificationTypeSpace    NotificationType = "space"    // 空间通知
+	NotificationTypeTable    NotificationType = "table"    // 表格通知
+	NotificationTypeRecord   NotificationType = "record"   // 记录通知
+	NotificationTypeComment  NotificationType = "comment"  // 评论通知
+	NotificationTypeMention  NotificationType = "mention"  // 提及通知
+	NotificationTypeShare    NotificationType = "share"    // 分享通知
+	NotificationTypeInvite   NotificationType = "invite"   // 邀请通知
+	NotificationTypeReminder NotificationType = "reminder" // 提醒通知
 )
 
 // NotificationStatus 通知状态
 type NotificationStatus string
 
 const (
-	NotificationStatusUnread NotificationStatus = "unread" // 未读
-	NotificationStatusRead   NotificationStatus = "read"   // 已读
+	NotificationStatusUnread   NotificationStatus = "unread"   // 未读
+	NotificationStatusRead     NotificationStatus = "read"     // 已读
 	NotificationStatusArchived NotificationStatus = "archived" // 已归档
 )
 
@@ -43,21 +43,21 @@ const (
 
 // Notification 通知实体
 type Notification struct {
-	ID          string              `json:"id"`
-	UserID      string              `json:"user_id"`
-	Type        NotificationType    `json:"type"`
-	Title       string              `json:"title"`
-	Content     string              `json:"content"`
+	ID          string                 `json:"id"`
+	UserID      string                 `json:"user_id"`
+	Type        NotificationType       `json:"type"`
+	Title       string                 `json:"title"`
+	Content     string                 `json:"content"`
 	Data        map[string]interface{} `json:"data,omitempty"`
-	Status      NotificationStatus  `json:"status"`
-	Priority    NotificationPriority `json:"priority"`
-	SourceID    string              `json:"source_id,omitempty"`    // 来源ID（如表格ID、记录ID等）
-	SourceType  string              `json:"source_type,omitempty"`  // 来源类型
-	ActionURL   string              `json:"action_url,omitempty"`   // 操作链接
-	ExpiresAt   *time.Time          `json:"expires_at,omitempty"`   // 过期时间
-	ReadAt      *time.Time          `json:"read_at,omitempty"`      // 阅读时间
-	CreatedTime time.Time           `json:"created_time"`
-	UpdatedTime time.Time           `json:"updated_time"`
+	Status      NotificationStatus     `json:"status"`
+	Priority    NotificationPriority   `json:"priority"`
+	SourceID    string                 `json:"source_id,omitempty"`   // 来源ID（如表格ID、记录ID等）
+	SourceType  string                 `json:"source_type,omitempty"` // 来源类型
+	ActionURL   string                 `json:"action_url,omitempty"`  // 操作链接
+	ExpiresAt   *time.Time             `json:"expires_at,omitempty"`  // 过期时间
+	ReadAt      *time.Time             `json:"read_at,omitempty"`     // 阅读时间
+	CreatedTime time.Time              `json:"created_time"`
+	UpdatedTime time.Time              `json:"updated_time"`
 }
 
 // NewNotification 创建新通知
@@ -139,7 +139,7 @@ type NotificationTemplate struct {
 	Name        string                 `json:"name"`
 	Title       string                 `json:"title"`
 	Content     string                 `json:"content"`
-	Variables   []string               `json:"variables"`   // 模板变量
+	Variables   []string               `json:"variables"`    // 模板变量
 	DefaultData map[string]interface{} `json:"default_data"` // 默认数据
 	IsActive    bool                   `json:"is_active"`
 	CreatedTime time.Time              `json:"created_time"`
@@ -179,16 +179,16 @@ func (t *NotificationTemplate) SetDefaultData(key string, value interface{}) {
 
 // NotificationSubscription 通知订阅
 type NotificationSubscription struct {
-	ID          string              `json:"id"`
-	UserID      string              `json:"user_id"`
-	Type        NotificationType    `json:"type"`
-	SourceID    string              `json:"source_id,omitempty"`    // 订阅来源ID
-	SourceType  string              `json:"source_type,omitempty"`  // 订阅来源类型
-	Channels    []string            `json:"channels"`               // 通知渠道：email, push, in_app
-	Settings    map[string]interface{} `json:"settings"`            // 订阅设置
-	IsActive    bool                `json:"is_active"`
-	CreatedTime time.Time           `json:"created_time"`
-	UpdatedTime time.Time           `json:"updated_time"`
+	ID          string                 `json:"id"`
+	UserID      string                 `json:"user_id"`
+	Type        NotificationType       `json:"type"`
+	SourceID    string                 `json:"source_id,omitempty"`   // 订阅来源ID
+	SourceType  string                 `json:"source_type,omitempty"` // 订阅来源类型
+	Channels    []string               `json:"channels"`              // 通知渠道：email, push, in_app
+	Settings    map[string]interface{} `json:"settings"`              // 订阅设置
+	IsActive    bool                   `json:"is_active"`
+	CreatedTime time.Time              `json:"created_time"`
+	UpdatedTime time.Time              `json:"updated_time"`
 }
 
 // NewNotificationSubscription 创建通知订阅
@@ -238,47 +238,47 @@ func (s *NotificationSubscription) SetSetting(key string, value interface{}) {
 
 // NotificationStats 通知统计
 type NotificationStats struct {
-	TotalNotifications int64 `json:"total_notifications"`
-	UnreadCount        int64 `json:"unread_count"`
-	ReadCount          int64 `json:"read_count"`
-	ArchivedCount      int64 `json:"archived_count"`
-	ByType             map[NotificationType]int64 `json:"by_type"`
+	TotalNotifications int64                          `json:"total_notifications"`
+	UnreadCount        int64                          `json:"unread_count"`
+	ReadCount          int64                          `json:"read_count"`
+	ArchivedCount      int64                          `json:"archived_count"`
+	ByType             map[NotificationType]int64     `json:"by_type"`
 	ByPriority         map[NotificationPriority]int64 `json:"by_priority"`
-	RecentActivity     []*Notification `json:"recent_activity"`
+	RecentActivity     []*Notification                `json:"recent_activity"`
 }
 
 // CreateNotificationRequest 创建通知请求
 type CreateNotificationRequest struct {
-	UserID      string                 `json:"user_id" binding:"required"`
-	Type        NotificationType       `json:"type" binding:"required"`
-	Title       string                 `json:"title" binding:"required"`
-	Content     string                 `json:"content" binding:"required"`
-	Data        map[string]interface{} `json:"data,omitempty"`
-	Priority    NotificationPriority   `json:"priority,omitempty"`
-	SourceID    string                 `json:"source_id,omitempty"`
-	SourceType  string                 `json:"source_type,omitempty"`
-	ActionURL   string                 `json:"action_url,omitempty"`
-	ExpiresAt   *time.Time             `json:"expires_at,omitempty"`
+	UserID     string                 `json:"user_id" binding:"required"`
+	Type       NotificationType       `json:"type" binding:"required"`
+	Title      string                 `json:"title" binding:"required"`
+	Content    string                 `json:"content" binding:"required"`
+	Data       map[string]interface{} `json:"data,omitempty"`
+	Priority   NotificationPriority   `json:"priority,omitempty"`
+	SourceID   string                 `json:"source_id,omitempty"`
+	SourceType string                 `json:"source_type,omitempty"`
+	ActionURL  string                 `json:"action_url,omitempty"`
+	ExpiresAt  *time.Time             `json:"expires_at,omitempty"`
 }
 
 // UpdateNotificationRequest 更新通知请求
 type UpdateNotificationRequest struct {
-	Status NotificationStatus `json:"status,omitempty"`
+	Status NotificationStatus     `json:"status,omitempty"`
 	Data   map[string]interface{} `json:"data,omitempty"`
 }
 
 // ListNotificationsRequest 列出通知请求
 type ListNotificationsRequest struct {
-	UserID   string              `json:"user_id" binding:"required"`
-	Type     *NotificationType   `json:"type,omitempty"`
-	Status   *NotificationStatus `json:"status,omitempty"`
-	Priority *NotificationPriority `json:"priority,omitempty"`
-	SourceID string              `json:"source_id,omitempty"`
-	SourceType string            `json:"source_type,omitempty"`
-	Page     int                 `json:"page,omitempty"`
-	PageSize int                 `json:"page_size,omitempty"`
-	SortBy   string              `json:"sort_by,omitempty"`
-	SortOrder string             `json:"sort_order,omitempty"`
+	UserID     string                `json:"user_id" binding:"required"`
+	Type       *NotificationType     `json:"type,omitempty"`
+	Status     *NotificationStatus   `json:"status,omitempty"`
+	Priority   *NotificationPriority `json:"priority,omitempty"`
+	SourceID   string                `json:"source_id,omitempty"`
+	SourceType string                `json:"source_type,omitempty"`
+	Page       int                   `json:"page,omitempty"`
+	PageSize   int                   `json:"page_size,omitempty"`
+	SortBy     string                `json:"sort_by,omitempty"`
+	SortOrder  string                `json:"sort_order,omitempty"`
 }
 
 // ListNotificationsResponse 列出通知响应
@@ -297,17 +297,17 @@ type MarkNotificationsReadRequest struct {
 
 // CreateSubscriptionRequest 创建订阅请求
 type CreateSubscriptionRequest struct {
-	UserID     string              `json:"user_id" binding:"required"`
-	Type       NotificationType    `json:"type" binding:"required"`
-	SourceID   string              `json:"source_id,omitempty"`
-	SourceType string              `json:"source_type,omitempty"`
-	Channels   []string            `json:"channels" binding:"required"`
+	UserID     string                 `json:"user_id" binding:"required"`
+	Type       NotificationType       `json:"type" binding:"required"`
+	SourceID   string                 `json:"source_id,omitempty"`
+	SourceType string                 `json:"source_type,omitempty"`
+	Channels   []string               `json:"channels" binding:"required"`
 	Settings   map[string]interface{} `json:"settings,omitempty"`
 }
 
 // UpdateSubscriptionRequest 更新订阅请求
 type UpdateSubscriptionRequest struct {
-	Channels []string            `json:"channels,omitempty"`
+	Channels []string               `json:"channels,omitempty"`
 	Settings map[string]interface{} `json:"settings,omitempty"`
-	IsActive *bool               `json:"is_active,omitempty"`
+	IsActive *bool                  `json:"is_active,omitempty"`
 }

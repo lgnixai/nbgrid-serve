@@ -1,13 +1,12 @@
 package http
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 
 	"teable-go-backend/internal/domain/space"
 	"teable-go-backend/internal/interfaces/middleware"
 	"teable-go-backend/pkg/errors"
+	"teable-go-backend/pkg/response"
 )
 
 // SpaceHandler 空间相关HTTP处理器
@@ -25,13 +24,13 @@ func (h *SpaceHandler) CreateSpace(c *gin.Context) {
 		Icon        *string `json:"icon"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, errors.ErrorResponse{Error: "参数错误", Code: errors.ErrBadRequest.Code, Details: err.Error()})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
 	userID, err := middleware.GetCurrentUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, errors.ErrorResponse{Error: errors.ErrUnauthorized.Message, Code: errors.ErrUnauthorized.Code})
+		response.Error(c, errors.ErrUnauthorized)
 		return
 	}
 
@@ -42,12 +41,11 @@ func (h *SpaceHandler) CreateSpace(c *gin.Context) {
 		CreatedBy:   userID,
 	})
 	if err != nil {
-		status := errors.GetHTTPStatus(err)
-		c.JSON(status, errors.ErrorResponse{Error: err.Error(), Code: errors.ErrInternalServer.Code})
+		response.Error(c, err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"data": sp})
+	response.SuccessWithMessage(c, sp, "")
 }
 
 // GetSpace 获取空间
@@ -55,15 +53,14 @@ func (h *SpaceHandler) GetSpace(c *gin.Context) {
 	id := c.Param("id")
 	sp, err := h.service.GetSpace(c.Request.Context(), id)
 	if err != nil {
-		status := errors.GetHTTPStatus(err)
-		c.JSON(status, errors.ErrorResponse{Error: err.Error(), Code: errors.ErrNotFound.Code})
+		response.Error(c, err)
 		return
 	}
 	if sp == nil {
-		c.JSON(http.StatusNotFound, errors.ErrorResponse{Error: errors.ErrSpaceNotFound.Message, Code: errors.ErrSpaceNotFound.Code})
+		response.Error(c, errors.ErrSpaceNotFound)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": sp})
+	response.SuccessWithMessage(c, sp, "")
 }
 
 // UpdateSpace 更新空间
@@ -75,7 +72,7 @@ func (h *SpaceHandler) UpdateSpace(c *gin.Context) {
 		Icon        *string `json:"icon"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, errors.ErrorResponse{Error: "参数错误", Code: errors.ErrBadRequest.Code, Details: err.Error()})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 	sp, err := h.service.UpdateSpace(c.Request.Context(), id, space.UpdateSpaceRequest{
@@ -84,22 +81,20 @@ func (h *SpaceHandler) UpdateSpace(c *gin.Context) {
 		Icon:        req.Icon,
 	})
 	if err != nil {
-		status := errors.GetHTTPStatus(err)
-		c.JSON(status, errors.ErrorResponse{Error: err.Error(), Code: errors.ErrInternalServer.Code})
+		response.Error(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": sp})
+	response.SuccessWithMessage(c, sp, "")
 }
 
 // DeleteSpace 删除空间
 func (h *SpaceHandler) DeleteSpace(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.service.DeleteSpace(c.Request.Context(), id); err != nil {
-		status := errors.GetHTTPStatus(err)
-		c.JSON(status, errors.ErrorResponse{Error: err.Error(), Code: errors.ErrInternalServer.Code})
+		response.Error(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"success": true})
+	response.SuccessWithMessage(c, map[string]bool{"success": true}, "")
 }
 
 // ListSpaces 列出空间
@@ -114,17 +109,16 @@ func (h *SpaceHandler) ListSpaces(c *gin.Context) {
 		CreatedBy *string `form:"created_by"`
 	}
 	if err := c.ShouldBindQuery(&query); err != nil {
-		c.JSON(http.StatusBadRequest, errors.ErrorResponse{Error: "查询参数错误", Code: errors.ErrBadRequest.Code, Details: err.Error()})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 	filter := space.ListFilter{Offset: query.Offset, Limit: query.Limit, OrderBy: query.OrderBy, Order: query.Order, Name: query.Name, Search: query.Search, CreatedBy: query.CreatedBy}
 	items, total, err := h.service.ListSpaces(c.Request.Context(), filter)
 	if err != nil {
-		status := errors.GetHTTPStatus(err)
-		c.JSON(status, errors.ErrorResponse{Error: err.Error(), Code: errors.ErrInternalServer.Code})
+		response.Error(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": items, "total": total, "offset": filter.Offset, "limit": filter.Limit})
+	response.PaginatedSuccess(c, items, response.Pagination{Page: 0, Limit: filter.Limit, Total: int(total), TotalPages: 0}, "")
 }
 
 // AddCollaborator 添加协作者
@@ -144,10 +138,7 @@ func (h *SpaceHandler) ListSpaces(c *gin.Context) {
 func (h *SpaceHandler) AddCollaborator(c *gin.Context) {
 	spaceID := c.Param("id")
 	if spaceID == "" {
-		c.JSON(http.StatusBadRequest, errors.ErrorResponse{
-			Error: "空间ID不能为空",
-			Code:  "MISSING_SPACE_ID",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("空间ID不能为空"))
 		return
 	}
 
@@ -156,26 +147,15 @@ func (h *SpaceHandler) AddCollaborator(c *gin.Context) {
 		Role   string `json:"role" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, errors.ErrorResponse{
-			Error:   "请求参数错误",
-			Code:    errors.ErrBadRequest.Code,
-			Details: err.Error(),
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
 	if err := h.service.AddCollaborator(c.Request.Context(), spaceID, req.UserID, req.Role); err != nil {
-		status := errors.GetHTTPStatus(err)
-		c.JSON(status, errors.ErrorResponse{
-			Error: err.Error(),
-			Code:  errors.ErrInternalServer.Code,
-		})
+		response.Error(c, err)
 		return
 	}
-
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "协作者添加成功",
-	})
+	response.SuccessWithMessage(c, map[string]string{"message": "协作者添加成功"}, "")
 }
 
 // RemoveCollaborator 移除协作者
@@ -195,25 +175,15 @@ func (h *SpaceHandler) AddCollaborator(c *gin.Context) {
 func (h *SpaceHandler) RemoveCollaborator(c *gin.Context) {
 	collabID := c.Param("collab_id")
 	if collabID == "" {
-		c.JSON(http.StatusBadRequest, errors.ErrorResponse{
-			Error: "协作者ID不能为空",
-			Code:  "MISSING_COLLABORATOR_ID",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("协作者ID不能为空"))
 		return
 	}
 
 	if err := h.service.RemoveCollaborator(c.Request.Context(), collabID); err != nil {
-		status := errors.GetHTTPStatus(err)
-		c.JSON(status, errors.ErrorResponse{
-			Error: err.Error(),
-			Code:  errors.ErrInternalServer.Code,
-		})
+		response.Error(c, err)
 		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": "协作者移除成功",
-	})
+	response.SuccessWithMessage(c, map[string]string{"message": "协作者移除成功"}, "")
 }
 
 // ListCollaborators 列出协作者
@@ -231,26 +201,16 @@ func (h *SpaceHandler) RemoveCollaborator(c *gin.Context) {
 func (h *SpaceHandler) ListCollaborators(c *gin.Context) {
 	spaceID := c.Param("id")
 	if spaceID == "" {
-		c.JSON(http.StatusBadRequest, errors.ErrorResponse{
-			Error: "空间ID不能为空",
-			Code:  "MISSING_SPACE_ID",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("空间ID不能为空"))
 		return
 	}
 
 	collaborators, err := h.service.ListCollaborators(c.Request.Context(), spaceID)
 	if err != nil {
-		status := errors.GetHTTPStatus(err)
-		c.JSON(status, errors.ErrorResponse{
-			Error: err.Error(),
-			Code:  errors.ErrInternalServer.Code,
-		})
+		response.Error(c, err)
 		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"data": collaborators,
-	})
+	response.SuccessWithMessage(c, collaborators, "")
 }
 
 // UpdateCollaboratorRole 更新协作者角色
@@ -271,10 +231,7 @@ func (h *SpaceHandler) ListCollaborators(c *gin.Context) {
 func (h *SpaceHandler) UpdateCollaboratorRole(c *gin.Context) {
 	collabID := c.Param("collab_id")
 	if collabID == "" {
-		c.JSON(http.StatusBadRequest, errors.ErrorResponse{
-			Error: "协作者ID不能为空",
-			Code:  "MISSING_COLLABORATOR_ID",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("协作者ID不能为空"))
 		return
 	}
 
@@ -282,26 +239,15 @@ func (h *SpaceHandler) UpdateCollaboratorRole(c *gin.Context) {
 		Role string `json:"role" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, errors.ErrorResponse{
-			Error:   "请求参数错误",
-			Code:    errors.ErrBadRequest.Code,
-			Details: err.Error(),
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
 	if err := h.service.UpdateCollaboratorRole(c.Request.Context(), collabID, req.Role); err != nil {
-		status := errors.GetHTTPStatus(err)
-		c.JSON(status, errors.ErrorResponse{
-			Error: err.Error(),
-			Code:  errors.ErrInternalServer.Code,
-		})
+		response.Error(c, err)
 		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": "协作者角色更新成功",
-	})
+	response.SuccessWithMessage(c, map[string]string{"message": "协作者角色更新成功"}, "")
 }
 
 // BulkUpdateSpaces 批量更新空间
@@ -319,26 +265,15 @@ func (h *SpaceHandler) UpdateCollaboratorRole(c *gin.Context) {
 func (h *SpaceHandler) BulkUpdateSpaces(c *gin.Context) {
 	var updates []space.BulkUpdateRequest
 	if err := c.ShouldBindJSON(&updates); err != nil {
-		c.JSON(http.StatusBadRequest, errors.ErrorResponse{
-			Error:   "请求参数错误",
-			Code:    errors.ErrBadRequest.Code,
-			Details: err.Error(),
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
 	if err := h.service.BulkUpdateSpaces(c.Request.Context(), updates); err != nil {
-		status := errors.GetHTTPStatus(err)
-		c.JSON(status, errors.ErrorResponse{
-			Error: err.Error(),
-			Code:  errors.ErrInternalServer.Code,
-		})
+		response.Error(c, err)
 		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": "批量更新成功",
-	})
+	response.SuccessWithMessage(c, map[string]string{"message": "批量更新成功"}, "")
 }
 
 // BulkDeleteSpaces 批量删除空间
@@ -356,26 +291,15 @@ func (h *SpaceHandler) BulkUpdateSpaces(c *gin.Context) {
 func (h *SpaceHandler) BulkDeleteSpaces(c *gin.Context) {
 	var spaceIDs []string
 	if err := c.ShouldBindJSON(&spaceIDs); err != nil {
-		c.JSON(http.StatusBadRequest, errors.ErrorResponse{
-			Error:   "请求参数错误",
-			Code:    errors.ErrBadRequest.Code,
-			Details: err.Error(),
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
 	if err := h.service.BulkDeleteSpaces(c.Request.Context(), spaceIDs); err != nil {
-		status := errors.GetHTTPStatus(err)
-		c.JSON(status, errors.ErrorResponse{
-			Error: err.Error(),
-			Code:  errors.ErrInternalServer.Code,
-		})
+		response.Error(c, err)
 		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": "批量删除成功",
-	})
+	response.SuccessWithMessage(c, map[string]string{"message": "批量删除成功"}, "")
 }
 
 // CheckUserPermission 检查用户权限
@@ -395,47 +319,33 @@ func (h *SpaceHandler) BulkDeleteSpaces(c *gin.Context) {
 func (h *SpaceHandler) CheckUserPermission(c *gin.Context) {
 	spaceID := c.Param("id")
 	if spaceID == "" {
-		c.JSON(http.StatusBadRequest, errors.ErrorResponse{
-			Error: "空间ID不能为空",
-			Code:  "MISSING_SPACE_ID",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("空间ID不能为空"))
 		return
 	}
 
 	userID := c.Query("user_id")
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, errors.ErrorResponse{
-			Error: "用户ID不能为空",
-			Code:  "MISSING_USER_ID",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("用户ID不能为空"))
 		return
 	}
 
 	permission := c.Query("permission")
 	if permission == "" {
-		c.JSON(http.StatusBadRequest, errors.ErrorResponse{
-			Error: "权限类型不能为空",
-			Code:  "MISSING_PERMISSION",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("权限类型不能为空"))
 		return
 	}
 
 	hasPermission, err := h.service.CheckUserPermission(c.Request.Context(), spaceID, userID, permission)
 	if err != nil {
-		status := errors.GetHTTPStatus(err)
-		c.JSON(status, errors.ErrorResponse{
-			Error: err.Error(),
-			Code:  errors.ErrInternalServer.Code,
-		})
+		response.Error(c, err)
 		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{
+	response.SuccessWithMessage(c, gin.H{
 		"has_permission": hasPermission,
 		"user_id":        userID,
 		"space_id":       spaceID,
 		"permission":     permission,
-	})
+	}, "")
 }
 
 // GetUserSpaces 获取用户空间
@@ -456,10 +366,7 @@ func (h *SpaceHandler) CheckUserPermission(c *gin.Context) {
 func (h *SpaceHandler) GetUserSpaces(c *gin.Context) {
 	userID := c.Param("user_id")
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, errors.ErrorResponse{
-			Error: "用户ID不能为空",
-			Code:  "MISSING_USER_ID",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("用户ID不能为空"))
 		return
 	}
 
@@ -469,11 +376,7 @@ func (h *SpaceHandler) GetUserSpaces(c *gin.Context) {
 		Search string `form:"search"`
 	}
 	if err := c.ShouldBindQuery(&query); err != nil {
-		c.JSON(http.StatusBadRequest, errors.ErrorResponse{
-			Error:   "查询参数错误",
-			Code:    errors.ErrBadRequest.Code,
-			Details: err.Error(),
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails(err.Error()))
 		return
 	}
 
@@ -487,20 +390,10 @@ func (h *SpaceHandler) GetUserSpaces(c *gin.Context) {
 
 	spaces, total, err := h.service.GetUserSpaces(c.Request.Context(), userID, filter)
 	if err != nil {
-		status := errors.GetHTTPStatus(err)
-		c.JSON(status, errors.ErrorResponse{
-			Error: err.Error(),
-			Code:  errors.ErrInternalServer.Code,
-		})
+		response.Error(c, err)
 		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"data":   spaces,
-		"total":  total,
-		"offset": filter.Offset,
-		"limit":  filter.Limit,
-	})
+	response.PaginatedSuccess(c, spaces, response.Pagination{Page: 0, Limit: filter.Limit, Total: int(total), TotalPages: 0}, "")
 }
 
 // GetSpaceStats 获取空间统计信息
@@ -518,24 +411,16 @@ func (h *SpaceHandler) GetUserSpaces(c *gin.Context) {
 func (h *SpaceHandler) GetSpaceStats(c *gin.Context) {
 	spaceID := c.Param("id")
 	if spaceID == "" {
-		c.JSON(http.StatusBadRequest, errors.ErrorResponse{
-			Error: "空间ID不能为空",
-			Code:  "MISSING_SPACE_ID",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("空间ID不能为空"))
 		return
 	}
 
 	stats, err := h.service.GetSpaceStats(c.Request.Context(), spaceID)
 	if err != nil {
-		status := errors.GetHTTPStatus(err)
-		c.JSON(status, errors.ErrorResponse{
-			Error: err.Error(),
-			Code:  errors.ErrInternalServer.Code,
-		})
+		response.Error(c, err)
 		return
 	}
-
-	c.JSON(http.StatusOK, stats)
+	response.SuccessWithMessage(c, stats, "")
 }
 
 // GetUserSpaceStats 获取用户空间统计信息
@@ -553,22 +438,14 @@ func (h *SpaceHandler) GetSpaceStats(c *gin.Context) {
 func (h *SpaceHandler) GetUserSpaceStats(c *gin.Context) {
 	userID := c.Param("user_id")
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, errors.ErrorResponse{
-			Error: "用户ID不能为空",
-			Code:  "MISSING_USER_ID",
-		})
+		response.Error(c, errors.ErrBadRequest.WithDetails("用户ID不能为空"))
 		return
 	}
 
 	stats, err := h.service.GetUserSpaceStats(c.Request.Context(), userID)
 	if err != nil {
-		status := errors.GetHTTPStatus(err)
-		c.JSON(status, errors.ErrorResponse{
-			Error: err.Error(),
-			Code:  errors.ErrInternalServer.Code,
-		})
+		response.Error(c, err)
 		return
 	}
-
-	c.JSON(http.StatusOK, stats)
+	response.SuccessWithMessage(c, stats, "")
 }

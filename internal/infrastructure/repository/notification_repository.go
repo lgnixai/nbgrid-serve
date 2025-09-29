@@ -31,9 +31,9 @@ func NewNotificationRepository(db *gorm.DB, logger *zap.Logger) *NotificationRep
 // CreateNotification 创建通知
 func (r *NotificationRepository) CreateNotification(ctx context.Context, n *notification.Notification) error {
 	model := r.domainToModel(n)
-	
+
 	if err := r.db.WithContext(ctx).Create(model).Error; err != nil {
-		r.logger.Error("Failed to create notification", 
+		r.logger.Error("Failed to create notification",
 			zap.String("id", n.ID),
 			zap.Error(err))
 		return err
@@ -45,12 +45,12 @@ func (r *NotificationRepository) CreateNotification(ctx context.Context, n *noti
 // GetNotification 获取通知
 func (r *NotificationRepository) GetNotification(ctx context.Context, id string) (*notification.Notification, error) {
 	var model models.Notification
-	
+
 	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&model).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.ErrNotFound
 		}
-		r.logger.Error("Failed to get notification", 
+		r.logger.Error("Failed to get notification",
 			zap.String("id", id),
 			zap.Error(err))
 		return nil, err
@@ -62,9 +62,9 @@ func (r *NotificationRepository) GetNotification(ctx context.Context, id string)
 // UpdateNotification 更新通知
 func (r *NotificationRepository) UpdateNotification(ctx context.Context, n *notification.Notification) error {
 	model := r.domainToModel(n)
-	
+
 	if err := r.db.WithContext(ctx).Save(model).Error; err != nil {
-		r.logger.Error("Failed to update notification", 
+		r.logger.Error("Failed to update notification",
 			zap.String("id", n.ID),
 			zap.Error(err))
 		return err
@@ -76,7 +76,7 @@ func (r *NotificationRepository) UpdateNotification(ctx context.Context, n *noti
 // DeleteNotification 删除通知
 func (r *NotificationRepository) DeleteNotification(ctx context.Context, id string) error {
 	if err := r.db.WithContext(ctx).Where("id = ?", id).Delete(&models.Notification{}).Error; err != nil {
-		r.logger.Error("Failed to delete notification", 
+		r.logger.Error("Failed to delete notification",
 			zap.String("id", id),
 			zap.Error(err))
 		return err
@@ -149,15 +149,15 @@ func (r *NotificationRepository) ListNotifications(ctx context.Context, req *not
 // MarkNotificationsRead 标记通知为已读
 func (r *NotificationRepository) MarkNotificationsRead(ctx context.Context, notificationIDs []string) error {
 	now := time.Now()
-	
+
 	if err := r.db.WithContext(ctx).Model(&models.Notification{}).
 		Where("id IN ?", notificationIDs).
 		Updates(map[string]interface{}{
-			"status":      string(notification.NotificationStatusRead),
-			"read_at":     &now,
+			"status":       string(notification.NotificationStatusRead),
+			"read_at":      &now,
 			"updated_time": now,
 		}).Error; err != nil {
-		r.logger.Error("Failed to mark notifications as read", 
+		r.logger.Error("Failed to mark notifications as read",
 			zap.Strings("notification_ids", notificationIDs),
 			zap.Error(err))
 		return err
@@ -169,15 +169,15 @@ func (r *NotificationRepository) MarkNotificationsRead(ctx context.Context, noti
 // MarkAllNotificationsRead 标记所有通知为已读
 func (r *NotificationRepository) MarkAllNotificationsRead(ctx context.Context, userID string) error {
 	now := time.Now()
-	
+
 	if err := r.db.WithContext(ctx).Model(&models.Notification{}).
 		Where("user_id = ? AND status = ?", userID, string(notification.NotificationStatusUnread)).
 		Updates(map[string]interface{}{
-			"status":      string(notification.NotificationStatusRead),
-			"read_at":     &now,
+			"status":       string(notification.NotificationStatusRead),
+			"read_at":      &now,
 			"updated_time": now,
 		}).Error; err != nil {
-		r.logger.Error("Failed to mark all notifications as read", 
+		r.logger.Error("Failed to mark all notifications as read",
 			zap.String("user_id", userID),
 			zap.Error(err))
 		return err
@@ -283,7 +283,7 @@ func (r *NotificationRepository) GetNotificationStats(ctx context.Context, userI
 // CleanupExpiredNotifications 清理过期通知
 func (r *NotificationRepository) CleanupExpiredNotifications(ctx context.Context) error {
 	now := time.Now()
-	
+
 	if err := r.db.WithContext(ctx).Where("expires_at IS NOT NULL AND expires_at < ?", now).
 		Delete(&models.Notification{}).Error; err != nil {
 		r.logger.Error("Failed to cleanup expired notifications", zap.Error(err))
@@ -369,9 +369,9 @@ func NewNotificationTemplateRepository(db *gorm.DB, logger *zap.Logger) *Notific
 // CreateTemplate 创建模板
 func (r *NotificationTemplateRepository) CreateTemplate(ctx context.Context, template *notification.NotificationTemplate) error {
 	model := r.domainToModel(template)
-	
+
 	if err := r.db.WithContext(ctx).Create(model).Error; err != nil {
-		r.logger.Error("Failed to create notification template", 
+		r.logger.Error("Failed to create notification template",
 			zap.String("id", template.ID),
 			zap.Error(err))
 		return err
@@ -383,12 +383,12 @@ func (r *NotificationTemplateRepository) CreateTemplate(ctx context.Context, tem
 // GetTemplate 获取模板
 func (r *NotificationTemplateRepository) GetTemplate(ctx context.Context, id string) (*notification.NotificationTemplate, error) {
 	var model models.NotificationTemplate
-	
+
 	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&model).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.ErrNotFound
 		}
-		r.logger.Error("Failed to get notification template", 
+		r.logger.Error("Failed to get notification template",
 			zap.String("id", id),
 			zap.Error(err))
 		return nil, err
@@ -400,12 +400,12 @@ func (r *NotificationTemplateRepository) GetTemplate(ctx context.Context, id str
 // GetTemplateByType 根据类型获取模板
 func (r *NotificationTemplateRepository) GetTemplateByType(ctx context.Context, notificationType notification.NotificationType) (*notification.NotificationTemplate, error) {
 	var model models.NotificationTemplate
-	
+
 	if err := r.db.WithContext(ctx).Where("type = ?", string(notificationType)).First(&model).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.ErrNotFound
 		}
-		r.logger.Error("Failed to get notification template by type", 
+		r.logger.Error("Failed to get notification template by type",
 			zap.String("type", string(notificationType)),
 			zap.Error(err))
 		return nil, err
@@ -417,9 +417,9 @@ func (r *NotificationTemplateRepository) GetTemplateByType(ctx context.Context, 
 // UpdateTemplate 更新模板
 func (r *NotificationTemplateRepository) UpdateTemplate(ctx context.Context, template *notification.NotificationTemplate) error {
 	model := r.domainToModel(template)
-	
+
 	if err := r.db.WithContext(ctx).Save(model).Error; err != nil {
-		r.logger.Error("Failed to update notification template", 
+		r.logger.Error("Failed to update notification template",
 			zap.String("id", template.ID),
 			zap.Error(err))
 		return err
@@ -431,7 +431,7 @@ func (r *NotificationTemplateRepository) UpdateTemplate(ctx context.Context, tem
 // DeleteTemplate 删除模板
 func (r *NotificationTemplateRepository) DeleteTemplate(ctx context.Context, id string) error {
 	if err := r.db.WithContext(ctx).Where("id = ?", id).Delete(&models.NotificationTemplate{}).Error; err != nil {
-		r.logger.Error("Failed to delete notification template", 
+		r.logger.Error("Failed to delete notification template",
 			zap.String("id", id),
 			zap.Error(err))
 		return err
@@ -547,9 +547,9 @@ func NewNotificationSubscriptionRepository(db *gorm.DB, logger *zap.Logger) *Not
 // CreateSubscription 创建订阅
 func (r *NotificationSubscriptionRepository) CreateSubscription(ctx context.Context, subscription *notification.NotificationSubscription) error {
 	model := r.domainToModel(subscription)
-	
+
 	if err := r.db.WithContext(ctx).Create(model).Error; err != nil {
-		r.logger.Error("Failed to create notification subscription", 
+		r.logger.Error("Failed to create notification subscription",
 			zap.String("id", subscription.ID),
 			zap.Error(err))
 		return err
@@ -561,12 +561,12 @@ func (r *NotificationSubscriptionRepository) CreateSubscription(ctx context.Cont
 // GetSubscription 获取订阅
 func (r *NotificationSubscriptionRepository) GetSubscription(ctx context.Context, id string) (*notification.NotificationSubscription, error) {
 	var model models.NotificationSubscription
-	
+
 	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&model).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.ErrNotFound
 		}
-		r.logger.Error("Failed to get notification subscription", 
+		r.logger.Error("Failed to get notification subscription",
 			zap.String("id", id),
 			zap.Error(err))
 		return nil, err
@@ -587,7 +587,7 @@ func (r *NotificationSubscriptionRepository) GetUserSubscriptions(ctx context.Co
 	// 查询数据
 	var models []models.NotificationSubscription
 	if err := query.Find(&models).Error; err != nil {
-		r.logger.Error("Failed to get user notification subscriptions", 
+		r.logger.Error("Failed to get user notification subscriptions",
 			zap.String("user_id", userID),
 			zap.Error(err))
 		return nil, err
@@ -622,7 +622,7 @@ func (r *NotificationSubscriptionRepository) GetSubscriptionsBySource(ctx contex
 	// 查询数据
 	var models []models.NotificationSubscription
 	if err := query.Find(&models).Error; err != nil {
-		r.logger.Error("Failed to get subscriptions by source", 
+		r.logger.Error("Failed to get subscriptions by source",
 			zap.String("source_id", sourceID),
 			zap.String("source_type", sourceType),
 			zap.Error(err))
@@ -641,9 +641,9 @@ func (r *NotificationSubscriptionRepository) GetSubscriptionsBySource(ctx contex
 // UpdateSubscription 更新订阅
 func (r *NotificationSubscriptionRepository) UpdateSubscription(ctx context.Context, subscription *notification.NotificationSubscription) error {
 	model := r.domainToModel(subscription)
-	
+
 	if err := r.db.WithContext(ctx).Save(model).Error; err != nil {
-		r.logger.Error("Failed to update notification subscription", 
+		r.logger.Error("Failed to update notification subscription",
 			zap.String("id", subscription.ID),
 			zap.Error(err))
 		return err
@@ -655,7 +655,7 @@ func (r *NotificationSubscriptionRepository) UpdateSubscription(ctx context.Cont
 // DeleteSubscription 删除订阅
 func (r *NotificationSubscriptionRepository) DeleteSubscription(ctx context.Context, id string) error {
 	if err := r.db.WithContext(ctx).Where("id = ?", id).Delete(&models.NotificationSubscription{}).Error; err != nil {
-		r.logger.Error("Failed to delete notification subscription", 
+		r.logger.Error("Failed to delete notification subscription",
 			zap.String("id", id),
 			zap.Error(err))
 		return err
@@ -674,7 +674,7 @@ func (r *NotificationSubscriptionRepository) DeleteUserSubscriptions(ctx context
 	}
 
 	if err := query.Delete(&models.NotificationSubscription{}).Error; err != nil {
-		r.logger.Error("Failed to delete user notification subscriptions", 
+		r.logger.Error("Failed to delete user notification subscriptions",
 			zap.String("user_id", userID),
 			zap.Error(err))
 		return err

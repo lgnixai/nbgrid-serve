@@ -19,24 +19,24 @@ func (ms *MemberService) ValidateInvitation(space *Space, inviterID, inviteeID s
 	if !space.IsActive() {
 		return DomainError{Code: "SPACE_NOT_ACTIVE", Message: "cannot invite members to inactive space"}
 	}
-	
+
 	// 检查邀请者权限
 	if space.CreatedBy != inviterID {
 		// TODO: 需要检查邀请者是否有管理成员的权限
 		// 这里需要通过聚合根或仓储查询邀请者的协作者信息
 		return DomainError{Code: "INSUFFICIENT_PERMISSION", Message: "insufficient permission to invite members"}
 	}
-	
+
 	// 检查角色有效性
 	if !role.IsValid() {
 		return ErrInvalidRole
 	}
-	
+
 	// 检查是否邀请自己
 	if inviterID == inviteeID {
 		return DomainError{Code: "CANNOT_INVITE_SELF", Message: "cannot invite yourself"}
 	}
-	
+
 	return nil
 }
 
@@ -46,12 +46,12 @@ func (ms *MemberService) ValidateRoleUpdate(updaterRole CollaboratorRole, target
 	if !updaterRole.CanManageRole(targetRole) {
 		return DomainError{Code: "INSUFFICIENT_PERMISSION", Message: "insufficient permission to manage this role"}
 	}
-	
+
 	// 检查更新者是否有权限设置新角色
 	if !updaterRole.CanManageRole(newRole) {
 		return DomainError{Code: "INSUFFICIENT_PERMISSION", Message: "insufficient permission to assign this role"}
 	}
-	
+
 	return nil
 }
 
@@ -61,12 +61,12 @@ func (ms *MemberService) ValidateRemoval(removerRole, targetRole CollaboratorRol
 	if isOwnerRemoval {
 		return DomainError{Code: "CANNOT_REMOVE_OWNER", Message: "cannot remove space owner"}
 	}
-	
+
 	// 检查移除者是否有权限管理目标角色
 	if !removerRole.CanManageRole(targetRole) {
 		return DomainError{Code: "INSUFFICIENT_PERMISSION", Message: "insufficient permission to remove this member"}
 	}
-	
+
 	return nil
 }
 
@@ -76,12 +76,12 @@ func (ms *MemberService) CalculatePermissions(space *Space, userID string, colla
 	if space.CreatedBy == userID {
 		return RoleOwner.GetPermissions()
 	}
-	
+
 	// 如果是活跃的协作者，返回角色权限
 	if collaborator != nil && collaborator.IsActive() {
 		return collaborator.GetPermissions()
 	}
-	
+
 	// 否则没有权限
 	return []string{}
 }
@@ -89,13 +89,13 @@ func (ms *MemberService) CalculatePermissions(space *Space, userID string, colla
 // CheckPermission 检查用户是否有指定权限
 func (ms *MemberService) CheckPermission(space *Space, userID, permission string, collaborator *SpaceCollaborator) bool {
 	permissions := ms.CalculatePermissions(space, userID, collaborator)
-	
+
 	for _, p := range permissions {
 		if p == permission {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -105,12 +105,12 @@ func (ms *MemberService) GetUserRole(space *Space, userID string, collaborator *
 	if space.CreatedBy == userID {
 		return RoleOwner
 	}
-	
+
 	// 如果是活跃的协作者，返回协作者角色
 	if collaborator != nil && collaborator.IsActive() {
 		return collaborator.Role
 	}
-	
+
 	// 否则没有角色
 	return ""
 }
@@ -121,12 +121,12 @@ func (ms *MemberService) ValidateOwnershipTransfer(currentOwnerID, newOwnerID st
 	if newOwnerCollaborator == nil || !newOwnerCollaborator.IsActive() {
 		return DomainError{Code: "INVALID_NEW_OWNER", Message: "new owner must be an active collaborator"}
 	}
-	
+
 	// 检查是否转移给自己
 	if currentOwnerID == newOwnerID {
 		return DomainError{Code: "CANNOT_TRANSFER_TO_SELF", Message: "cannot transfer ownership to yourself"}
 	}
-	
+
 	return nil
 }
 
