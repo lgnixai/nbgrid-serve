@@ -2,7 +2,9 @@ package record
 
 import (
 	"context"
+	"fmt"
 
+	"teable-go-backend/internal/domain/table"
 	"teable-go-backend/pkg/errors"
 )
 
@@ -43,6 +45,25 @@ func NewService(repo Repository) Service {
 // CreateRecord 创建记录
 func (s *ServiceImpl) CreateRecord(ctx context.Context, req CreateRecordRequest) (*Record, error) {
 	record := NewRecord(req)
+	
+	// 获取表格schema进行验证
+	tableSchema, err := s.getTableSchema(ctx, req.TableID)
+	if err != nil {
+		return nil, fmt.Errorf("获取表格schema失败: %v", err)
+	}
+	
+	record.SetTableSchema(tableSchema)
+	
+	// 应用字段默认值
+	if err := record.ApplyFieldDefaults(); err != nil {
+		return nil, fmt.Errorf("应用字段默认值失败: %v", err)
+	}
+	
+	// 验证记录数据
+	if err := record.ValidateData(); err != nil {
+		return nil, fmt.Errorf("记录数据验证失败: %v", err)
+	}
+	
 	if err := s.repo.Create(ctx, record); err != nil {
 		return nil, err
 	}
@@ -71,7 +92,24 @@ func (s *ServiceImpl) UpdateRecord(ctx context.Context, id string, req UpdateRec
 		return nil, errors.ErrNotFound.WithDetails("记录未找到")
 	}
 
-	record.Update(req)
+	// 获取表格schema进行验证
+	tableSchema, err := s.getTableSchema(ctx, record.TableID)
+	if err != nil {
+		return nil, fmt.Errorf("获取表格schema失败: %v", err)
+	}
+	
+	record.SetTableSchema(tableSchema)
+	
+	// 更新记录数据
+	updatedBy := req.UpdatedBy
+	if updatedBy == "" {
+		updatedBy = record.CreatedBy // 如果没有指定更新者，使用创建者
+	}
+	
+	if err := record.Update(req, updatedBy); err != nil {
+		return nil, fmt.Errorf("更新记录失败: %v", err)
+	}
+
 	if err := s.repo.Update(ctx, record); err != nil {
 		return nil, err
 	}
@@ -182,4 +220,15 @@ func (s *ServiceImpl) ImportRecords(ctx context.Context, req ImportRequest) (int
 	}
 
 	return s.repo.ImportRecords(ctx, req)
+}
+
+// getTableSchema 获取表格schema（这里需要依赖注入表格服务）
+func (s *ServiceImpl) getTableSchema(ctx context.Context, tableID string) (*table.Table, error) {
+	// 这里应该通过依赖注入的表格服务获取schema
+	// 为了简化，暂时返回一个模拟的schema
+	// 在实际实现中，需要注入TableService
+	return &table.Table{
+		ID: tableID,
+		// 其他字段...
+	}, nil
 }

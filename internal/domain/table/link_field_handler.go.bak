@@ -1,0 +1,545 @@
+package table
+
+import (
+	"fmt"
+	// "reflect" // 暂时注释掉，如果需要可以取消注释
+	"strconv"
+	"strings"
+)
+
+// LinkFieldHandler 链接字段处理器
+type LinkFieldHandler struct {
+	BaseFieldHandler
+	relationshipManager *RelationshipManager
+}
+
+// NewLinkFieldHandler 创建链接字段处理器
+func NewLinkFieldHandler() FieldTypeHandler {
+	return &LinkFieldHandler{
+		BaseFieldHandler: BaseFieldHandler{
+			fieldType: FieldTypeLink,
+			info: FieldTypeInfo{
+				Type:        FieldTypeLink,
+				Name:        "关联",
+				Description: "关联到其他表格的记录",
+				Category:    "关系",
+				Icon:        "link",
+				Color:       "#3b82f6",
+			},
+		},
+		relationshipManager: NewRelationshipManager(),
+	}
+}
+
+// NewLinkFieldHandlerWithManager 创建带关系管理器的链接字段处理器
+func NewLinkFieldHandlerWithManager(relationshipManager *RelationshipManager) *LinkFieldHandler {
+	handler := &LinkFieldHandler{
+		BaseFieldHandler: BaseFieldHandler{
+			fieldType: FieldTypeLink,
+			info: FieldTypeInfo{
+				Type:        FieldTypeLink,
+				Name:        "关联",
+				Description: "关联到其他表格的记录",
+				Category:    "关系",
+				Icon:        "link",
+				Color:       "#3b82f6",
+			},
+		},
+		relationshipManager: relationshipManager,
+	}
+	return handler
+}
+
+// ValidateValue 验证链接字段值 - 实现 FieldTypeHandler 接口
+func (h *LinkFieldHandler) ValidateValue(value interface{}, options *FieldOptions) error {
+	if value == nil {
+		return nil
+	}
+
+	// 获取链接字段配置
+	linkOptions, ok := options.(*LinkFieldOptions)
+	if !ok {
+		return fmt.Errorf("链接字段选项类型错误")
+	}
+
+	// 根据关系类型验证值
+	switch linkOptions.RelationType {
+	case RelationTypeOneToOne, RelationTypeManyToOne:
+		return h.validateSingleLinkValue(linkOptions, value)
+	case RelationTypeOneToMany, RelationTypeManyToMany:
+		return h.validateMultipleLinkValues(linkOptions, value)
+	default:
+		return fmt.Errorf("不支持的关系类型: %s", linkOptions.RelationType)
+	}
+}
+
+// ValidateValueWithField 验证链接字段值（带字段信息）
+func (h *LinkFieldHandler) ValidateValueWithField(field *Field, value interface{}) error {
+	if value == nil {
+		return nil
+	}
+
+	// 获取链接字段配置
+	linkOptions, err := h.getLinkFieldOptions(field)
+	if err != nil {
+		return fmt.Errorf("获取链接字段配置失败: %v", err)
+	}
+
+	// 根据关系类型验证值
+	switch linkOptions.RelationType {
+	case RelationTypeOneToOne, RelationTypeManyToOne:
+		return h.validateSingleLinkValue(linkOptions, value)
+	case RelationTypeOneToMany, RelationTypeManyToMany:
+		return h.validateMultipleLinkValues(linkOptions, value)
+	default:
+		return fmt.Errorf("不支持的关系类型: %s", linkOptions.RelationType)
+	}
+}
+
+// GetDefaultOptions 获取默认选项配置
+func (h *LinkFieldHandler) GetDefaultOptions() *FieldOptions {
+	return &LinkFieldOptions{
+		RelationType:        RelationTypeManyToOne,
+		AllowLinkToMultiple: false,
+		IsSymmetric:         false,
+		CascadeDelete:       false,
+		OnDeleteAction:      "restrict",
+		OnUpdateAction:      "cascade",
+	}
+}
+
+// IsCompatibleWith 检查与其他类型的兼容性
+func (h *LinkFieldHandler) IsCompatibleWith(targetType FieldType) bool {
+	// 链接字段只能转换为文本字段（显示关联记录的标题）
+	return targetType == FieldTypeText || targetType == FieldTypeLink
+}
+
+// ConvertValue 转换值到目标类型
+func (h *LinkFieldHandler) ConvertValue(value interface{}, targetType FieldType, targetOptions *FieldOptions) (interface{}, error) {
+	if value == nil {
+		return nil, nil
+	}
+
+	switch targetType {
+	case FieldTypeText:
+		// 转换为文本显示
+		return h.convertToDisplayText(value)
+	case FieldTypeLink:
+		// 保持原值
+		return value, nil
+	default:
+		return nil, fmt.Errorf("链接字段不能转换为类型 %s", targetType)
+	}
+}
+
+// RequiresOptions 是否需要选项配置
+func (h *LinkFieldHandler) RequiresOptions() bool {
+	return true
+}
+
+// GetValidationRules 获取验证规则
+func (h *LinkFieldHandler) GetValidationRules(options *FieldOptions) []FieldValidationRule {
+	var rules []FieldValidationRule
+	
+	linkOptions, ok := options.(*LinkFieldOptions)
+	if !ok {
+		return rules
+	}
+
+	// 添加关系约束规则
+	rules = append(rules, FieldValidationRule{
+		Type:        "relationship_constraint",
+		Description: fmt.Sprintf("必须是有效的 %s 关系", linkOptions.RelationType),
+		Required:    true,
+	})
+
+	if !linkOptions.AllowLinkToMultiple {
+		rules = append(rules, FieldValidationRule{
+			Type:        "single_link",
+			Description: "只能链接到一个记录",
+			Required:    true,
+		})
+	}
+
+	return rules
+}
+
+// FormatValue 格式化链接字段值
+func (h *LinkFieldHandler) FormatValue(field *Field, value interface{}) (interface{}, error) {
+	if value == nil {
+		return nil, nil
+	}
+
+	linkOptions, err := h.getLinkFieldOptions(field)
+	if err != nil {
+		return nil, fmt.Errorf("获取链接字段配置失败: %v", err)
+	}
+
+	switch linkOptions.RelationType {
+	case RelationTypeOneToOne, RelationTypeManyToOne:
+		return h.formatSingleLinkValue(value)
+	case RelationTypeOneToMany, RelationTypeManyToMany:
+		return h.formatMultipleLinkValues(value)
+	default:
+		return nil, fmt.Errorf("不支持的关系类型: %s", linkOptions.RelationType)
+	}
+}
+
+// ProcessLinkCreation 处理链接创建
+func (h *LinkFieldHandler) ProcessLinkCreation(sourceTableID, sourceFieldID string, sourceRecordID string, targetRecordIDs []string) error {
+	// 获取关系配置
+	relationships := h.relationshipManager.GetRelationshipsByField(sourceFieldID)
+	if len(relationships) == 0 {
+		return fmt.Errorf("字段 %s 没有配置关系", sourceFieldID)
+	}
+
+	rel := relationships[0] // 假设一个字段只有一个关系
+
+	// 验证关系约束
+	if err := h.validateLinkConstraints(rel, sourceRecordID, targetRecordIDs); err != nil {
+		return fmt.Errorf("链接约束验证失败: %v", err)
+	}
+
+	// 处理对称关系
+	if rel.IsSymmetric {
+		if err := h.createSymmetricLinks(rel, sourceRecordID, targetRecordIDs); err != nil {
+			return fmt.Errorf("创建对称链接失败: %v", err)
+		}
+	}
+
+	return nil
+}
+
+// ProcessLinkDeletion 处理链接删除
+func (h *LinkFieldHandler) ProcessLinkDeletion(sourceTableID, sourceFieldID string, sourceRecordID string, targetRecordIDs []string) error {
+	relationships := h.relationshipManager.GetRelationshipsByField(sourceFieldID)
+	if len(relationships) == 0 {
+		return fmt.Errorf("字段 %s 没有配置关系", sourceFieldID)
+	}
+
+	rel := relationships[0]
+
+	// 处理级联删除
+	if rel.CascadeDelete {
+		if err := h.processCascadeDelete(rel, targetRecordIDs); err != nil {
+			return fmt.Errorf("级联删除失败: %v", err)
+		}
+	}
+
+	// 处理对称关系
+	if rel.IsSymmetric {
+		if err := h.deleteSymmetricLinks(rel, sourceRecordID, targetRecordIDs); err != nil {
+			return fmt.Errorf("删除对称链接失败: %v", err)
+		}
+	}
+
+	return nil
+}
+
+// GetLinkedRecords 获取链接的记录
+func (h *LinkFieldHandler) GetLinkedRecords(sourceTableID, sourceFieldID string, sourceRecordID string) ([]string, error) {
+	relationships := h.relationshipManager.GetRelationshipsByField(sourceFieldID)
+	if len(relationships) == 0 {
+		return nil, fmt.Errorf("字段 %s 没有配置关系", sourceFieldID)
+	}
+
+	// 这里需要查询数据库获取链接的记录
+	// 实际实现需要依赖记录仓储
+	return []string{}, nil
+}
+
+// UpdateLinkDisplayValues 更新链接显示值
+func (h *LinkFieldHandler) UpdateLinkDisplayValues(targetTableID string, targetRecordID string, displayValue string) error {
+	// 查找所有指向该记录的链接字段
+	relationships := h.relationshipManager.GetRelationshipsByTable(targetTableID)
+	
+	for _, rel := range relationships {
+		if rel.TargetTableID == targetTableID && rel.DisplayField != "" {
+			// 更新所有链接到该记录的显示值
+			if err := h.updateDisplayValueForRelationship(rel, targetRecordID, displayValue); err != nil {
+				return fmt.Errorf("更新关系 %s 的显示值失败: %v", rel.ID, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// getLinkFieldOptions 获取链接字段选项
+func (h *LinkFieldHandler) getLinkFieldOptions(field *Field) (*LinkFieldOptions, error) {
+	if field.Type != FieldTypeLink {
+		return nil, fmt.Errorf("字段类型不是链接字段")
+	}
+
+	options, ok := field.Options.(*LinkFieldOptions)
+	if !ok {
+		return nil, fmt.Errorf("链接字段选项类型错误")
+	}
+
+	return options, nil
+}
+
+// validateSingleLinkValue 验证单个链接值
+func (h *LinkFieldHandler) validateSingleLinkValue(options *LinkFieldOptions, value interface{}) error {
+	// 转换为字符串ID
+	recordID, err := h.convertToRecordID(value)
+	if err != nil {
+		return fmt.Errorf("无效的记录ID: %v", err)
+	}
+
+	// 验证记录是否存在于目标表
+	if err := h.validateRecordExists(options.TargetTableID, recordID); err != nil {
+		return fmt.Errorf("目标记录不存在: %v", err)
+	}
+
+	return nil
+}
+
+// validateMultipleLinkValues 验证多个链接值
+func (h *LinkFieldHandler) validateMultipleLinkValues(options *LinkFieldOptions, value interface{}) error {
+	recordIDs, err := h.convertToRecordIDs(value)
+	if err != nil {
+		return fmt.Errorf("无效的记录ID列表: %v", err)
+	}
+
+	// 检查是否允许链接到多个记录
+	if !options.AllowLinkToMultiple && len(recordIDs) > 1 {
+		return fmt.Errorf("该字段不允许链接到多个记录")
+	}
+
+	// 验证所有记录是否存在
+	for _, recordID := range recordIDs {
+		if err := h.validateRecordExists(options.TargetTableID, recordID); err != nil {
+			return fmt.Errorf("目标记录 %s 不存在: %v", recordID, err)
+		}
+	}
+
+	return nil
+}
+
+// formatSingleLinkValue 格式化单个链接值
+func (h *LinkFieldHandler) formatSingleLinkValue(value interface{}) (interface{}, error) {
+	recordID, err := h.convertToRecordID(value)
+	if err != nil {
+		return nil, err
+	}
+	return recordID, nil
+}
+
+// formatMultipleLinkValues 格式化多个链接值
+func (h *LinkFieldHandler) formatMultipleLinkValues(value interface{}) (interface{}, error) {
+	recordIDs, err := h.convertToRecordIDs(value)
+	if err != nil {
+		return nil, err
+	}
+	return recordIDs, nil
+}
+
+// convertToRecordID 转换为记录ID
+func (h *LinkFieldHandler) convertToRecordID(value interface{}) (string, error) {
+	switch v := value.(type) {
+	case string:
+		if v == "" {
+			return "", fmt.Errorf("记录ID不能为空")
+		}
+		return v, nil
+	case int:
+		return strconv.Itoa(v), nil
+	case int64:
+		return strconv.FormatInt(v, 10), nil
+	case float64:
+		return strconv.FormatInt(int64(v), 10), nil
+	default:
+		return "", fmt.Errorf("不支持的记录ID类型: %T", value)
+	}
+}
+
+// convertToRecordIDs 转换为记录ID列表
+func (h *LinkFieldHandler) convertToRecordIDs(value interface{}) ([]string, error) {
+	switch v := value.(type) {
+	case []interface{}:
+		var recordIDs []string
+		for _, item := range v {
+			recordID, err := h.convertToRecordID(item)
+			if err != nil {
+				return nil, err
+			}
+			recordIDs = append(recordIDs, recordID)
+		}
+		return recordIDs, nil
+	case []string:
+		return v, nil
+	case string:
+		// 支持逗号分隔的字符串
+		if v == "" {
+			return []string{}, nil
+		}
+		return strings.Split(v, ","), nil
+	default:
+		// 尝试作为单个值处理
+		recordID, err := h.convertToRecordID(value)
+		if err != nil {
+			return nil, fmt.Errorf("不支持的记录ID列表类型: %T", value)
+		}
+		return []string{recordID}, nil
+	}
+}
+
+// validateRecordExists 验证记录是否存在
+func (h *LinkFieldHandler) validateRecordExists(tableID, recordID string) error {
+	// 这里需要查询数据库验证记录是否存在
+	// 实际实现需要依赖记录仓储
+	// 暂时返回nil，表示验证通过
+	return nil
+}
+
+// validateLinkConstraints 验证链接约束
+func (h *LinkFieldHandler) validateLinkConstraints(rel *RelationshipConfig, sourceRecordID string, targetRecordIDs []string) error {
+	// 根据关系类型验证约束
+	switch rel.RelationType {
+	case RelationTypeOneToOne:
+		// 一对一关系：源记录只能链接一个目标记录，目标记录只能被一个源记录链接
+		if len(targetRecordIDs) > 1 {
+			return fmt.Errorf("一对一关系只能链接一个记录")
+		}
+		// 检查目标记录是否已被其他记录链接
+		for _, targetID := range targetRecordIDs {
+			if err := h.checkTargetRecordUniqueness(rel, targetID); err != nil {
+				return err
+			}
+		}
+	case RelationTypeManyToOne:
+		// 多对一关系：源记录只能链接一个目标记录
+		if len(targetRecordIDs) > 1 {
+			return fmt.Errorf("多对一关系只能链接一个记录")
+		}
+	case RelationTypeOneToMany:
+		// 一对多关系：检查源记录的唯一性
+		if err := h.checkSourceRecordUniqueness(rel, sourceRecordID); err != nil {
+			return err
+		}
+	case RelationTypeManyToMany:
+		// 多对多关系：无特殊约束
+	}
+
+	return nil
+}
+
+// checkTargetRecordUniqueness 检查目标记录唯一性
+func (h *LinkFieldHandler) checkTargetRecordUniqueness(rel *RelationshipConfig, targetRecordID string) error {
+	// 这里需要查询数据库检查目标记录是否已被链接
+	// 实际实现需要依赖记录仓储
+	return nil
+}
+
+// checkSourceRecordUniqueness 检查源记录唯一性
+func (h *LinkFieldHandler) checkSourceRecordUniqueness(rel *RelationshipConfig, sourceRecordID string) error {
+	// 这里需要查询数据库检查源记录是否已有链接
+	// 实际实现需要依赖记录仓储
+	return nil
+}
+
+// createSymmetricLinks 创建对称链接
+func (h *LinkFieldHandler) createSymmetricLinks(rel *RelationshipConfig, sourceRecordID string, targetRecordIDs []string) error {
+	// 在目标表中创建反向链接
+	// 这里需要更新目标记录的链接字段
+	// 实际实现需要依赖记录仓储
+	return nil
+}
+
+// deleteSymmetricLinks 删除对称链接
+func (h *LinkFieldHandler) deleteSymmetricLinks(rel *RelationshipConfig, sourceRecordID string, targetRecordIDs []string) error {
+	// 在目标表中删除反向链接
+	// 这里需要更新目标记录的链接字段
+	// 实际实现需要依赖记录仓储
+	return nil
+}
+
+// processCascadeDelete 处理级联删除
+func (h *LinkFieldHandler) processCascadeDelete(rel *RelationshipConfig, targetRecordIDs []string) error {
+	// 根据删除动作处理
+	switch rel.OnDeleteAction {
+	case "cascade":
+		// 级联删除目标记录
+		for _, recordID := range targetRecordIDs {
+			if err := h.deleteTargetRecord(rel.TargetTableID, recordID); err != nil {
+				return fmt.Errorf("级联删除记录 %s 失败: %v", recordID, err)
+			}
+		}
+	case "set_null":
+		// 将链接字段设置为null
+		if err := h.setLinkFieldToNull(rel, targetRecordIDs); err != nil {
+			return fmt.Errorf("设置链接字段为null失败: %v", err)
+		}
+	case "restrict":
+		// 限制删除，如果有链接则不允许删除
+		return fmt.Errorf("存在链接记录，不允许删除")
+	}
+
+	return nil
+}
+
+// deleteTargetRecord 删除目标记录
+func (h *LinkFieldHandler) deleteTargetRecord(tableID, recordID string) error {
+	// 这里需要调用记录服务删除记录
+	// 实际实现需要依赖记录服务
+	return nil
+}
+
+// setLinkFieldToNull 将链接字段设置为null
+func (h *LinkFieldHandler) setLinkFieldToNull(rel *RelationshipConfig, targetRecordIDs []string) error {
+	// 这里需要更新所有链接到这些记录的字段值为null
+	// 实际实现需要依赖记录仓储
+	return nil
+}
+
+// updateDisplayValueForRelationship 更新关系的显示值
+func (h *LinkFieldHandler) updateDisplayValueForRelationship(rel *RelationshipConfig, targetRecordID string, displayValue string) error {
+	// 这里需要更新所有链接到该记录的显示值
+	// 实际实现需要依赖记录仓储
+	return nil
+}
+
+// convertToDisplayText 转换为显示文本
+func (h *LinkFieldHandler) convertToDisplayText(value interface{}) (string, error) {
+	switch v := value.(type) {
+	case string:
+		return v, nil
+	case []string:
+		return strings.Join(v, ", "), nil
+	case []interface{}:
+		var texts []string
+		for _, item := range v {
+			if str, ok := item.(string); ok {
+				texts = append(texts, str)
+			} else {
+				texts = append(texts, fmt.Sprintf("%v", item))
+			}
+		}
+		return strings.Join(texts, ", "), nil
+	default:
+		return fmt.Sprintf("%v", value), nil
+	}
+}
+
+// LinkFieldValidator 链接字段验证器
+type LinkFieldValidator struct {
+	handler *LinkFieldHandler
+}
+
+// NewLinkFieldValidator 创建链接字段验证器
+func NewLinkFieldValidator(handler *LinkFieldHandler) *LinkFieldValidator {
+	return &LinkFieldValidator{
+		handler: handler,
+	}
+}
+
+// Validate 验证链接字段
+func (v *LinkFieldValidator) Validate(field *Field, value interface{}) error {
+	return v.handler.ValidateValue(field, value)
+}
+
+// ValidateRelationshipIntegrity 验证关系完整性
+func (v *LinkFieldValidator) ValidateRelationshipIntegrity(tableID string, recordData map[string]interface{}) error {
+	return v.handler.relationshipManager.ValidateRelationshipIntegrity(tableID, recordData)
+}

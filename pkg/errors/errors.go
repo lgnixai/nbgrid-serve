@@ -49,6 +49,12 @@ func (e *AppError) WithDetails(details interface{}) *AppError {
 	return e
 }
 
+// WithMessage 添加错误消息
+func (e *AppError) WithMessage(message string) *AppError {
+	e.Message = message
+	return e
+}
+
 // 预定义错误
 var (
 	// 通用错误
@@ -123,6 +129,7 @@ var (
 	ErrDatabaseQuery       = New("DATABASE_QUERY_ERROR", "数据库查询错误", http.StatusInternalServerError)
 	ErrDatabaseTransaction = New("DATABASE_TRANSACTION_ERROR", "数据库事务错误", http.StatusInternalServerError)
 	ErrDatabaseOperation   = New("DATABASE_OPERATION_ERROR", "数据库操作错误", http.StatusInternalServerError)
+	ErrTimeout             = New("TIMEOUT_ERROR", "操作超时", http.StatusRequestTimeout)
 
 	// 缓存相关错误
 	ErrCacheConnection = New("CACHE_CONNECTION_ERROR", "缓存连接错误", http.StatusInternalServerError)

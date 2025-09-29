@@ -1,0 +1,154 @@
+# 测试配置文件
+# 用于配置测试环境和参数
+
+# 测试环境配置
+test:
+  # 数据库配置
+  database:
+    driver: "sqlite3"
+    database: ":memory:"
+    # 或者使用文件数据库进行持久化测试
+    # database: "test.db"
+    
+  # 缓存配置
+  cache:
+    type: "memory"
+    ttl: "1h"
+    
+  # JWT配置
+  jwt:
+    secret: "test-secret-key-for-testing-only"
+    access_token_ttl: "1h"
+    refresh_token_ttl: "24h"
+    issuer: "teable-test"
+    
+  # 存储配置
+  storage:
+    type: "local"
+    base_path: "/tmp/teable-test"
+    
+  # 日志配置
+  logger:
+    level: "debug"
+    format: "json"
+    output_path: "test.log"
+    
+  # 服务器配置
+  server:
+    mode: "test"
+    port: 0  # 使用随机端口
+    enable_cors: true
+    enable_swagger: false
+
+# 测试数据配置
+test_data:
+  # 用户测试数据
+  users:
+    - name: "Test User 1"
+      email: "test1@example.com"
+      password: "password123"
+      is_admin: false
+    - name: "Test Admin"
+      email: "admin@example.com"
+      password: "admin123"
+      is_admin: true
+      
+  # 空间测试数据
+  spaces:
+    - name: "Test Space 1"
+      description: "Test space description 1"
+    - name: "Test Space 2"
+      description: "Test space description 2"
+      
+  # 表格测试数据
+  tables:
+    - name: "Test Table 1"
+      description: "Test table description 1"
+    - name: "Test Table 2"
+      description: "Test table description 2"
+
+# 性能测试配置
+benchmark:
+  # 并发用户数
+  concurrent_users: 100
+  
+  # 测试持续时间
+  duration: "30s"
+  
+  # 请求速率
+  rate: 100
+  
+  # 超时时间
+  timeout: "5s"
+  
+  # 测试场景
+  scenarios:
+    - name: "user_registration"
+      endpoint: "/api/auth/register"
+      method: "POST"
+      payload: |
+        {
+          "name": "Benchmark User",
+          "email": "benchmark@example.com",
+          "password": "password123"
+        }
+        
+    - name: "user_login"
+      endpoint: "/api/auth/login"
+      method: "POST"
+      payload: |
+        {
+          "email": "test@example.com",
+          "password": "password123"
+        }
+        
+    - name: "get_profile"
+      endpoint: "/api/users/profile"
+      method: "GET"
+      headers:
+        Authorization: "Bearer {{token}}"
+
+# 测试覆盖率配置
+coverage:
+  # 覆盖率阈值
+  threshold: 80
+  
+  # 排除的文件和目录
+  exclude:
+    - "**/*_test.go"
+    - "**/test/**"
+    - "**/mocks/**"
+    - "**/main.go"
+    
+  # 包含的文件和目录
+  include:
+    - "internal/domain/**"
+    - "internal/application/**"
+    - "internal/interfaces/**"
+
+# 测试报告配置
+reports:
+  # 输出目录
+  output_dir: "test_reports"
+  
+  # 报告格式
+  formats:
+    - "html"
+    - "xml"
+    - "json"
+    
+  # 报告内容
+  content:
+    - "coverage"
+    - "performance"
+    - "test_results"
+    - "errors"
+
+# 测试环境变量
+environment:
+  GO_ENV: "test"
+  LOG_LEVEL: "debug"
+  DB_DRIVER: "sqlite3"
+  DB_DATABASE: ":memory:"
+  CACHE_TYPE: "memory"
+  JWT_SECRET: "test-secret-key-for-testing-only"

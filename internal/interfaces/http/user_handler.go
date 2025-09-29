@@ -48,7 +48,13 @@ func (h *UserHandler) Register(c *gin.Context) {
 		return
 	}
 
-	response, err := h.userService.Register(c.Request.Context(), req)
+	loginCtx := &application.LoginContext{
+		IPAddress: c.ClientIP(),
+		UserAgent: c.GetHeader("User-Agent"),
+		DeviceID:  c.GetHeader("X-Device-ID"),
+	}
+	
+	response, err := h.userService.Register(c.Request.Context(), req, loginCtx)
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -80,7 +86,13 @@ func (h *UserHandler) Login(c *gin.Context) {
 		return
 	}
 
-	response, err := h.userService.Login(c.Request.Context(), req)
+	loginCtx := &application.LoginContext{
+		IPAddress: c.ClientIP(),
+		UserAgent: c.GetHeader("User-Agent"),
+		DeviceID:  c.GetHeader("X-Device-ID"),
+	}
+	
+	response, err := h.userService.Login(c.Request.Context(), req, loginCtx)
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -115,7 +127,12 @@ func (h *UserHandler) Logout(c *gin.Context) {
 		return
 	}
 
-	if err := h.userService.Logout(c.Request.Context(), userID, token); err != nil {
+	sessionID := c.GetString("session_id") // or extract from token
+	if sessionID == "" {
+		sessionID = "default" // fallback
+	}
+	
+	if err := h.userService.Logout(c.Request.Context(), userID, token, sessionID); err != nil {
 		h.handleError(c, err)
 		return
 	}

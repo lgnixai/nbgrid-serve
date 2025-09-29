@@ -8,10 +8,7 @@ import (
 // 业务错误定义
 var (
 	ErrBaseNotFound     = errors.New("基础表不存在")
-	ErrBaseExists       = errors.New("基础表已存在")
-	ErrInvalidSpaceID   = errors.New("无效的空间ID")
 	ErrInvalidName      = errors.New("无效的基础表名称")
-	ErrInvalidCreatedBy = errors.New("无效的创建者ID")
 	ErrPermissionDenied = errors.New("权限不足")
 )
 
@@ -99,19 +96,19 @@ type SpaceBaseStats struct {
 	TotalFields  int64  `json:"total_fields"`
 }
 
-// ServiceImpl 基础表服务实现
+// ServiceImpl 基础表服务实现 - 重构后的版本
 type ServiceImpl struct {
 	repo Repository
 }
 
-// NewService 创建基础表服务
+// NewService 创建基础表服务 - 重构后的版本
 func NewService(repo Repository) Service {
 	return &ServiceImpl{
 		repo: repo,
 	}
 }
 
-// CreateBase 创建基础表
+// CreateBase 创建基础表 - 重构后的版本
 func (s *ServiceImpl) CreateBase(ctx context.Context, req CreateBaseRequest) (*Base, error) {
 	// 检查同一空间下名称是否已存在
 	exists, err := s.repo.Exists(ctx, ExistsFilter{
@@ -126,7 +123,11 @@ func (s *ServiceImpl) CreateBase(ctx context.Context, req CreateBaseRequest) (*B
 	}
 
 	// 创建基础表
-	base := NewBase(req.SpaceID, req.Name, req.CreatedBy)
+	base, err := NewBase(req.SpaceID, req.Name, req.CreatedBy)
+	if err != nil {
+		return nil, err
+	}
+	
 	base.Description = req.Description
 	base.Icon = req.Icon
 
@@ -153,10 +154,15 @@ func (s *ServiceImpl) GetBase(ctx context.Context, id string) (*Base, error) {
 	return base, nil
 }
 
-// UpdateBase 更新基础表
+// UpdateBase 更新基础表 - 重构后的版本
 func (s *ServiceImpl) UpdateBase(ctx context.Context, id string, req UpdateBaseRequest) (*Base, error) {
 	base, err := s.GetBase(ctx, id)
 	if err != nil {
+		return nil, err
+	}
+
+	// 验证基础表是否可以更新
+	if err := base.ValidateForUpdate(); err != nil {
 		return nil, err
 	}
 
@@ -174,7 +180,9 @@ func (s *ServiceImpl) UpdateBase(ctx context.Context, id string, req UpdateBaseR
 		}
 	}
 
-	base.Update(req.Name, req.Description, req.Icon)
+	if err := base.Update(&req.Name, req.Description, req.Icon); err != nil {
+		return nil, err
+	}
 
 	if err := s.repo.Update(ctx, base); err != nil {
 		return nil, err
@@ -183,10 +191,15 @@ func (s *ServiceImpl) UpdateBase(ctx context.Context, id string, req UpdateBaseR
 	return base, nil
 }
 
-// DeleteBase 删除基础表
+// DeleteBase 删除基础表 - 重构后的版本
 func (s *ServiceImpl) DeleteBase(ctx context.Context, id string) error {
 	base, err := s.GetBase(ctx, id)
 	if err != nil {
+		return err
+	}
+
+	// 验证基础表是否可以删除
+	if err := base.ValidateForDeletion(); err != nil {
 		return err
 	}
 

@@ -116,42 +116,7 @@ type UserActivity struct {
 	LastActivityTime *time.Time `json:"last_activity_time"`
 }
 
-// UserPreferences 用户偏好设置
-type UserPreferences struct {
-	Language      string            `json:"language"`
-	Timezone      string            `json:"timezone"`
-	DateFormat    string            `json:"date_format"`
-	TimeFormat    string            `json:"time_format"`
-	Theme         string            `json:"theme"`
-	Notifications NotificationPrefs `json:"notifications"`
-	Display       DisplayPrefs      `json:"display"`
-	Privacy       PrivacyPrefs      `json:"privacy"`
-}
-
-// NotificationPrefs 通知偏好
-type NotificationPrefs struct {
-	EmailNotifications bool `json:"email_notifications"`
-	PushNotifications  bool `json:"push_notifications"`
-	SpaceInvites       bool `json:"space_invites"`
-	RecordUpdates      bool `json:"record_updates"`
-	CommentMentions    bool `json:"comment_mentions"`
-}
-
-// DisplayPrefs 显示偏好
-type DisplayPrefs struct {
-	DefaultViewType string `json:"default_view_type"`
-	RecordsPerPage  int    `json:"records_per_page"`
-	ShowGridLines   bool   `json:"show_grid_lines"`
-	CompactMode     bool   `json:"compact_mode"`
-	ShowFieldTypes  bool   `json:"show_field_types"`
-}
-
-// PrivacyPrefs 隐私偏好
-type PrivacyPrefs struct {
-	ProfileVisibility   string `json:"profile_visibility"`
-	ShowOnlineStatus    bool   `json:"show_online_status"`
-	AllowDirectMessages bool   `json:"allow_direct_messages"`
-}
+// 注意：UserPreferences 和相关结构已移动到 value_objects.go
 
 // CreateUser 创建用户
 func (s *ServiceImpl) CreateUser(ctx context.Context, req CreateUserRequest) (*User, error) {
@@ -183,15 +148,7 @@ func (s *ServiceImpl) CreateUser(ctx context.Context, req CreateUserRequest) (*U
 		user, err = NewUser(req.Name, req.Email)
 	}
 	if err != nil {
-		// 将业务错误转换为应用错误
-		switch err {
-		case ErrInvalidEmail:
-			return nil, pkgErrors.ErrBadRequest.WithDetails("邮箱格式不正确")
-		case ErrWeakPassword:
-			return nil, pkgErrors.ErrInvalidPassword.WithDetails("密码强度不够，至少8位且包含字母和数字")
-		default:
-			return nil, err
-		}
+		return nil, convertDomainError(err)
 	}
 
 	// 设置其他属性
@@ -241,13 +198,15 @@ func (s *ServiceImpl) UpdateUser(ctx context.Context, id string, req UpdateUserR
 		return nil, err
 	}
 
-	// 检查用户状态
-	if !user.IsActive() {
-		return nil, pkgErrors.ErrUserDeactivated
+	// 验证用户是否可以被更新
+	if err := user.ValidateForUpdate(); err != nil {
+		return nil, convertDomainError(err)
 	}
 
 	// 更新用户信息
-	user.UpdateProfile(req.Name, req.Phone, req.Avatar)
+	if err := user.UpdateProfile(req.Name, req.Phone, req.Avatar); err != nil {
+		return nil, convertDomainError(err)
+	}
 
 	// 保存更新
 	if err := s.repo.Update(ctx, user); err != nil {
@@ -262,6 +221,11 @@ func (s *ServiceImpl) DeleteUser(ctx context.Context, id string) error {
 	user, err := s.GetUser(ctx, id)
 	if err != nil {
 		return err
+	}
+
+	// 验证用户是否可以被删除
+	if err := user.ValidateForDeletion(); err != nil {
+		return convertDomainError(err)
 	}
 
 	// 软删除
@@ -361,13 +325,7 @@ func (s *ServiceImpl) ChangePassword(ctx context.Context, userID, oldPassword, n
 
 	// 设置新密码
 	if err := user.SetPassword(newPassword); err != nil {
-		// 将业务错误转换为应用错误
-		switch err {
-		case ErrWeakPassword:
-			return pkgErrors.ErrInvalidPassword.WithDetails("新密码强度不够，至少8位且包含字母和数字")
-		default:
-			return err
-		}
+		return convertDomainError(err)
 	}
 
 	return s.repo.Update(ctx, user)
@@ -672,9 +630,18 @@ func (s *ServiceImpl) UpdateUserPreferences(ctx context.Context, userID string, 
 		return err
 	}
 
+	// 验证偏好设置
+	if err := prefs.Validate(); err != nil {
+		return convertDomainError(err)
+	}
+
 	// 将偏好设置序列化为JSON并存储到NotifyMeta字段
-	// TODO: 实现JSON序列化
-	user.NotifyMeta = stringPtr("preferences_updated") // 临时实现
+	prefsJSON, err := prefs.ToJSON()
+	if err != nil {
+		return convertDomainError(err)
+	}
+
+	user.NotifyMeta = &prefsJSON
 	user.updateModifiedTime()
 
 	return s.repo.Update(ctx, user)
@@ -682,39 +649,24 @@ func (s *ServiceImpl) UpdateUserPreferences(ctx context.Context, userID string, 
 
 // GetUserPreferences 获取用户偏好设置
 func (s *ServiceImpl) GetUserPreferences(ctx context.Context, userID string) (*UserPreferences, error) {
-	_, err := s.GetUser(ctx, userID)
+	user, err := s.GetUser(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: 从NotifyMeta字段反序列化偏好设置
-	// 暂时返回默认偏好设置
-	return &UserPreferences{
-		Language:   "zh-CN",
-		Timezone:   "Asia/Shanghai",
-		DateFormat: "YYYY-MM-DD",
-		TimeFormat: "24h",
-		Theme:      "light",
-		Notifications: NotificationPrefs{
-			EmailNotifications: true,
-			PushNotifications:  true,
-			SpaceInvites:       true,
-			RecordUpdates:      true,
-			CommentMentions:    true,
-		},
-		Display: DisplayPrefs{
-			DefaultViewType: "grid",
-			RecordsPerPage:  50,
-			ShowGridLines:   true,
-			CompactMode:     false,
-			ShowFieldTypes:  false,
-		},
-		Privacy: PrivacyPrefs{
-			ProfileVisibility:   "public",
-			ShowOnlineStatus:    true,
-			AllowDirectMessages: true,
-		},
-	}, nil
+	// 从NotifyMeta字段反序列化偏好设置
+	var prefsJSON string
+	if user.NotifyMeta != nil {
+		prefsJSON = *user.NotifyMeta
+	}
+
+	prefs, err := UserPreferencesFromJSON(prefsJSON)
+	if err != nil {
+		// 如果反序列化失败，返回默认偏好设置
+		return NewDefaultUserPreferences(), nil
+	}
+
+	return prefs, nil
 }
 
 // 辅助函数
@@ -724,4 +676,33 @@ func boolPtr(b bool) *bool {
 
 func stringPtr(s string) *string {
 	return &s
+}
+
+// convertDomainError 将领域错误转换为应用错误
+func convertDomainError(err error) error {
+	if domainErr, ok := err.(DomainError); ok {
+		switch domainErr.Code {
+		case "INVALID_EMAIL", "EMPTY_EMAIL", "EMAIL_TOO_LONG":
+			return pkgErrors.ErrBadRequest.WithDetails(domainErr.Message)
+		case "WEAK_PASSWORD", "PASSWORD_TOO_SHORT", "PASSWORD_TOO_LONG", "PASSWORD_TOO_WEAK":
+			return pkgErrors.ErrInvalidPassword.WithDetails(domainErr.Message)
+		case "EMAIL_EXISTS":
+			return pkgErrors.ErrEmailExists
+		case "PHONE_EXISTS":
+			return pkgErrors.ErrPhoneExists
+		case "USER_NOT_FOUND":
+			return pkgErrors.ErrUserNotFound
+		case "USER_DEACTIVATED":
+			return pkgErrors.ErrUserDeactivated
+		case "USER_DELETED":
+			return pkgErrors.ErrUserDeleted
+		case "INVALID_PASSWORD":
+			return pkgErrors.ErrInvalidCredentials
+		case "SYSTEM_USER_READONLY", "SYSTEM_USER_UNDELETABLE":
+			return pkgErrors.ErrOperationNotAllowed.WithDetails(domainErr.Message)
+		default:
+			return pkgErrors.ErrBadRequest.WithDetails(domainErr.Message)
+		}
+	}
+	return err
 }

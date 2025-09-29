@@ -1,7 +1,6 @@
 package table
 
 import (
-	"encoding/json"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -37,10 +36,11 @@ const (
 	FieldTypeProgress FieldType = "progress"
 
 	// 媒体类型
-	FieldTypeImage FieldType = "image"
-	FieldTypeFile  FieldType = "file"
-	FieldTypeVideo FieldType = "video"
-	FieldTypeAudio FieldType = "audio"
+	FieldTypeImage      FieldType = "image"
+	FieldTypeFile       FieldType = "file"
+	FieldTypeAttachment FieldType = "attachment"
+	FieldTypeVideo      FieldType = "video"
+	FieldTypeAudio      FieldType = "audio"
 
 	// 关系类型
 	FieldTypeLink    FieldType = "link"
@@ -64,6 +64,60 @@ type FieldTypeInfo struct {
 	Category    string    `json:"category"`
 	Icon        string    `json:"icon"`
 	Color       string    `json:"color"`
+}
+
+// FieldValidationRule 字段验证规则
+type FieldValidationRule struct {
+	Type     string      `json:"type"`
+	Value    interface{} `json:"value"`
+	Message  string      `json:"message"`
+	Required bool        `json:"required"`
+}
+
+// FieldOptions 字段选项配置
+type FieldOptions struct {
+	// 通用选项
+	Placeholder string `json:"placeholder,omitempty"`
+	HelpText    string `json:"help_text,omitempty"`
+
+	// 选择类型选项
+	Choices []FieldChoice `json:"choices,omitempty"`
+
+	// 数字类型选项
+	MinValue *float64 `json:"min_value,omitempty"`
+	MaxValue *float64 `json:"max_value,omitempty"`
+	Decimal  int      `json:"decimal,omitempty"`
+
+	// 文本类型选项
+	MinLength int    `json:"min_length,omitempty"`
+	MaxLength int    `json:"max_length,omitempty"`
+	Pattern   string `json:"pattern,omitempty"`
+
+	// 日期类型选项
+	DateFormat string `json:"date_format,omitempty"`
+	TimeFormat string `json:"time_format,omitempty"`
+
+	// 文件类型选项
+	MaxFileSize  int64    `json:"max_file_size,omitempty"`
+	AllowedTypes []string `json:"allowed_types,omitempty"`
+
+	// 关联类型选项
+	LinkTableID string `json:"link_table_id,omitempty"`
+	LinkFieldID string `json:"link_field_id,omitempty"`
+
+	// 公式类型选项
+	Formula string `json:"formula,omitempty"`
+
+	// 验证规则
+	ValidationRules []FieldValidationRule `json:"validation_rules,omitempty"`
+}
+
+// FieldChoice 字段选择项
+type FieldChoice struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
+	Value string `json:"value"`
+	Color string `json:"color,omitempty"`
 }
 
 // GetFieldTypeInfo 获取字段类型信息
@@ -228,6 +282,14 @@ func GetFieldTypeInfo(fieldType FieldType) FieldTypeInfo {
 			Icon:        "file",
 			Color:       "#CDDC39",
 		},
+		FieldTypeAttachment: {
+			Type:        FieldTypeAttachment,
+			Name:        "附件",
+			Description: "附件上传",
+			Category:    "媒体",
+			Icon:        "attachment",
+			Color:       "#FF9800",
+		},
 		FieldTypeVideo: {
 			Type:        FieldTypeVideo,
 			Name:        "视频",
@@ -346,7 +408,7 @@ func GetAllFieldTypes() []FieldTypeInfo {
 		// 高级类型
 		FieldTypeEmail, FieldTypeURL, FieldTypePhone, FieldTypeCurrency, FieldTypePercent, FieldTypeRating, FieldTypeProgress,
 		// 媒体类型
-		FieldTypeImage, FieldTypeFile, FieldTypeVideo, FieldTypeAudio,
+		FieldTypeImage, FieldTypeFile, FieldTypeAttachment, FieldTypeVideo, FieldTypeAudio,
 		// 关系类型
 		FieldTypeLink, FieldTypeLookup, FieldTypeRollup, FieldTypeFormula,
 		// 特殊类型
@@ -361,113 +423,185 @@ func GetAllFieldTypes() []FieldTypeInfo {
 	return infos
 }
 
-// FieldValidationRule 字段验证规则
-type FieldValidationRule struct {
-	Type     string      `json:"type"`
-	Value    interface{} `json:"value"`
-	Message  string      `json:"message"`
-	Required bool        `json:"required"`
-}
-
-// FieldOptions 字段选项配置
-type FieldOptions struct {
-	// 通用选项
-	Placeholder string `json:"placeholder,omitempty"`
-	HelpText    string `json:"help_text,omitempty"`
-
-	// 选择类型选项
-	Choices []FieldChoice `json:"choices,omitempty"`
-
-	// 数字类型选项
-	MinValue *float64 `json:"min_value,omitempty"`
-	MaxValue *float64 `json:"max_value,omitempty"`
-	Decimal  int      `json:"decimal,omitempty"`
-
-	// 文本类型选项
-	MinLength int    `json:"min_length,omitempty"`
-	MaxLength int    `json:"max_length,omitempty"`
-	Pattern   string `json:"pattern,omitempty"`
-
-	// 日期类型选项
-	DateFormat string `json:"date_format,omitempty"`
-	TimeFormat string `json:"time_format,omitempty"`
-
-	// 文件类型选项
-	MaxFileSize  int64    `json:"max_file_size,omitempty"`
-	AllowedTypes []string `json:"allowed_types,omitempty"`
-
-	// 关联类型选项
-	LinkTableID string `json:"link_table_id,omitempty"`
-	LinkFieldID string `json:"link_field_id,omitempty"`
-
-	// 公式类型选项
-	Formula string `json:"formula,omitempty"`
-
-	// 验证规则
-	ValidationRules []FieldValidationRule `json:"validation_rules,omitempty"`
-}
-
-// FieldChoice 字段选择项
-type FieldChoice struct {
-	ID    string `json:"id"`
-	Label string `json:"label"`
-	Value string `json:"value"`
-	Color string `json:"color,omitempty"`
-}
-
-// ValidateFieldValue 验证字段值
-func ValidateFieldValue(field *Field, value interface{}) error {
-	if field.IsRequired && (value == nil || value == "") {
-		return fmt.Errorf("字段 %s 是必填的", field.Name)
-	}
-
+// ValidateValue 验证字段值 - 字段类型的方法
+func (ft FieldType) ValidateValue(value interface{}, options *FieldOptions) error {
 	if value == nil || value == "" {
-		return nil // 非必填字段可以为空
-	}
-
-	// 解析字段选项
-	var options FieldOptions
-	if field.Options != nil && *field.Options != "" {
-		if err := json.Unmarshal([]byte(*field.Options), &options); err != nil {
-			return fmt.Errorf("解析字段选项失败: %v", err)
-		}
+		return nil // 空值由字段的IsRequired属性处理
 	}
 
 	// 根据字段类型验证
-	switch FieldType(field.Type) {
+	switch ft {
 	case FieldTypeText:
-		return validateTextValue(value, &options)
+		return validateTextValue(value, options)
 	case FieldTypeNumber:
-		return validateNumberValue(value, &options)
+		return validateNumberValue(value, options)
 	case FieldTypeEmail:
-		return validateEmailValue(value, &options)
+		return validateEmailValue(value, options)
 	case FieldTypeURL:
-		return validateURLValue(value, &options)
+		return validateURLValue(value, options)
 	case FieldTypePhone:
-		return validatePhoneValue(value, &options)
+		return validatePhoneValue(value, options)
 	case FieldTypeDate:
-		return validateDateValue(value, &options)
+		return validateDateValue(value, options)
 	case FieldTypeDateTime:
-		return validateDateTimeValue(value, &options)
+		return validateDateTimeValue(value, options)
 	case FieldTypeTime:
-		return validateTimeValue(value, &options)
+		return validateTimeValue(value, options)
 	case FieldTypeSelect, FieldTypeRadio:
-		return validateSelectValue(value, &options)
+		return validateSelectValue(value, options)
 	case FieldTypeMultiSelect, FieldTypeCheckbox:
-		return validateMultiSelectValue(value, &options)
+		return validateMultiSelectValue(value, options)
 	case FieldTypeBoolean:
-		return validateBooleanValue(value, &options)
+		return validateBooleanValue(value, options)
 	case FieldTypeCurrency:
-		return validateCurrencyValue(value, &options)
+		return validateCurrencyValue(value, options)
 	case FieldTypePercent:
-		return validatePercentValue(value, &options)
+		return validatePercentValue(value, options)
 	case FieldTypeRating:
-		return validateRatingValue(value, &options)
+		return validateRatingValue(value, options)
 	case FieldTypeProgress:
-		return validateProgressValue(value, &options)
+		return validateProgressValue(value, options)
 	default:
 		return nil // 其他类型暂时不验证
 	}
+}
+
+// IsCompatibleWith 检查字段类型是否兼容
+func (ft FieldType) IsCompatibleWith(newType FieldType) bool {
+	// 相同类型总是兼容的
+	if ft == newType {
+		return true
+	}
+	
+	// 定义类型兼容性矩阵
+	compatibilityMatrix := map[FieldType][]FieldType{
+		FieldTypeText: {
+			FieldTypeEmail, FieldTypeURL, FieldTypePhone,
+			FieldTypeSelect, FieldTypeMultiSelect,
+		},
+		FieldTypeNumber: {
+			FieldTypeCurrency, FieldTypePercent, FieldTypeRating, FieldTypeProgress,
+		},
+		FieldTypeEmail: {FieldTypeText, FieldTypeURL},
+		FieldTypeURL:   {FieldTypeText, FieldTypeEmail},
+		FieldTypePhone: {FieldTypeText},
+		FieldTypeSelect: {FieldTypeText, FieldTypeMultiSelect, FieldTypeRadio},
+		FieldTypeMultiSelect: {FieldTypeText, FieldTypeSelect, FieldTypeCheckbox},
+		FieldTypeRadio: {FieldTypeSelect, FieldTypeText},
+		FieldTypeCheckbox: {FieldTypeMultiSelect, FieldTypeText},
+		FieldTypeCurrency: {FieldTypeNumber, FieldTypePercent},
+		FieldTypePercent: {FieldTypeNumber, FieldTypeCurrency, FieldTypeProgress},
+		FieldTypeRating: {FieldTypeNumber, FieldTypeProgress},
+		FieldTypeProgress: {FieldTypeNumber, FieldTypePercent, FieldTypeRating},
+		FieldTypeDate: {FieldTypeDateTime},
+		FieldTypeDateTime: {FieldTypeDate, FieldTypeTime},
+		FieldTypeTime: {FieldTypeDateTime},
+	}
+	
+	if compatibleTypes, exists := compatibilityMatrix[ft]; exists {
+		for _, compatibleType := range compatibleTypes {
+			if compatibleType == newType {
+				return true
+			}
+		}
+	}
+	
+	return false
+}
+
+// SupportsUnique 检查字段类型是否支持唯一性约束
+func (ft FieldType) SupportsUnique() bool {
+	switch ft {
+	case FieldTypeText, FieldTypeNumber, FieldTypeEmail, FieldTypeURL, FieldTypePhone,
+		 FieldTypeDate, FieldTypeDateTime, FieldTypeTime, FieldTypeSelect, FieldTypeRadio,
+		 FieldTypeCurrency, FieldTypeAutoNumber:
+		return true
+	case FieldTypeMultiSelect, FieldTypeCheckbox, FieldTypeFile, FieldTypeImage,
+		 FieldTypeVideo, FieldTypeAudio, FieldTypeFormula, FieldTypeLookup, FieldTypeRollup:
+		return false
+	default:
+		return false
+	}
+}
+
+// RequiresOptions 检查字段类型是否需要选项配置
+func (ft FieldType) RequiresOptions() bool {
+	switch ft {
+	case FieldTypeSelect, FieldTypeMultiSelect, FieldTypeRadio, FieldTypeCheckbox,
+		 FieldTypeLink, FieldTypeLookup, FieldTypeRollup, FieldTypeFormula:
+		return true
+	default:
+		return false
+	}
+}
+
+// GetDefaultOptions 获取字段类型的默认选项
+func (ft FieldType) GetDefaultOptions() *FieldOptions {
+	switch ft {
+	case FieldTypeText:
+		return &FieldOptions{
+			MaxLength: 255,
+		}
+	case FieldTypeNumber:
+		return &FieldOptions{
+			Decimal: 2,
+		}
+	case FieldTypeSelect, FieldTypeRadio:
+		return &FieldOptions{
+			Choices: []FieldChoice{
+				{ID: "1", Label: "选项1", Value: "option1", Color: "#4CAF50"},
+				{ID: "2", Label: "选项2", Value: "option2", Color: "#2196F3"},
+			},
+		}
+	case FieldTypeMultiSelect, FieldTypeCheckbox:
+		return &FieldOptions{
+			Choices: []FieldChoice{
+				{ID: "1", Label: "选项1", Value: "option1", Color: "#4CAF50"},
+				{ID: "2", Label: "选项2", Value: "option2", Color: "#2196F3"},
+				{ID: "3", Label: "选项3", Value: "option3", Color: "#FF9800"},
+			},
+		}
+	case FieldTypeDate:
+		return &FieldOptions{
+			DateFormat: "2006-01-02",
+		}
+	case FieldTypeDateTime:
+		return &FieldOptions{
+			DateFormat: "2006-01-02 15:04:05",
+		}
+	case FieldTypeTime:
+		return &FieldOptions{
+			TimeFormat: "15:04:05",
+		}
+	case FieldTypeCurrency:
+		return &FieldOptions{
+			Decimal: 2,
+		}
+	case FieldTypePercent:
+		return &FieldOptions{
+			Decimal: 1,
+		}
+	case FieldTypeRating:
+		return &FieldOptions{
+			MaxValue: func() *float64 { v := 5.0; return &v }(),
+		}
+	case FieldTypeProgress:
+		return &FieldOptions{
+			MinValue: func() *float64 { v := 0.0; return &v }(),
+			MaxValue: func() *float64 { v := 100.0; return &v }(),
+		}
+	case FieldTypeFile, FieldTypeImage, FieldTypeVideo, FieldTypeAudio:
+		return &FieldOptions{
+			MaxFileSize: 10 * 1024 * 1024, // 10MB
+		}
+	default:
+		return &FieldOptions{}
+	}
+}
+
+// ValidateFieldValue 验证字段值 - 保持向后兼容
+func ValidateFieldValue(field *Field, value interface{}) error {
+	return field.ValidateValue(value)
 }
 
 // validateTextValue 验证文本值
@@ -477,21 +611,23 @@ func validateTextValue(value interface{}, options *FieldOptions) error {
 		return fmt.Errorf("文本字段值必须是字符串")
 	}
 
-	if options.MinLength > 0 && len(str) < options.MinLength {
-		return fmt.Errorf("文本长度不能少于 %d 个字符", options.MinLength)
-	}
-
-	if options.MaxLength > 0 && len(str) > options.MaxLength {
-		return fmt.Errorf("文本长度不能超过 %d 个字符", options.MaxLength)
-	}
-
-	if options.Pattern != "" {
-		matched, err := regexp.MatchString(options.Pattern, str)
-		if err != nil {
-			return fmt.Errorf("正则表达式错误: %v", err)
+	if options != nil {
+		if options.MinLength > 0 && len(str) < options.MinLength {
+			return fmt.Errorf("文本长度不能少于 %d 个字符", options.MinLength)
 		}
-		if !matched {
-			return fmt.Errorf("文本格式不正确")
+
+		if options.MaxLength > 0 && len(str) > options.MaxLength {
+			return fmt.Errorf("文本长度不能超过 %d 个字符", options.MaxLength)
+		}
+
+		if options.Pattern != "" {
+			matched, err := regexp.MatchString(options.Pattern, str)
+			if err != nil {
+				return fmt.Errorf("正则表达式错误: %v", err)
+			}
+			if !matched {
+				return fmt.Errorf("文本格式不正确")
+			}
 		}
 	}
 
@@ -516,12 +652,14 @@ func validateNumberValue(value interface{}, options *FieldOptions) error {
 		return fmt.Errorf("数字字段值必须是数字")
 	}
 
-	if options.MinValue != nil && num < *options.MinValue {
-		return fmt.Errorf("数字不能小于 %v", *options.MinValue)
-	}
+	if options != nil {
+		if options.MinValue != nil && num < *options.MinValue {
+			return fmt.Errorf("数字不能小于 %v", *options.MinValue)
+		}
 
-	if options.MaxValue != nil && num > *options.MaxValue {
-		return fmt.Errorf("数字不能大于 %v", *options.MaxValue)
+		if options.MaxValue != nil && num > *options.MaxValue {
+			return fmt.Errorf("数字不能大于 %v", *options.MaxValue)
+		}
 	}
 
 	return nil
@@ -580,7 +718,7 @@ func validateDateValue(value interface{}, options *FieldOptions) error {
 	}
 
 	format := "2006-01-02"
-	if options.DateFormat != "" {
+	if options != nil && options.DateFormat != "" {
 		format = options.DateFormat
 	}
 
@@ -600,7 +738,7 @@ func validateDateTimeValue(value interface{}, options *FieldOptions) error {
 	}
 
 	format := "2006-01-02 15:04:05"
-	if options.DateFormat != "" {
+	if options != nil && options.DateFormat != "" {
 		format = options.DateFormat
 	}
 
@@ -620,7 +758,7 @@ func validateTimeValue(value interface{}, options *FieldOptions) error {
 	}
 
 	format := "15:04:05"
-	if options.TimeFormat != "" {
+	if options != nil && options.TimeFormat != "" {
 		format = options.TimeFormat
 	}
 
@@ -637,6 +775,10 @@ func validateSelectValue(value interface{}, options *FieldOptions) error {
 	str, ok := value.(string)
 	if !ok {
 		return fmt.Errorf("选择字段值必须是字符串")
+	}
+
+	if options == nil || len(options.Choices) == 0 {
+		return fmt.Errorf("选择字段必须配置选项")
 	}
 
 	// 检查值是否在选项中
@@ -666,6 +808,10 @@ func validateMultiSelectValue(value interface{}, options *FieldOptions) error {
 		}
 	default:
 		return fmt.Errorf("多选字段值必须是字符串数组或逗号分隔的字符串")
+	}
+
+	if options == nil || len(options.Choices) == 0 {
+		return fmt.Errorf("多选字段必须配置选项")
 	}
 
 	// 检查每个值是否在选项中

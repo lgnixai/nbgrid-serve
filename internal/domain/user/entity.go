@@ -1,11 +1,13 @@
 package user
 
 import (
-	"errors"
-	"teable-go-backend/pkg/utils"
+	"regexp"
 	"time"
+	"unicode"
 
 	"golang.org/x/crypto/bcrypt"
+	
+	"teable-go-backend/pkg/utils"
 )
 
 // User 用户实体
@@ -68,22 +70,61 @@ const (
 	ProviderOIDC   Provider = "oidc"
 )
 
-// 业务规则错误 - 这些错误会被转换为应用错误
+// 安全级别枚举
+type SecurityLevel int
+
+const (
+	SecurityLevelUser SecurityLevel = iota
+	SecurityLevelAdmin
+	SecurityLevelSystem
+)
+
+func (s SecurityLevel) String() string {
+	switch s {
+	case SecurityLevelUser:
+		return "user"
+	case SecurityLevelAdmin:
+		return "admin"
+	case SecurityLevelSystem:
+		return "system"
+	default:
+		return "unknown"
+	}
+}
+
+// 领域错误定义
+type DomainError struct {
+	Code    string
+	Message string
+}
+
+func (e DomainError) Error() string {
+	return e.Message
+}
+
+// 业务规则错误 - 纯领域错误，不依赖外部包
 var (
-	ErrInvalidEmail    = errors.New("invalid email format")
-	ErrWeakPassword    = errors.New("password is too weak")
-	ErrEmailExists     = errors.New("email already exists")
-	ErrPhoneExists     = errors.New("phone already exists")
-	ErrUserNotFound    = errors.New("user not found")
-	ErrUserDeactivated = errors.New("user is deactivated")
-	ErrUserDeleted     = errors.New("user is deleted")
-	ErrInvalidPassword = errors.New("invalid password")
+	ErrInvalidEmail    = DomainError{Code: "INVALID_EMAIL", Message: "invalid email format"}
+	ErrWeakPassword    = DomainError{Code: "WEAK_PASSWORD", Message: "password is too weak"}
+	ErrEmailExists     = DomainError{Code: "EMAIL_EXISTS", Message: "email already exists"}
+	ErrPhoneExists     = DomainError{Code: "PHONE_EXISTS", Message: "phone already exists"}
+	ErrUserNotFound    = DomainError{Code: "USER_NOT_FOUND", Message: "user not found"}
+	ErrUserDeactivated = DomainError{Code: "USER_DEACTIVATED", Message: "user is deactivated"}
+	ErrUserDeleted     = DomainError{Code: "USER_DELETED", Message: "user is deleted"}
+	ErrInvalidPassword = DomainError{Code: "INVALID_PASSWORD", Message: "invalid password"}
+	ErrInvalidUserID   = DomainError{Code: "INVALID_USER_ID", Message: "invalid user ID format"}
+	ErrInvalidPhone    = DomainError{Code: "INVALID_PHONE", Message: "invalid phone number format"}
 )
 
 // NewUser 创建新用户
 func NewUser(name, email string) (*User, error) {
-	if !isValidEmail(email) {
-		return nil, ErrInvalidEmail
+	// 验证输入参数
+	if err := validateUserName(name); err != nil {
+		return nil, err
+	}
+	
+	if err := validateEmail(email); err != nil {
+		return nil, err
 	}
 
 	now := time.Now()
@@ -115,13 +156,13 @@ func NewUserWithPassword(name, email, password string) (*User, error) {
 
 // SetPassword 设置密码
 func (u *User) SetPassword(password string) error {
-	if !isValidPassword(password) {
-		return ErrWeakPassword
+	if err := validatePassword(password); err != nil {
+		return err
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return err
+		return DomainError{Code: "PASSWORD_HASH_FAILED", Message: "failed to hash password"}
 	}
 
 	passwordStr := string(hashedPassword)
@@ -177,17 +218,30 @@ func (u *User) SoftDelete() {
 }
 
 // UpdateProfile 更新用户资料
-func (u *User) UpdateProfile(name, phone *string, avatar *string) {
+func (u *User) UpdateProfile(name, phone *string, avatar *string) error {
 	if name != nil {
+		if err := validateUserName(*name); err != nil {
+			return err
+		}
 		u.Name = *name
 	}
+	
 	if phone != nil {
+		if err := validatePhone(*phone); err != nil {
+			return err
+		}
 		u.Phone = phone
 	}
+	
 	if avatar != nil {
+		if err := validateAvatar(*avatar); err != nil {
+			return err
+		}
 		u.Avatar = avatar
 	}
+	
 	u.updateModifiedTime()
+	return nil
 }
 
 // PromoteToAdmin 提升为管理员
@@ -225,6 +279,11 @@ func (u *User) GetDisplayName() string {
 
 // HasPermission 检查权限
 func (u *User) HasPermission(permission string) bool {
+	// 已删除或停用的用户没有任何权限
+	if !u.IsActive() {
+		return false
+	}
+
 	// 系统用户拥有所有权限
 	if u.IsSystem {
 		return true
@@ -235,8 +294,88 @@ func (u *User) HasPermission(permission string) bool {
 		return true
 	}
 
-	// TODO: 实现更细粒度的权限检查
+	// 基础用户权限
+	if isBasicUserPermission(permission) {
+		return true
+	}
+
 	return false
+}
+
+// CanAccessResource 检查是否可以访问资源
+func (u *User) CanAccessResource(resourceType, resourceID string) bool {
+	if !u.IsActive() {
+		return false
+	}
+
+	// 系统用户可以访问所有资源
+	if u.IsSystem {
+		return true
+	}
+
+	// TODO: 实现基于资源的权限检查
+	// 这里需要与权限服务集成
+	return false
+}
+
+// ValidateForUpdate 验证用户是否可以被更新
+func (u *User) ValidateForUpdate() error {
+	if u.DeletedTime != nil {
+		return ErrUserDeleted
+	}
+	
+	// 系统用户不能被普通操作修改
+	if u.IsSystem {
+		return DomainError{Code: "SYSTEM_USER_READONLY", Message: "system user cannot be modified"}
+	}
+	
+	return nil
+}
+
+// ValidateForDeletion 验证用户是否可以被删除
+func (u *User) ValidateForDeletion() error {
+	if u.DeletedTime != nil {
+		return ErrUserDeleted
+	}
+	
+	// 系统用户不能被删除
+	if u.IsSystem {
+		return DomainError{Code: "SYSTEM_USER_UNDELETABLE", Message: "system user cannot be deleted"}
+	}
+	
+	return nil
+}
+
+// GetSecurityLevel 获取用户安全级别
+func (u *User) GetSecurityLevel() SecurityLevel {
+	if u.IsSystem {
+		return SecurityLevelSystem
+	}
+	if u.IsAdmin {
+		return SecurityLevelAdmin
+	}
+	return SecurityLevelUser
+}
+
+// IsPasswordExpired 检查密码是否过期
+func (u *User) IsPasswordExpired(maxAge time.Duration) bool {
+	if u.LastModifiedTime == nil {
+		return false
+	}
+	
+	// 如果密码修改时间超过最大年龄，则认为过期
+	return time.Since(*u.LastModifiedTime) > maxAge
+}
+
+// ShouldChangePassword 检查是否应该更改密码
+func (u *User) ShouldChangePassword() bool {
+	// 新用户或没有密码的用户应该设置密码
+	if u.Password == nil {
+		return true
+	}
+	
+	// 检查密码是否过期（90天）
+	return u.IsPasswordExpired(90 * 24 * time.Hour)
 }
 
 // AddAccount 添加第三方账户
@@ -257,64 +396,175 @@ func (u *User) updateModifiedTime() {
 	u.LastModifiedTime = &now
 }
 
-// 辅助函数
+// 验证函数
 
-// isValidEmail 验证邮箱格式
-func isValidEmail(email string) bool {
-	// 简单的邮箱验证，实际应该使用更严格的正则表达式
-	return len(email) > 0 &&
-		len(email) <= 255 &&
-		containsChar(email, '@') &&
-		containsChar(email, '.')
+// validateUserName 验证用户名
+func validateUserName(name string) error {
+	if len(name) == 0 {
+		return DomainError{Code: "EMPTY_NAME", Message: "user name cannot be empty"}
+	}
+	if len(name) > 100 {
+		return DomainError{Code: "NAME_TOO_LONG", Message: "user name cannot exceed 100 characters"}
+	}
+	
+	// 检查是否包含非法字符
+	for _, char := range name {
+		if char < 32 || char == 127 { // 控制字符
+			return DomainError{Code: "INVALID_NAME_CHARS", Message: "user name contains invalid characters"}
+		}
+	}
+	
+	return nil
 }
 
-// isValidPassword 验证密码强度
-func isValidPassword(password string) bool {
-	// 密码至少8位，包含字母和数字
+// validateEmail 验证邮箱格式
+func validateEmail(email string) error {
+	if len(email) == 0 {
+		return DomainError{Code: "EMPTY_EMAIL", Message: "email cannot be empty"}
+	}
+	if len(email) > 255 {
+		return DomainError{Code: "EMAIL_TOO_LONG", Message: "email cannot exceed 255 characters"}
+	}
+	
+	// 使用正则表达式验证邮箱格式
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	if !emailRegex.MatchString(email) {
+		return ErrInvalidEmail
+	}
+	
+	return nil
+}
+
+// validatePassword 验证密码强度
+func validatePassword(password string) error {
 	if len(password) < 8 {
-		return false
+		return DomainError{Code: "PASSWORD_TOO_SHORT", Message: "password must be at least 8 characters long"}
+	}
+	if len(password) > 128 {
+		return DomainError{Code: "PASSWORD_TOO_LONG", Message: "password cannot exceed 128 characters"}
 	}
 
-	hasLetter := false
-	hasDigit := false
+	var (
+		hasLower   = false
+		hasUpper   = false
+		hasDigit   = false
+		hasSpecial = false
+	)
 
 	for _, char := range password {
-		if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') {
-			hasLetter = true
-		}
-		if char >= '0' && char <= '9' {
+		switch {
+		case unicode.IsLower(char):
+			hasLower = true
+		case unicode.IsUpper(char):
+			hasUpper = true
+		case unicode.IsDigit(char):
 			hasDigit = true
+		case unicode.IsPunct(char) || unicode.IsSymbol(char):
+			hasSpecial = true
 		}
 	}
 
-	return hasLetter && hasDigit
+	// 至少包含3种类型的字符
+	charTypes := 0
+	if hasLower {
+		charTypes++
+	}
+	if hasUpper {
+		charTypes++
+	}
+	if hasDigit {
+		charTypes++
+	}
+	if hasSpecial {
+		charTypes++
+	}
+
+	if charTypes < 3 {
+		return DomainError{Code: "PASSWORD_TOO_WEAK", Message: "password must contain at least 3 types of characters (lowercase, uppercase, digit, special)"}
+	}
+
+	return nil
 }
 
-// containsChar 检查字符串是否包含字符
-func containsChar(str string, char rune) bool {
-	for _, c := range str {
-		if c == char {
-			return true
-		}
+// validatePhone 验证手机号格式
+func validatePhone(phone string) error {
+	if len(phone) == 0 {
+		return nil // 手机号可以为空
 	}
-	return false
+	if len(phone) > 50 {
+		return DomainError{Code: "PHONE_TOO_LONG", Message: "phone number cannot exceed 50 characters"}
+	}
+	
+	// 简单的手机号验证，支持国际格式
+	phoneRegex := regexp.MustCompile(`^\+?[1-9]\d{1,14}$`)
+	if !phoneRegex.MatchString(phone) {
+		return ErrInvalidPhone
+	}
+	
+	return nil
+}
+
+// validateAvatar 验证头像URL
+func validateAvatar(avatar string) error {
+	if len(avatar) == 0 {
+		return nil // 头像可以为空
+	}
+	if len(avatar) > 500 {
+		return DomainError{Code: "AVATAR_URL_TOO_LONG", Message: "avatar URL cannot exceed 500 characters"}
+	}
+	
+	// 简单的URL验证
+	urlRegex := regexp.MustCompile(`^https?://[^\s/$.?#].[^\s]*$`)
+	if !urlRegex.MatchString(avatar) {
+		return DomainError{Code: "INVALID_AVATAR_URL", Message: "invalid avatar URL format"}
+	}
+	
+	return nil
 }
 
 // isAdminPermission 检查是否为管理员权限
 func isAdminPermission(permission string) bool {
-	adminPermissions := []string{
-		"user:manage",
-		"space:manage",
-		"base:manage",
-		"system:config",
+	adminPermissions := map[string]bool{
+		"user:manage":        true,
+		"user:create":        true,
+		"user:delete":        true,
+		"user:promote":       true,
+		"space:manage":       true,
+		"space:delete":       true,
+		"base:manage":        true,
+		"base:delete":        true,
+		"table:manage":       true,
+		"system:config":      true,
+		"system:monitor":     true,
+		"permission:manage":  true,
 	}
 
-	for _, perm := range adminPermissions {
-		if perm == permission {
-			return true
-		}
+	return adminPermissions[permission]
+}
+
+// isBasicUserPermission 检查是否为基础用户权限
+func isBasicUserPermission(permission string) bool {
+	basicPermissions := map[string]bool{
+		"user:read":         true,
+		"user:update_self":  true,
+		"space:read":        true,
+		"space:create":      true,
+		"base:read":         true,
+		"base:create":       true,
+		"table:read":        true,
+		"table:create":      true,
+		"record:read":       true,
+		"record:create":     true,
+		"record:update":     true,
+		"record:delete":     true,
+		"view:read":         true,
+		"view:create":       true,
+		"view:update":       true,
+		"attachment:upload": true,
+		"attachment:read":   true,
 	}
-	return false
+
+	return basicPermissions[permission]
 }
 
 // generateUserID 生成用户ID

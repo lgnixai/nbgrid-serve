@@ -168,13 +168,6 @@ func (s *ServiceImpl) GetGridViewData(ctx context.Context, viewID string, page, 
 		return nil, errors.ErrInvalidRequest.WithDetails("视图类型不是网格视图")
 	}
 
-	// 解析网格视图配置
-	var config GridViewConfig
-	if view.Config != nil {
-		// TODO: 将map转换为GridViewConfig结构体
-		// 这里需要实现JSON序列化/反序列化
-	}
-
 	// 构建查询条件
 	req := GridViewDataRequest{
 		ViewID:   viewID,
@@ -182,16 +175,8 @@ func (s *ServiceImpl) GetGridViewData(ctx context.Context, viewID string, page, 
 		PageSize: pageSize,
 	}
 
-	// 从配置中获取排序、过滤、分组条件
-	if config.Sorts != nil {
-		req.Sorts = config.Sorts
-	}
-	if config.Filters != nil {
-		req.Filters = config.Filters
-	}
-	if config.Groups != nil {
-		req.Groups = config.Groups
-	}
+	// TODO: 解析网格视图配置并设置排序、过滤、分组条件
+	// 这里需要实现配置解析和类型转换
 
 	// 调用仓储获取数据
 	data, err := s.repo.GetGridViewData(ctx, req)

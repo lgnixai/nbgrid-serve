@@ -43,7 +43,7 @@ type service struct {
 	storage           Storage
 	thumbnailGenerator ThumbnailGenerator
 	validator         FileValidator
-	config            *StorageConfig
+	config            *AttachmentStorageConfig
 	thumbnailConfig   *ThumbnailConfig
 	logger            *zap.Logger
 }
@@ -55,7 +55,7 @@ func NewService(
 	storage Storage,
 	thumbnailGenerator ThumbnailGenerator,
 	validator FileValidator,
-	config *StorageConfig,
+	config *AttachmentStorageConfig,
 	thumbnailConfig *ThumbnailConfig,
 	logger *zap.Logger,
 ) Service {

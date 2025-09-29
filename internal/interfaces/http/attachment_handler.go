@@ -317,11 +317,14 @@ func (h *AttachmentHandler) handleError(c *gin.Context, err error) {
 			logger.String("trace_id", traceID),
 		)
 
-		c.JSON(appErr.HTTPStatus, ErrorResponse{
-			Error:   appErr.Message,
-			Code:    appErr.Code,
-			Details: appErr.Details,
-			TraceID: traceID,
+		c.JSON(appErr.HTTPStatus, gin.H{
+			"success": false,
+			"error": gin.H{
+				"code":    appErr.Code,
+				"message": appErr.Message,
+				"details": appErr.Details,
+			},
+			"trace_id": traceID,
 		})
 		return
 	}
@@ -331,9 +334,12 @@ func (h *AttachmentHandler) handleError(c *gin.Context, err error) {
 		logger.String("trace_id", traceID),
 	)
 
-	c.JSON(http.StatusInternalServerError, ErrorResponse{
-		Error:   "服务器内部错误",
-		Code:    "INTERNAL_SERVER_ERROR",
-		TraceID: traceID,
+	c.JSON(http.StatusInternalServerError, gin.H{
+		"success": false,
+		"error": gin.H{
+			"code":    "INTERNAL_SERVER_ERROR",
+			"message": "服务器内部错误",
+		},
+		"trace_id": traceID,
 	})
 }

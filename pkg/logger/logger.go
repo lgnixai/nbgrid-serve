@@ -2,6 +2,7 @@ package logger
 
 import (
 	"os"
+	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -172,4 +173,12 @@ func Any(key string, val interface{}) zap.Field {
 
 func ErrorField(err error) zap.Field {
 	return zap.Error(err)
+}
+
+func Duration(key string, val time.Duration) zap.Field {
+	return zap.Duration(key, val)
+}
+
+func Strings(key string, val []string) zap.Field {
+	return zap.Strings(key, val)
 }

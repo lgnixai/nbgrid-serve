@@ -4,9 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-
-	"teable-go-backend/internal/config"
 	userDomain "teable-go-backend/internal/domain/user"
 	"teable-go-backend/internal/infrastructure/cache"
 	"teable-go-backend/pkg/errors"
@@ -16,20 +13,23 @@ import (
 // UserService 用户应用服务
 type UserService struct {
 	userDomainService userDomain.Service
+	tokenService      *TokenService
+	sessionService    *SessionService
 	cacheService      cache.CacheService
-	jwtConfig         config.JWTConfig
 }
 
 // NewUserService 创建用户应用服务
 func NewUserService(
 	userDomainService userDomain.Service,
+	tokenService *TokenService,
+	sessionService *SessionService,
 	cacheService cache.CacheService,
-	jwtConfig config.JWTConfig,
 ) *UserService {
 	return &UserService{
 		userDomainService: userDomainService,
+		tokenService:      tokenService,
+		sessionService:    sessionService,
 		cacheService:      cacheService,
-		jwtConfig:         jwtConfig,
 	}
 }
 
@@ -40,6 +40,14 @@ type AuthResponse struct {
 	RefreshToken string        `json:"refresh_token,omitempty"`
 	ExpiresIn    int64         `json:"expires_in"`
 	TokenType    string        `json:"token_type"`
+	SessionID    string        `json:"session_id,omitempty"`
+}
+
+// LoginContext 登录上下文信息
+type LoginContext struct {
+	IPAddress string `json:"ip_address"`
+	UserAgent string `json:"user_agent"`
+	DeviceID  string `json:"device_id,omitempty"`
 }
 
 // UserResponse 用户响应
@@ -85,7 +93,7 @@ type UpdateProfileRequest struct {
 }
 
 // Register 用户注册
-func (s *UserService) Register(ctx context.Context, req RegisterRequest) (*AuthResponse, error) {
+func (s *UserService) Register(ctx context.Context, req RegisterRequest, loginCtx *LoginContext) (*AuthResponse, error) {
 	// 创建用户
 	createReq := userDomain.CreateUserRequest{
 		Name:     req.Name,
@@ -112,8 +120,31 @@ func (s *UserService) Register(ctx context.Context, req RegisterRequest) (*AuthR
 		return nil, err
 	}
 
-	// 生成令牌
-	tokens, err := s.generateTokens(domainUser)
+	// 创建用户会话
+	session := &UserSession{
+		UserID:       domainUser.ID,
+		Email:        domainUser.Email,
+		Name:         domainUser.Name,
+		IsAdmin:      domainUser.IsAdmin,
+		IsSystem:     domainUser.IsSystem,
+		LoginTime:    time.Now(),
+		LastActivity: time.Now(),
+		IPAddress:    loginCtx.IPAddress,
+		UserAgent:    loginCtx.UserAgent,
+		DeviceID:     loginCtx.DeviceID,
+	}
+
+	sessionID, err := s.sessionService.CreateSession(ctx, domainUser.ID, session)
+	if err != nil {
+		logger.Error("Failed to create user session",
+			logger.String("user_id", domainUser.ID),
+			logger.ErrorField(err),
+		)
+		return nil, err
+	}
+
+	// 生成令牌对
+	tokens, err := s.tokenService.GenerateTokenPair(ctx, domainUser, sessionID)
 	if err != nil {
 		logger.Error("Failed to generate tokens",
 			logger.String("user_id", domainUser.ID),
@@ -133,19 +164,21 @@ func (s *UserService) Register(ctx context.Context, req RegisterRequest) (*AuthR
 	logger.Info("User registered successfully",
 		logger.String("user_id", domainUser.ID),
 		logger.String("email", domainUser.Email),
+		logger.String("session_id", sessionID),
 	)
 
 	return &AuthResponse{
 		User:         s.toUserResponse(domainUser),
 		AccessToken:  tokens.AccessToken,
 		RefreshToken: tokens.RefreshToken,
-		ExpiresIn:    int64(s.jwtConfig.AccessTokenTTL.Seconds()),
-		TokenType:    "Bearer",
+		ExpiresIn:    tokens.ExpiresIn,
+		TokenType:    tokens.TokenType,
+		SessionID:    sessionID,
 	}, nil
 }
 
 // Login 用户登录
-func (s *UserService) Login(ctx context.Context, req LoginRequest) (*AuthResponse, error) {
+func (s *UserService) Login(ctx context.Context, req LoginRequest, loginCtx *LoginContext) (*AuthResponse, error) {
 	// 认证用户
 	domainUser, err := s.userDomainService.Authenticate(ctx, req.Email, req.Password)
 	if err != nil {
@@ -164,8 +197,31 @@ func (s *UserService) Login(ctx context.Context, req LoginRequest) (*AuthRespons
 		return nil, err
 	}
 
-	// 生成令牌
-	tokens, err := s.generateTokens(domainUser)
+	// 创建用户会话
+	session := &UserSession{
+		UserID:       domainUser.ID,
+		Email:        domainUser.Email,
+		Name:         domainUser.Name,
+		IsAdmin:      domainUser.IsAdmin,
+		IsSystem:     domainUser.IsSystem,
+		LoginTime:    time.Now(),
+		LastActivity: time.Now(),
+		IPAddress:    loginCtx.IPAddress,
+		UserAgent:    loginCtx.UserAgent,
+		DeviceID:     loginCtx.DeviceID,
+	}
+
+	sessionID, err := s.sessionService.CreateSession(ctx, domainUser.ID, session)
+	if err != nil {
+		logger.Error("Failed to create user session",
+			logger.String("user_id", domainUser.ID),
+			logger.ErrorField(err),
+		)
+		return nil, err
+	}
+
+	// 生成令牌对
+	tokens, err := s.tokenService.GenerateTokenPair(ctx, domainUser, sessionID)
 	if err != nil {
 		logger.Error("Failed to generate tokens",
 			logger.String("user_id", domainUser.ID),
@@ -185,26 +241,39 @@ func (s *UserService) Login(ctx context.Context, req LoginRequest) (*AuthRespons
 	logger.Info("User logged in successfully",
 		logger.String("user_id", domainUser.ID),
 		logger.String("email", domainUser.Email),
+		logger.String("session_id", sessionID),
 	)
 
 	return &AuthResponse{
 		User:         s.toUserResponse(domainUser),
 		AccessToken:  tokens.AccessToken,
 		RefreshToken: tokens.RefreshToken,
-		ExpiresIn:    int64(s.jwtConfig.AccessTokenTTL.Seconds()),
-		TokenType:    "Bearer",
+		ExpiresIn:    tokens.ExpiresIn,
+		TokenType:    tokens.TokenType,
+		SessionID:    sessionID,
 	}, nil
 }
 
 // Logout 用户登出
-func (s *UserService) Logout(ctx context.Context, userID, token string) error {
+func (s *UserService) Logout(ctx context.Context, userID, token, sessionID string) error {
 	// 将令牌加入黑名单
-	if err := s.blacklistToken(ctx, token); err != nil {
+	if err := s.tokenService.BlacklistToken(ctx, token); err != nil {
 		logger.Error("Failed to blacklist token",
 			logger.String("user_id", userID),
 			logger.ErrorField(err),
 		)
 		return err
+	}
+
+	// 使会话失效
+	if sessionID != "" {
+		if err := s.sessionService.InvalidateSession(ctx, sessionID); err != nil {
+			logger.Warn("Failed to invalidate session",
+				logger.String("user_id", userID),
+				logger.String("session_id", sessionID),
+				logger.ErrorField(err),
+			)
+		}
 	}
 
 	// 清除用户缓存
@@ -217,6 +286,7 @@ func (s *UserService) Logout(ctx context.Context, userID, token string) error {
 
 	logger.Info("User logged out successfully",
 		logger.String("user_id", userID),
+		logger.String("session_id", sessionID),
 	)
 
 	return nil
@@ -290,23 +360,22 @@ type RefreshTokenRequest struct {
 // RefreshToken 刷新访问令牌
 func (s *UserService) RefreshToken(ctx context.Context, req RefreshTokenRequest) (*AuthResponse, error) {
 	// 验证refresh token
-	claims, err := s.validateRefreshToken(req.RefreshToken)
+	claims, err := s.tokenService.ValidateToken(ctx, req.RefreshToken)
 	if err != nil {
 		logger.Warn("Invalid refresh token", logger.ErrorField(err))
 		return nil, err
 	}
 
-	// 从claims中获取用户ID
-	userID, ok := claims["user_id"].(string)
-	if !ok {
+	// 检查令牌类型
+	if claims.TokenType != "refresh" {
 		return nil, errors.ErrInvalidToken
 	}
 
 	// 获取用户信息
-	domainUser, err := s.userDomainService.GetUser(ctx, userID)
+	domainUser, err := s.userDomainService.GetUser(ctx, claims.UserID)
 	if err != nil {
 		logger.Error("Failed to get user for token refresh",
-			logger.String("user_id", userID),
+			logger.String("user_id", claims.UserID),
 			logger.ErrorField(err),
 		)
 		return nil, err
@@ -317,22 +386,25 @@ func (s *UserService) RefreshToken(ctx context.Context, req RefreshTokenRequest)
 		return nil, errors.ErrUserDeactivated
 	}
 
+	// 更新会话活动时间
+	if claims.SessionID != "" {
+		if err := s.sessionService.UpdateSessionActivity(ctx, claims.SessionID); err != nil {
+			logger.Warn("Failed to update session activity",
+				logger.String("user_id", domainUser.ID),
+				logger.String("session_id", claims.SessionID),
+				logger.ErrorField(err),
+			)
+		}
+	}
+
 	// 生成新的令牌对
-	tokens, err := s.generateTokens(domainUser)
+	tokens, err := s.tokenService.RefreshToken(ctx, req.RefreshToken, domainUser)
 	if err != nil {
-		logger.Error("Failed to generate new tokens",
+		logger.Error("Failed to refresh tokens",
 			logger.String("user_id", domainUser.ID),
 			logger.ErrorField(err),
 		)
 		return nil, err
-	}
-
-	// 将旧的refresh token加入黑名单
-	if err := s.blacklistToken(ctx, req.RefreshToken); err != nil {
-		logger.Warn("Failed to blacklist old refresh token",
-			logger.String("user_id", domainUser.ID),
-			logger.ErrorField(err),
-		)
 	}
 
 	// 缓存用户信息
@@ -345,14 +417,16 @@ func (s *UserService) RefreshToken(ctx context.Context, req RefreshTokenRequest)
 
 	logger.Info("Token refreshed successfully",
 		logger.String("user_id", domainUser.ID),
+		logger.String("session_id", claims.SessionID),
 	)
 
 	return &AuthResponse{
 		User:         s.toUserResponse(domainUser),
 		AccessToken:  tokens.AccessToken,
 		RefreshToken: tokens.RefreshToken,
-		ExpiresIn:    int64(s.jwtConfig.AccessTokenTTL.Seconds()),
-		TokenType:    "Bearer",
+		ExpiresIn:    tokens.ExpiresIn,
+		TokenType:    tokens.TokenType,
+		SessionID:    claims.SessionID,
 	}, nil
 }
 
@@ -426,6 +500,72 @@ func (s *UserService) GetUserStats(ctx context.Context) (*userDomain.UserStats, 
 // GetUserActivity 获取用户活动信息
 func (s *UserService) GetUserActivity(ctx context.Context, userID string, days int) (*userDomain.UserActivity, error) {
 	return s.userDomainService.GetUserActivity(ctx, userID, days)
+}
+
+// GetUserSessions 获取用户的活跃会话
+func (s *UserService) GetUserSessions(ctx context.Context, userID string) ([]*UserSession, error) {
+	return s.sessionService.GetUserActiveSessions(ctx, userID)
+}
+
+// InvalidateUserSession 使指定会话失效
+func (s *UserService) InvalidateUserSession(ctx context.Context, userID, sessionID string) error {
+	// 验证会话属于该用户
+	session, err := s.sessionService.GetSession(ctx, sessionID)
+	if err != nil {
+		return err
+	}
+
+	if session.UserID != userID {
+		return errors.ErrForbidden
+	}
+
+	return s.sessionService.InvalidateSession(ctx, sessionID)
+}
+
+// InvalidateAllUserSessions 使用户的所有会话失效
+func (s *UserService) InvalidateAllUserSessions(ctx context.Context, userID string) error {
+	// 使所有会话失效
+	if err := s.sessionService.InvalidateAllUserSessions(ctx, userID); err != nil {
+		return err
+	}
+
+	// 使所有令牌失效
+	return s.tokenService.InvalidateUserTokens(ctx, userID)
+}
+
+// GenerateAPIKey 生成API密钥
+func (s *UserService) GenerateAPIKey(ctx context.Context, userID, name string, expiresAt *time.Time) (string, error) {
+	// 验证用户存在
+	_, err := s.userDomainService.GetUser(ctx, userID)
+	if err != nil {
+		return "", err
+	}
+
+	return s.tokenService.GenerateAPIKey(ctx, userID, name, expiresAt)
+}
+
+// ValidateAPIKey 验证API密钥
+func (s *UserService) ValidateAPIKey(ctx context.Context, apiKey string) (*UserResponse, error) {
+	userID, err := s.tokenService.ValidateAPIKey(ctx, apiKey)
+	if err != nil {
+		return nil, err
+	}
+
+	domainUser, err := s.userDomainService.GetUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if !domainUser.IsActive() {
+		return nil, errors.ErrUserDeactivated
+	}
+
+	return s.toUserResponse(domainUser), nil
+}
+
+// RevokeAPIKey 撤销API密钥
+func (s *UserService) RevokeAPIKey(ctx context.Context, apiKey string) error {
+	return s.tokenService.RevokeAPIKey(ctx, apiKey)
 }
 
 // UpdateUserPreferences 更新用户偏好设置
@@ -548,110 +688,6 @@ func (s *UserService) DeactivateUser(ctx context.Context, userID string) error {
 
 // 私有方法
 
-// TokenPair 令牌对
-type TokenPair struct {
-	AccessToken  string
-	RefreshToken string
-}
-
-// generateTokens 生成访问令牌和刷新令牌
-func (s *UserService) generateTokens(user *userDomain.User) (*TokenPair, error) {
-	// 创建临时用户模型用于令牌生成
-	userModel := &struct {
-		ID       string
-		Email    string
-		Name     string
-		IsAdmin  bool
-		IsSystem bool
-	}{
-		ID:       user.ID,
-		Email:    user.Email,
-		Name:     user.Name,
-		IsAdmin:  user.IsAdmin,
-		IsSystem: user.IsSystem,
-	}
-
-	// 生成访问令牌
-	accessToken, err := s.generateJWTToken(*userModel, "access")
-	if err != nil {
-		return nil, err
-	}
-
-	var refreshToken string
-	if s.jwtConfig.EnableRefresh {
-		refreshToken, err = s.generateJWTToken(*userModel, "refresh")
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &TokenPair{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-	}, nil
-}
-
-// generateJWTToken 生成JWT令牌
-func (s *UserService) generateJWTToken(user interface{}, tokenType string) (string, error) {
-	now := time.Now()
-	var exp time.Time
-
-	switch tokenType {
-	case "access":
-		exp = now.Add(s.jwtConfig.AccessTokenTTL)
-	case "refresh":
-		exp = now.Add(s.jwtConfig.RefreshTokenTTL)
-	default:
-		exp = now.Add(s.jwtConfig.AccessTokenTTL)
-	}
-
-	// 根据用户类型提取信息
-	var userID, email, name string
-	var isAdmin, isSystem bool
-
-	switch u := user.(type) {
-	case *userDomain.User:
-		userID = u.ID
-		email = u.Email
-		name = u.Name
-		isAdmin = u.IsAdmin
-		isSystem = u.IsSystem
-	default:
-		// 处理匿名结构体
-		if v, ok := user.(struct {
-			ID       string
-			Email    string
-			Name     string
-			IsAdmin  bool
-			IsSystem bool
-		}); ok {
-			userID = v.ID
-			email = v.Email
-			name = v.Name
-			isAdmin = v.IsAdmin
-			isSystem = v.IsSystem
-		} else {
-			return "", errors.ErrInternalServer
-		}
-	}
-
-	claims := jwt.MapClaims{
-		"user_id":    userID,
-		"email":      email,
-		"name":       name,
-		"is_admin":   isAdmin,
-		"is_system":  isSystem,
-		"token_type": tokenType,
-		"iss":        s.jwtConfig.Issuer,
-		"iat":        now.Unix(),
-		"exp":        exp.Unix(),
-		"nbf":        now.Unix(),
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(s.jwtConfig.Secret))
-}
-
 // cacheUserInfo 缓存用户信息
 func (s *UserService) cacheUserInfo(ctx context.Context, user *userDomain.User) error {
 	key := cache.BuildCacheKey(cache.UserCachePrefix, user.ID)
@@ -662,54 +698,6 @@ func (s *UserService) cacheUserInfo(ctx context.Context, user *userDomain.User) 
 func (s *UserService) clearUserCache(ctx context.Context, userID string) error {
 	key := cache.BuildCacheKey(cache.UserCachePrefix, userID)
 	return s.cacheService.Delete(ctx, key)
-}
-
-// blacklistToken 将令牌加入黑名单
-func (s *UserService) blacklistToken(ctx context.Context, token string) error {
-	key := cache.BuildCacheKey("blacklist:", token)
-	// 设置过期时间为令牌的有效期
-	return s.cacheService.Set(ctx, key, true, s.jwtConfig.AccessTokenTTL)
-}
-
-// validateRefreshToken 验证refresh token
-func (s *UserService) validateRefreshToken(tokenString string) (jwt.MapClaims, error) {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		// 检查签名方法
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.ErrInvalidToken
-		}
-		return []byte(s.jwtConfig.Secret), nil
-	})
-
-	if err != nil {
-		if err == jwt.ErrTokenExpired {
-			return nil, errors.ErrTokenExpired
-		}
-		return nil, errors.ErrInvalidToken
-	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok || !token.Valid {
-		return nil, errors.ErrInvalidToken
-	}
-
-	// 检查token类型
-	tokenType, ok := claims["token_type"].(string)
-	if !ok || tokenType != "refresh" {
-		return nil, errors.ErrInvalidToken
-	}
-
-	// 检查令牌是否在黑名单中
-	key := cache.BuildCacheKey("blacklist:", tokenString)
-	exists, err := s.cacheService.Exists(context.Background(), key)
-	if err != nil {
-		logger.Error("Failed to check token blacklist", logger.ErrorField(err))
-	}
-	if exists {
-		return nil, errors.ErrInvalidToken
-	}
-
-	return claims, nil
 }
 
 // toUserResponse 转换为用户响应

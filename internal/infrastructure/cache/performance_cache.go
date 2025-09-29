@@ -158,6 +158,32 @@ func (pc *PerformanceCache) Delete(ctx context.Context, keys ...string) error {
 	return nil
 }
 
+// DeletePattern 按模式删除缓存
+func (pc *PerformanceCache) DeletePattern(ctx context.Context, pattern string) error {
+	fullPattern := pc.buildKey(pattern)
+	
+	// 删除Redis缓存
+	if err := pc.redis.DeletePattern(ctx, fullPattern); err != nil {
+		pc.logger.Error("Failed to delete Redis cache by pattern",
+			zap.String("pattern", pattern),
+			zap.Error(err),
+		)
+		return err
+	}
+
+	// 注意：本地缓存无法按模式删除，只能清空所有本地缓存
+	// 或者实现一个更复杂的模式匹配机制
+	if pc.localCache != nil {
+		pc.logger.Warn("Local cache pattern deletion not implemented, consider clearing local cache")
+	}
+
+	pc.logger.Debug("Cache deleted by pattern successfully",
+		zap.String("pattern", pattern),
+	)
+
+	return nil
+}
+
 // GetOrSet 获取缓存，如果不存在则设置
 func (pc *PerformanceCache) GetOrSet(ctx context.Context, key string, dest interface{}, setter func() (interface{}, error), ttl time.Duration) error {
 	// 尝试获取缓存

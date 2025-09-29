@@ -45,16 +45,24 @@ type Service interface {
 	GetFieldTypes(ctx context.Context) ([]FieldTypeInfo, error)
 	ValidateFieldValue(ctx context.Context, field *Field, value interface{}) error
 	GetFieldTypeInfo(ctx context.Context, fieldType FieldType) (FieldTypeInfo, error)
+	
+	// Schema管理
+	ValidateSchemaChange(ctx context.Context, tableID string, changes []SchemaChange) error
+	ApplySchemaChanges(ctx context.Context, req SchemaChangeRequest) (*SchemaChangeResult, error)
+	PreviewSchemaChanges(ctx context.Context, tableID string, changes []SchemaChange) (*SchemaChangeResult, error)
 }
 
 // ServiceImpl 数据表服务实现
 type ServiceImpl struct {
-	repo Repository
+	repo          Repository
+	schemaService SchemaService
 }
 
 // NewService 创建数据表服务
 func NewService(repo Repository) Service {
-	return &ServiceImpl{repo: repo}
+	service := &ServiceImpl{repo: repo}
+	service.schemaService = NewSchemaService(repo)
+	return service
 }
 
 // CreateTable 创建数据表
@@ -196,7 +204,11 @@ func (s *ServiceImpl) UpdateField(ctx context.Context, id string, req UpdateFiel
 		}
 	}
 
-	field.Update(req)
+	// 使用新的Update方法，包含验证逻辑
+	if err := field.Update(req); err != nil {
+		return nil, errors.ErrValidationFailed.WithDetails(err.Error())
+	}
+	
 	if err := s.repo.UpdateField(ctx, field); err != nil {
 		return nil, err
 	}
@@ -371,4 +383,28 @@ func (s *ServiceImpl) ValidateFieldValue(ctx context.Context, field *Field, valu
 // GetFieldTypeInfo 获取字段类型信息
 func (s *ServiceImpl) GetFieldTypeInfo(ctx context.Context, fieldType FieldType) (FieldTypeInfo, error) {
 	return GetFieldTypeInfo(fieldType), nil
+}
+// ValidateSchemaChange 验证schema变更
+func (s *ServiceImpl) ValidateSchemaChange(ctx context.Context, tableID string, changes []SchemaChange) error {
+	table, err := s.GetTable(ctx, tableID)
+	if err != nil {
+		return err
+	}
+	
+	return s.schemaService.ValidateSchemaChange(ctx, table, changes)
+}
+
+// ApplySchemaChanges 应用schema变更
+func (s *ServiceImpl) ApplySchemaChanges(ctx context.Context, req SchemaChangeRequest) (*SchemaChangeResult, error) {
+	return s.schemaService.ApplySchemaChanges(ctx, req)
+}
+
+// PreviewSchemaChanges 预览schema变更
+func (s *ServiceImpl) PreviewSchemaChanges(ctx context.Context, tableID string, changes []SchemaChange) (*SchemaChangeResult, error) {
+	table, err := s.GetTable(ctx, tableID)
+	if err != nil {
+		return nil, err
+	}
+	
+	return s.schemaService.PreviewSchemaChanges(ctx, table, changes)
 }

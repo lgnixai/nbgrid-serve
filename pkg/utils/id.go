@@ -323,3 +323,10 @@ func IsBaseID(id string) bool {
 func IsTableID(id string) bool {
 	return ExtractIDPrefix(id) == TableIDPrefix
 }
+
+// GenerateDataHash 生成数据哈希值
+func GenerateDataHash(data map[string]interface{}, version int64) string {
+	// 简单的哈希实现，实际项目中应该使用更强的哈希算法
+	hashData := fmt.Sprintf("%v_%d_%d", data, version, time.Now().UnixNano())
+	return base64.URLEncoding.EncodeToString([]byte(hashData))[:16]
+}

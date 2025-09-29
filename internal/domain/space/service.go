@@ -26,6 +26,7 @@ type Service interface {
 	// 权限检查
 	CheckUserPermission(ctx context.Context, spaceID, userID, permission string) (bool, error)
 	GetUserSpaces(ctx context.Context, userID string, filter ListFilter) ([]*Space, int64, error)
+	GetUserDeletedSpaces(ctx context.Context, userID string, filter ListFilter) ([]*Space, int64, error)
 
 	// 统计信息
 	GetSpaceStats(ctx context.Context, spaceID string) (*SpaceStats, error)
@@ -33,10 +34,21 @@ type Service interface {
 }
 
 type ServiceImpl struct {
-	repo Repository
+	repo                 Repository
+	memberService        *MemberService
+	accessControlService *AccessControlService
 }
 
-func NewService(repo Repository) Service { return &ServiceImpl{repo: repo} }
+func NewService(repo Repository) Service {
+	memberService := NewMemberService()
+	accessControlService := NewAccessControlService(memberService)
+	
+	return &ServiceImpl{
+		repo:                 repo,
+		memberService:        memberService,
+		accessControlService: accessControlService,
+	}
+}
 
 type CreateSpaceRequest struct {
 	Name        string  `json:"name" validate:"required,min=1,max=255"`
@@ -78,9 +90,14 @@ type UserSpaceStats struct {
 }
 
 func (s *ServiceImpl) CreateSpace(ctx context.Context, req CreateSpaceRequest) (*Space, error) {
-	space := NewSpace(req.Name, req.CreatedBy)
+	space, err := NewSpace(req.Name, req.CreatedBy)
+	if err != nil {
+		return nil, err
+	}
+	
 	space.Description = req.Description
 	space.Icon = req.Icon
+	
 	if err := s.repo.Create(ctx, space); err != nil {
 		return nil, err
 	}
@@ -132,7 +149,30 @@ func (s *ServiceImpl) ListSpaces(ctx context.Context, filter ListFilter) ([]*Spa
 }
 
 func (s *ServiceImpl) AddCollaborator(ctx context.Context, spaceID, userID, role string) error {
-	return s.repo.AddCollaborator(ctx, NewSpaceCollaborator(spaceID, userID, role))
+	// 获取空间信息
+	space, err := s.GetSpace(ctx, spaceID)
+	if err != nil {
+		return err
+	}
+	
+	// 验证角色
+	collaboratorRole := CollaboratorRole(role)
+	if !collaboratorRole.IsValid() {
+		return ErrInvalidRole
+	}
+	
+	// 验证邀请（这里简化处理，实际需要获取邀请者信息）
+	if err := s.memberService.ValidateInvitation(space, space.CreatedBy, userID, collaboratorRole); err != nil {
+		return err
+	}
+	
+	// 创建协作者
+	collaborator, err := NewSpaceCollaborator(spaceID, userID, collaboratorRole, space.CreatedBy)
+	if err != nil {
+		return err
+	}
+	
+	return s.repo.AddCollaborator(ctx, collaborator)
 }
 
 func (s *ServiceImpl) RemoveCollaborator(ctx context.Context, collabID string) error {
@@ -171,7 +211,7 @@ func (s *ServiceImpl) BulkDeleteSpaces(ctx context.Context, spaceIDs []string) e
 	return nil
 }
 
-// CheckUserPermission 检查用户权限
+// CheckUserPermission 检查用户权限 - 重构后的版本
 func (s *ServiceImpl) CheckUserPermission(ctx context.Context, spaceID, userID, permission string) (bool, error) {
 	// 获取空间信息
 	space, err := s.GetSpace(ctx, spaceID)
@@ -179,32 +219,24 @@ func (s *ServiceImpl) CheckUserPermission(ctx context.Context, spaceID, userID, 
 		return false, err
 	}
 
-	// 如果是空间创建者，拥有所有权限
-	if space.CreatedBy == userID {
-		return true, nil
-	}
-
-	// 检查协作者权限
-	collaborators, err := s.ListCollaborators(ctx, spaceID)
-	if err != nil {
-		return false, err
-	}
-
-	for _, collab := range collaborators {
-		if collab.UserID == userID {
-			// 根据角色检查权限
-			switch collab.Role {
-			case "admin":
-				return true, nil
-			case "editor":
-				return permission == "read" || permission == "write", nil
-			case "viewer":
-				return permission == "read", nil
+	// 获取用户的协作者信息
+	var collaborator *SpaceCollaborator
+	if space.CreatedBy != userID {
+		collaborators, err := s.ListCollaborators(ctx, spaceID)
+		if err != nil {
+			return false, err
+		}
+		
+		for _, collab := range collaborators {
+			if collab.UserID == userID {
+				collaborator = collab
+				break
 			}
 		}
 	}
 
-	return false, nil
+	// 使用访问控制服务检查权限
+	return s.accessControlService.CheckSpaceOperation(ctx, space, userID, permission, collaborator), nil
 }
 
 // GetUserSpaces 获取用户的空间列表
@@ -226,6 +258,31 @@ func (s *ServiceImpl) GetSpaceStats(ctx context.Context, spaceID string) (*Space
 		TotalRecords:       0,
 		TotalCollaborators: 0,
 	}, nil
+}
+
+// GetUserDeletedSpaces 获取用户已删除的空间列表
+func (s *ServiceImpl) GetUserDeletedSpaces(ctx context.Context, userID string, filter ListFilter) ([]*Space, int64, error) {
+	// 设置过滤条件为当前用户的已删除空间
+	filter.CreatedBy = &userID
+	
+	// 获取已删除的空间（需要在仓储层实现专门的查询方法）
+	spaces, err := s.repo.ListDeleted(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+	
+	// 统计总数
+	countFilter := CountFilter{
+		Name:      filter.Name,
+		CreatedBy: filter.CreatedBy,
+		Search:    filter.Search,
+	}
+	total, err := s.repo.CountDeleted(ctx, countFilter)
+	if err != nil {
+		return nil, 0, err
+	}
+	
+	return spaces, total, nil
 }
 
 // GetUserSpaceStats 获取用户空间统计信息

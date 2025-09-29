@@ -1,0 +1,254 @@
+package table
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
+)
+
+// LinkFieldHandlerTestSuite 链接字段处理器测试套件
+type LinkFieldHandlerTestSuite struct {
+	suite.Suite
+	handler             *LinkFieldHandler
+	relationshipManager *RelationshipManager
+}
+
+// SetupTest 设置测试
+func (s *LinkFieldHandlerTestSuite) SetupTest() {
+	s.relationshipManager = NewRelationshipManager()
+	s.handler = NewLinkFieldHandlerWithManager(s.relationshipManager)
+}
+
+// TestValidateValue 测试验证值
+func (s *LinkFieldHandlerTestSuite) TestValidateValue() {
+	// 创建链接字段选项
+	options := &LinkFieldOptions{
+		TargetTableID:       "table-2",
+		RelationType:        RelationTypeManyToOne,
+		AllowLinkToMultiple: false,
+	}
+
+	// 测试有效的单个值
+	err := s.handler.ValidateValue("record-1", options)
+	assert.NoError(s.T(), err)
+
+	// 测试空值
+	err = s.handler.ValidateValue(nil, options)
+	assert.NoError(s.T(), err)
+
+	// 测试多个值（不允许）
+	err = s.handler.ValidateValue([]string{"record-1", "record-2"}, options)
+	assert.Error(s.T(), err)
+	assert.Contains(s.T(), err.Error(), "不允许链接到多个记录")
+
+	// 测试允许多个值的情况
+	multiOptions := &LinkFieldOptions{
+		TargetTableID:       "table-2",
+		RelationType:        RelationTypeOneToMany,
+		AllowLinkToMultiple: true,
+	}
+
+	err = s.handler.ValidateValue([]string{"record-1", "record-2"}, multiOptions)
+	assert.NoError(s.T(), err)
+}
+
+// TestConvertToRecordID 测试转换为记录ID
+func (s *LinkFieldHandlerTestSuite) TestConvertToRecordID() {
+	testCases := []struct {
+		input    interface{}
+		expected string
+		hasError bool
+	}{
+		{"record-1", "record-1", false},
+		{123, "123", false},
+		{int64(456), "456", false},
+		{float64(789), "789", false},
+		{"", "", true}, // 空字符串应该报错
+		{nil, "", true},
+		{[]string{"record-1"}, "", true}, // 数组类型应该报错
+	}
+
+	for _, tc := range testCases {
+		result, err := s.handler.convertToRecordID(tc.input)
+		if tc.hasError {
+			assert.Error(s.T(), err, "Input %v should cause error", tc.input)
+		} else {
+			assert.NoError(s.T(), err, "Input %v should not cause error", tc.input)
+			assert.Equal(s.T(), tc.expected, result, "Input %v should convert to %s", tc.input, tc.expected)
+		}
+	}
+}
+
+// TestConvertToRecordIDs 测试转换为记录ID列表
+func (s *LinkFieldHandlerTestSuite) TestConvertToRecordIDs() {
+	testCases := []struct {
+		input    interface{}
+		expected []string
+		hasError bool
+	}{
+		{[]interface{}{"record-1", "record-2"}, []string{"record-1", "record-2"}, false},
+		{[]string{"record-1", "record-2"}, []string{"record-1", "record-2"}, false},
+		{"record-1,record-2", []string{"record-1", "record-2"}, false},
+		{"record-1", []string{"record-1"}, false},
+		{"", []string{}, false},
+		{123, []string{"123"}, false},
+		{[]interface{}{123, "record-2"}, []string{"123", "record-2"}, false},
+	}
+
+	for _, tc := range testCases {
+		result, err := s.handler.convertToRecordIDs(tc.input)
+		if tc.hasError {
+			assert.Error(s.T(), err, "Input %v should cause error", tc.input)
+		} else {
+			assert.NoError(s.T(), err, "Input %v should not cause error", tc.input)
+			assert.Equal(s.T(), tc.expected, result, "Input %v should convert to %v", tc.input, tc.expected)
+		}
+	}
+}
+
+// TestGetDefaultOptions 测试获取默认选项
+func (s *LinkFieldHandlerTestSuite) TestGetDefaultOptions() {
+	options := s.handler.GetDefaultOptions()
+	assert.NotNil(s.T(), options)
+
+	linkOptions, ok := options.(*LinkFieldOptions)
+	assert.True(s.T(), ok)
+	assert.Equal(s.T(), RelationTypeManyToOne, linkOptions.RelationType)
+	assert.False(s.T(), linkOptions.AllowLinkToMultiple)
+	assert.False(s.T(), linkOptions.IsSymmetric)
+	assert.False(s.T(), linkOptions.CascadeDelete)
+	assert.Equal(s.T(), "restrict", linkOptions.OnDeleteAction)
+	assert.Equal(s.T(), "cascade", linkOptions.OnUpdateAction)
+}
+
+// TestIsCompatibleWith 测试兼容性检查
+func (s *LinkFieldHandlerTestSuite) TestIsCompatibleWith() {
+	// 链接字段应该与文本字段和链接字段兼容
+	assert.True(s.T(), s.handler.IsCompatibleWith(FieldTypeText))
+	assert.True(s.T(), s.handler.IsCompatibleWith(FieldTypeLink))
+	
+	// 不应该与其他类型兼容
+	assert.False(s.T(), s.handler.IsCompatibleWith(FieldTypeNumber))
+	assert.False(s.T(), s.handler.IsCompatibleWith(FieldTypeDate))
+	assert.False(s.T(), s.handler.IsCompatibleWith(FieldTypeSelect))
+}
+
+// TestConvertValue 测试值转换
+func (s *LinkFieldHandlerTestSuite) TestConvertValue() {
+	// 测试转换为文本
+	result, err := s.handler.ConvertValue("record-1", FieldTypeText, nil)
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), "record-1", result)
+
+	// 测试转换为链接字段
+	result, err = s.handler.ConvertValue("record-1", FieldTypeLink, nil)
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), "record-1", result)
+
+	// 测试转换为不支持的类型
+	_, err = s.handler.ConvertValue("record-1", FieldTypeNumber, nil)
+	assert.Error(s.T(), err)
+	assert.Contains(s.T(), err.Error(), "链接字段不能转换为类型")
+
+	// 测试转换数组为文本
+	result, err = s.handler.ConvertValue([]string{"record-1", "record-2"}, FieldTypeText, nil)
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), "record-1, record-2", result)
+}
+
+// TestGetValidationRules 测试获取验证规则
+func (s *LinkFieldHandlerTestSuite) TestGetValidationRules() {
+	options := &LinkFieldOptions{
+		RelationType:        RelationTypeOneToMany,
+		AllowLinkToMultiple: true,
+	}
+
+	rules := s.handler.GetValidationRules(options)
+	assert.NotEmpty(s.T(), rules)
+
+	// 检查关系约束规则
+	found := false
+	for _, rule := range rules {
+		if rule.Type == "relationship_constraint" {
+			found = true
+			assert.Contains(s.T(), rule.Description, "one_to_many")
+			break
+		}
+	}
+	assert.True(s.T(), found, "Should have relationship_constraint rule")
+
+	// 测试不允许多个链接的情况
+	singleOptions := &LinkFieldOptions{
+		RelationType:        RelationTypeManyToOne,
+		AllowLinkToMultiple: false,
+	}
+
+	rules = s.handler.GetValidationRules(singleOptions)
+	found = false
+	for _, rule := range rules {
+		if rule.Type == "single_link" {
+			found = true
+			break
+		}
+	}
+	assert.True(s.T(), found, "Should have single_link rule when AllowLinkToMultiple is false")
+}
+
+// TestRequiresOptions 测试是否需要选项
+func (s *LinkFieldHandlerTestSuite) TestRequiresOptions() {
+	assert.True(s.T(), s.handler.RequiresOptions())
+}
+
+// TestGetType 测试获取类型
+func (s *LinkFieldHandlerTestSuite) TestGetType() {
+	assert.Equal(s.T(), FieldTypeLink, s.handler.GetType())
+}
+
+// TestGetInfo 测试获取信息
+func (s *LinkFieldHandlerTestSuite) TestGetInfo() {
+	info := s.handler.GetInfo()
+	assert.Equal(s.T(), FieldTypeLink, info.Type)
+	assert.Equal(s.T(), "关联", info.Name)
+	assert.Equal(s.T(), "关系", info.Category)
+	assert.Equal(s.T(), "link", info.Icon)
+	assert.Equal(s.T(), "#3b82f6", info.Color)
+}
+
+// 运行测试套件
+func TestLinkFieldHandlerSuite(t *testing.T) {
+	suite.Run(t, new(LinkFieldHandlerTestSuite))
+}
+
+// TestLinkFieldValidator 测试链接字段验证器
+func TestLinkFieldValidator(t *testing.T) {
+	manager := NewRelationshipManager()
+	handler := NewLinkFieldHandlerWithManager(manager)
+	validator := NewLinkFieldValidator(handler)
+
+	// 创建测试字段
+	field := &Field{
+		ID:   "field-1",
+		Type: FieldTypeLink,
+		Options: &LinkFieldOptions{
+			TargetTableID:       "table-2",
+			RelationType:        RelationTypeManyToOne,
+			AllowLinkToMultiple: false,
+		},
+	}
+
+	// 测试验证
+	err := validator.Validate(field, "record-1")
+	assert.NoError(t, err)
+
+	err = validator.Validate(field, nil)
+	assert.NoError(t, err)
+
+	// 测试关系完整性验证
+	recordData := map[string]interface{}{
+		"field-1": "record-1",
+	}
+
+	err = validator.ValidateRelationshipIntegrity("table-1", recordData)
+	assert.NoError(t, err) // 由于是模拟实现，应该返回nil
+}

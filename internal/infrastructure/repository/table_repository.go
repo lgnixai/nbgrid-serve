@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -317,21 +318,33 @@ func (r *TableRepository) modelToDomain(model *models.Table) *table.Table {
 
 // fieldDomainToModel 字段领域对象转数据模型
 func (r *TableRepository) fieldDomainToModel(f *table.Field) *models.Field {
+	// 序列化选项配置
+	var optionsJSON *string
+	if f.Options != nil {
+		if optionsBytes, err := json.Marshal(f.Options); err == nil {
+			optionsStr := string(optionsBytes)
+			optionsJSON = &optionsStr
+		}
+	}
+	
 	model := &models.Field{
 		ID:               f.ID,
 		TableID:          f.TableID,
 		Name:             f.Name,
-		Type:             f.Type,
-		CellValueType:    f.Type, // 默认使用相同的类型
-		DBFieldType:      f.Type, // 默认使用相同的类型
+		Type:             string(f.Type),
+		CellValueType:    string(f.Type), // 默认使用相同的类型
+		DBFieldType:      string(f.Type), // 默认使用相同的类型
 		DBFieldName:      f.Name, // 默认使用相同的名称
 		Description:      f.Description,
 		IsRequired:       f.IsRequired,
 		IsUnique:         f.IsUnique,
 		IsPrimary:        &f.IsPrimary,
+		IsComputed:       &f.IsComputed,
+		IsLookup:         &f.IsLookup,
 		DefaultValue:     f.DefaultValue,
-		Options:          f.Options,
+		Options:          optionsJSON,
 		FieldOrder:       float64(f.FieldOrder),
+		Version:          &f.Version,
 		CreatedBy:        f.CreatedBy,
 		CreatedTime:      f.CreatedTime,
 		LastModifiedTime: f.LastModifiedTime,
@@ -353,19 +366,46 @@ func (r *TableRepository) fieldModelToDomain(model *models.Field) *table.Field {
 	if model.IsPrimary != nil {
 		isPrimary = *model.IsPrimary
 	}
+	
+	var isComputed bool
+	if model.IsComputed != nil {
+		isComputed = *model.IsComputed
+	}
+	
+	var isLookup bool
+	if model.IsLookup != nil {
+		isLookup = *model.IsLookup
+	}
+	
+	var version int64 = 1
+	if model.Version != nil {
+		version = *model.Version
+	}
+	
+	// 反序列化选项配置
+	var options *table.FieldOptions
+	if model.Options != nil && *model.Options != "" {
+		var opts table.FieldOptions
+		if err := json.Unmarshal([]byte(*model.Options), &opts); err == nil {
+			options = &opts
+		}
+	}
 
 	return &table.Field{
 		ID:               model.ID,
 		TableID:          model.TableID,
 		Name:             model.Name,
-		Type:             model.Type,
+		Type:             table.FieldType(model.Type),
 		Description:      model.Description,
 		IsRequired:       model.IsRequired,
 		IsUnique:         model.IsUnique,
 		IsPrimary:        isPrimary,
+		IsComputed:       isComputed,
+		IsLookup:         isLookup,
 		DefaultValue:     model.DefaultValue,
-		Options:          model.Options,
+		Options:          options,
 		FieldOrder:       int(model.FieldOrder),
+		Version:          version,
 		CreatedBy:        model.CreatedBy,
 		CreatedTime:      model.CreatedTime,
 		DeletedTime:      deletedTime,

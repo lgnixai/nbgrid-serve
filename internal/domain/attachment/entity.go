@@ -164,8 +164,8 @@ type SignatureResponse struct {
 	AllowedTypes []string `json:"allowed_types"`
 }
 
-// UploadRequest 上传请求
-type UploadRequest struct {
+// HTTPUploadRequest HTTP上传请求
+type HTTPUploadRequest struct {
 	Token    string `form:"token" binding:"required"`
 	Filename string `form:"filename,omitempty"`
 }
@@ -216,8 +216,8 @@ type AttachmentStats struct {
 	LastUploaded   time.Time `json:"last_uploaded"`
 }
 
-// StorageConfig 存储配置
-type StorageConfig struct {
+// AttachmentStorageConfig 附件存储配置
+type AttachmentStorageConfig struct {
 	Type         string `json:"type"` // local, s3, oss, etc.
 	LocalPath    string `json:"local_path,omitempty"`
 	BucketName   string `json:"bucket_name,omitempty"`

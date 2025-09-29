@@ -75,6 +75,20 @@ func (r *RedisClient) Delete(ctx context.Context, keys ...string) error {
 	return r.client.Del(ctx, keys...).Err()
 }
 
+// DeletePattern 按模式删除缓存
+func (r *RedisClient) DeletePattern(ctx context.Context, pattern string) error {
+	keys, err := r.client.Keys(ctx, pattern).Result()
+	if err != nil {
+		return fmt.Errorf("failed to get keys by pattern: %w", err)
+	}
+	
+	if len(keys) > 0 {
+		return r.client.Del(ctx, keys...).Err()
+	}
+	
+	return nil
+}
+
 // Exists 检查键是否存在
 func (r *RedisClient) Exists(ctx context.Context, key string) (bool, error) {
 	count, err := r.client.Exists(ctx, key).Result()
@@ -252,6 +266,7 @@ type CacheService interface {
 	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error
 	Get(ctx context.Context, key string, dest interface{}) error
 	Delete(ctx context.Context, keys ...string) error
+	DeletePattern(ctx context.Context, pattern string) error
 	Exists(ctx context.Context, key string) (bool, error)
 	Expire(ctx context.Context, key string, expiration time.Duration) error
 	TTL(ctx context.Context, key string) (time.Duration, error)
@@ -276,6 +291,11 @@ const (
 	BaseCachePrefix     = "base:"
 	TableCachePrefix    = "table:"
 	PermissionCachePrefix = "permission:"
+)
+
+// 默认缓存过期时间
+const (
+	DefaultTTL = 24 * time.Hour
 )
 
 // BuildCacheKey 构建缓存键

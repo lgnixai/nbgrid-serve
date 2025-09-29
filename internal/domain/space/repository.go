@@ -10,6 +10,10 @@ type Repository interface {
 	Delete(ctx context.Context, id string) error
 	List(ctx context.Context, filter ListFilter) ([]*Space, error)
 	Count(ctx context.Context, filter CountFilter) (int64, error)
+	
+	// 软删除相关
+	ListDeleted(ctx context.Context, filter ListFilter) ([]*Space, error)
+	CountDeleted(ctx context.Context, filter CountFilter) (int64, error)
 
 	// 协作者
     AddCollaborator(ctx context.Context, collab *SpaceCollaborator) error

@@ -130,10 +130,7 @@ func AuthMiddleware(authService AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := extractToken(c)
 		if token == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Missing authorization token",
-				"code":  "MISSING_TOKEN",
-			})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing authorization token"})
 			c.Abort()
 			return
 		}
@@ -141,15 +138,9 @@ func AuthMiddleware(authService AuthService) gin.HandlerFunc {
 		user, err := authService.GetUserFromToken(c.Request.Context(), token)
 		if err != nil {
 			if appErr, ok := appErrors.IsAppError(err); ok {
-				c.JSON(appErr.HTTPStatus, gin.H{
-					"error": appErr.Message,
-					"code":  appErr.Code,
-				})
+				c.JSON(appErr.HTTPStatus, gin.H{"error": appErr.Message, "code": appErr.Code})
 			} else {
-				c.JSON(http.StatusUnauthorized, gin.H{
-					"error": "Invalid token",
-					"code":  "INVALID_TOKEN",
-				})
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			}
 			c.Abort()
 			return
@@ -157,10 +148,7 @@ func AuthMiddleware(authService AuthService) gin.HandlerFunc {
 
 		// 检查用户是否被禁用或删除
 		if !user.IsActive() {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error": "User account is deactivated",
-				"code":  "USER_DEACTIVATED",
-			})
+			c.JSON(http.StatusForbidden, gin.H{"error": "User account is deactivated"})
 			c.Abort()
 			return
 		}
@@ -195,29 +183,20 @@ func AdminRequiredMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user, exists := c.Get("user")
 		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Authentication required",
-				"code":  "AUTH_REQUIRED",
-			})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
 			c.Abort()
 			return
 		}
 
 		u, ok := user.(*models.User)
 		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Invalid user context",
-				"code":  "INVALID_CONTEXT",
-			})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user context"})
 			c.Abort()
 			return
 		}
 
 		if !u.IsAdminUser() && !u.IsSuperAdmin() {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error": "Admin access required",
-				"code":  "ADMIN_REQUIRED",
-			})
+			c.JSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
 			c.Abort()
 			return
 		}
@@ -231,29 +210,20 @@ func SuperAdminRequiredMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user, exists := c.Get("user")
 		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Authentication required",
-				"code":  "AUTH_REQUIRED",
-			})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
 			c.Abort()
 			return
 		}
 
 		u, ok := user.(*models.User)
 		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Invalid user context",
-				"code":  "INVALID_CONTEXT",
-			})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user context"})
 			c.Abort()
 			return
 		}
 
 		if !u.IsSuperAdmin() {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error": "Super admin access required",
-				"code":  "SUPER_ADMIN_REQUIRED",
-			})
+			c.JSON(http.StatusForbidden, gin.H{"error": "Super admin access required"})
 			c.Abort()
 			return
 		}
@@ -324,10 +294,7 @@ func GetCurrentUserID(c *gin.Context) (string, error) {
 func RequireAuth(c *gin.Context) (*models.User, error) {
 	user, err := GetCurrentUser(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "Authentication required",
-			"code":  "AUTH_REQUIRED",
-		})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
 		c.Abort()
 		return nil, err
 	}
