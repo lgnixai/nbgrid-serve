@@ -17,7 +17,9 @@ interface Tab {
   id: string;
   title: string;
   content: string;
-  type: "markdown";
+  type: "markdown" | "table";
+  tableId?: string;
+  baseId?: string;
 }
 
 export const ObsidianLayout = () => {
@@ -159,15 +161,36 @@ export const ObsidianLayout = () => {
       return;
     }
 
-    const newTab: Tab = {
-      id: `tab-${Date.now()}`,
-      title: fileName,
-      content: `# ${fileName}\n\n这是 ${fileName} 的内容...`,
-      type: "markdown"
+    // 从当前表列表中解析 tableId（当前实现：去掉 .md，再通过 listTables 找到同名表）
+    const name = fileName.replace(/\.md$/i, "");
+    const createTableTab = async () => {
+      try {
+        const tablesResp = await teable.listTables({ base_id: selectedBaseId, limit: 200 });
+        const match = tablesResp.data.find(t => t.name === name);
+        if (match) {
+          const newTab: Tab = {
+            id: `tab-${Date.now()}`,
+            title: fileName,
+            content: "",
+            type: "table",
+            tableId: match.id,
+            baseId: selectedBaseId,
+          };
+          setOpenTabs(prev => [...prev, newTab]);
+          setActiveTab(newTab.id);
+          return;
+        }
+      } catch {}
+      const newTab: Tab = {
+        id: `tab-${Date.now()}`,
+        title: fileName,
+        content: `# ${fileName}\n\n这是 ${fileName} 的内容...`,
+        type: "markdown"
+      };
+      setOpenTabs(prev => [...prev, newTab]);
+      setActiveTab(newTab.id);
     };
-    
-    setOpenTabs([...openTabs, newTab]);
-    setActiveTab(newTab.id);
+    createTableTab();
   };
 
   const handleFileCreate = (fileName: string, type: string) => {

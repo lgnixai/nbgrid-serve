@@ -37,6 +37,20 @@ interface Table {
   description?: string;
 }
 
+interface Field {
+  id: string;
+  table_id: string;
+  name: string;
+  type: string;
+  options?: any;
+}
+
+interface RecordItem {
+  id: string;
+  table_id: string;
+  [key: string]: any;
+}
+
 interface PaginatedResponse<T> {
   data: T[];
   total: number;
@@ -50,6 +64,96 @@ class SimpleTeableClient {
 
   constructor(baseURL: string) {
     this.baseURL = baseURL;
+  }
+
+  // ========== Tables ==========
+  async getTable(params: { table_id: string }): Promise<{ data: Table & { fields?: Field[] } }> {
+    try {
+      const response = await axios.get(`${this.baseURL}/api/tables/${params.table_id}`, {
+        headers: this.getHeaders(),
+      });
+      return { data: response.data.data };
+    } catch (error: any) {
+      throw new Error(`获取数据表失败: ${error.response?.data?.message || error.message}`);
+    }
+  }
+
+  // ========== Fields ==========
+  async listFields(params: { table_id: string; limit?: number; offset?: number }): Promise<PaginatedResponse<Field>> {
+    try {
+      const response = await axios.get(`${this.baseURL}/api/fields`, {
+        headers: this.getHeaders(),
+        params,
+      });
+      const backendData = response.data.data;
+      return {
+        data: backendData.list,
+        total: backendData.pagination.total,
+        limit: backendData.pagination.limit,
+        offset: backendData.pagination.page * backendData.pagination.limit,
+      };
+    } catch (error: any) {
+      throw new Error(`获取字段列表失败: ${error.response?.data?.message || error.message}`);
+    }
+  }
+
+  async createField(body: { table_id: string; name: string; type: string; options?: any }): Promise<{ data: Field }> {
+    try {
+      const response = await axios.post(`${this.baseURL}/api/fields`, body, { headers: this.getHeaders() });
+      return { data: response.data.data };
+    } catch (error: any) {
+      throw new Error(`创建字段失败: ${error.response?.data?.message || error.message}`);
+    }
+  }
+
+  // ========== Records ==========
+  async listRecords(params: { table_id: string; limit?: number; offset?: number }): Promise<PaginatedResponse<RecordItem>> {
+    try {
+      const response = await axios.get(`${this.baseURL}/api/records`, {
+        headers: this.getHeaders(),
+        params,
+      });
+      const backendData = response.data.data;
+      // 后端常用结构 { list, pagination }
+      if (backendData?.list && backendData?.pagination) {
+        return {
+          data: backendData.list,
+          total: backendData.pagination.total,
+          limit: backendData.pagination.limit,
+          offset: backendData.pagination.page * backendData.pagination.limit,
+        };
+      }
+      // 兜底：直接返回 data
+      return backendData as PaginatedResponse<RecordItem>;
+    } catch (error: any) {
+      throw new Error(`获取记录列表失败: ${error.response?.data?.message || error.message}`);
+    }
+  }
+
+  async createRecord(body: { table_id: string; fields: Record<string, any> }): Promise<{ data: RecordItem }> {
+    try {
+      const response = await axios.post(`${this.baseURL}/api/records`, body, { headers: this.getHeaders() });
+      return { data: response.data.data };
+    } catch (error: any) {
+      throw new Error(`创建记录失败: ${error.response?.data?.message || error.message}`);
+    }
+  }
+
+  async updateRecord(body: { table_id: string; record_id: string; fields: Record<string, any> }): Promise<{ data: RecordItem }> {
+    try {
+      const response = await axios.put(`${this.baseURL}/api/records/${body.record_id}`, body, { headers: this.getHeaders() });
+      return { data: response.data.data };
+    } catch (error: any) {
+      throw new Error(`更新记录失败: ${error.response?.data?.message || error.message}`);
+    }
+  }
+
+  async deleteRecord(body: { table_id: string; record_id: string }): Promise<void> {
+    try {
+      await axios.delete(`${this.baseURL}/api/records/${body.record_id}`, { headers: this.getHeaders() });
+    } catch (error: any) {
+      throw new Error(`删除记录失败: ${error.response?.data?.message || error.message}`);
+    }
   }
 
   private getHeaders() {

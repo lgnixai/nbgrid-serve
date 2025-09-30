@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { X, Plus, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
@@ -29,7 +29,9 @@ interface Tab {
   id: string;
   title: string;
   content: string;
-  type: "markdown";
+  type: "markdown" | "table";
+  tableId?: string;
+  baseId?: string;
 }
 
 interface DraggableTabSystemProps {
@@ -205,13 +207,23 @@ export const DraggableTabSystem = ({
       {/* Tab Content */}
       <div className="flex-1 overflow-hidden">
         {activeTabData && (
-          // <MarkdownEditor
-          //   key={activeTabData.id}
-          //   content={activeTabData.content}
-          //   title={activeTabData.title}
-          //   onChange={(content) => onContentChange(activeTabData.id, content)}
-          // />
-          <AdvancedGlideGrid />
+          activeTabData.type === "table" ? (
+            (() => {
+              const TeableDataGridLazy = lazy(() => import("./TeableDataGrid").then(m => ({ default: m.TeableDataGrid })));
+              return (
+                <Suspense fallback={<div className="p-4 text-sm text-obsidian-text-muted">加载数据网格...</div>}>
+                  <TeableDataGridLazy key={activeTabData.tableId!} tableId={activeTabData.tableId!} baseId={activeTabData.baseId!} />
+                </Suspense>
+              );
+            })()
+          ) : (
+            <MarkdownEditor
+              key={activeTabData.id}
+              content={activeTabData.content}
+              title={activeTabData.title}
+              onChange={(content) => onContentChange(activeTabData.id, content)}
+            />
+          )
         )}
       </div>
     </div>

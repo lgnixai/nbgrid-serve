@@ -50,11 +50,11 @@ type Field struct {
 
 // CreateTableRequest 创建数据表请求
 type CreateTableRequest struct {
-	BaseID      string
-	Name        string
-	Description *string
-	Icon        *string
-	CreatedBy   string
+	BaseID      string  `json:"base_id"`
+	Name        string  `json:"name"`
+	Description *string `json:"description"`
+	Icon        *string `json:"icon"`
+	CreatedBy   string  `json:"created_by,omitempty"`
 }
 
 // UpdateTableRequest 更新数据表请求
