@@ -144,7 +144,22 @@ func setupRouter(container *container.Container) *gin.Engine {
 	})
 
 	// ORM 自动迁移（开发期）
-	_ = container.DBConnection().Migrate(&models.User{}, &models.Account{}, &models.Space{}, &models.SpaceCollaborator{}, &models.Base{}, &models.Table{}, &models.Field{}, &models.Record{}, &models.View{}, &models.Permission{}, &models.ShareView{}, &models.Attachment{})
+	_ = container.DBConnection().Migrate(
+		&models.User{},
+		&models.Account{},
+		&models.Space{},
+		&models.SpaceCollaborator{},
+		&models.Base{},
+		&models.Table{},
+		&models.Field{},
+		&models.Record{},
+		&models.View{},
+		&models.Permission{},
+		&models.ShareView{},
+		&models.Attachment{},
+		&models.RecordChange{},
+		&models.RecordVersion{},
+	)
 
 	// 设置API路由
 	httpHandlers.SetupRoutes(router, httpHandlers.RouterConfig{

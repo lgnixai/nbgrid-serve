@@ -46,6 +46,10 @@ type Container struct {
 	permissionRepo permission.Repository
 	shareRepo      share.Repository
 	attachmentRepo attachment.Repository
+	
+	// 应用层仓储
+	changeRepo  *repository.ChangeRepository
+	versionRepo *repository.VersionRepository
 
 	// 领域服务
 	userDomainService       user.Service
@@ -165,6 +169,10 @@ func (c *Container) initRepositories() {
 	c.permissionRepo = repository.NewPermissionRepository(db, logger.Logger)
 	c.shareRepo = repository.NewShareRepository(db, logger.Logger)
 	c.attachmentRepo = repository.NewAttachmentRepository(db, logger.Logger)
+	
+	// 应用层仓储
+	c.changeRepo = repository.NewChangeRepository(db)
+	c.versionRepo = repository.NewVersionRepository(db)
 }
 
 // initDomainServices 初始化领域服务
@@ -194,7 +202,7 @@ func (c *Container) initApplicationServices() {
 	c.authService = application.NewAuthService(tokenService, c.userDomainService, c.redisClient)
 
 	// 创建记录应用服务
-	c.recordAppService = application.NewRecordService(c.recordRepo, c.tableDomainService, c.permissionDomainService)
+	c.recordAppService = application.NewRecordService(c.recordRepo, c.tableDomainService, c.permissionDomainService, c.changeRepo, c.versionRepo)
 
 	// 创建权限应用服务
 	c.permissionAppService = application.NewPermissionService(c.permissionDomainService, c.redisClient)
@@ -283,13 +291,11 @@ func (c *Container) initStorageServices() error {
 		Format:      "jpeg",
 	}
 
-	// 创建简单的上传令牌仓储（内存实现）
-	c.uploadTokenRepo = &memoryUploadTokenRepository{
-		tokens: make(map[string]*attachment.UploadToken),
-	}
+	// 创建上传令牌仓储
+	c.uploadTokenRepo = repository.NewUploadTokenRepository(c.dbConn.GetDB(), logger.Logger)
 
-	// 创建简单的缩略图生成器（占位符实现）
-	c.thumbnailGenerator = &placeholderThumbnailGenerator{}
+	// 创建缩略图生成器
+	c.thumbnailGenerator = storage.NewThumbnailGenerator(logger.Logger)
 
 	c.attachmentDomainService = attachment.NewService(
 		c.attachmentRepo,
@@ -377,48 +383,3 @@ func (c *Container) CollaborationService() *websocket.CollaborationService {
 	return c.collaborationService
 }
 
-// 简单的内存上传令牌仓储实现
-type memoryUploadTokenRepository struct {
-	tokens map[string]*attachment.UploadToken
-}
-
-func (r *memoryUploadTokenRepository) CreateUploadToken(ctx context.Context, token *attachment.UploadToken) error {
-	r.tokens[token.Token] = token
-	return nil
-}
-
-func (r *memoryUploadTokenRepository) GetUploadToken(ctx context.Context, token string) (*attachment.UploadToken, error) {
-	t, exists := r.tokens[token]
-	if !exists {
-		return nil, fmt.Errorf("token not found")
-	}
-	return t, nil
-}
-
-func (r *memoryUploadTokenRepository) DeleteUploadToken(ctx context.Context, token string) error {
-	delete(r.tokens, token)
-	return nil
-}
-
-func (r *memoryUploadTokenRepository) CleanupExpiredTokens(ctx context.Context) error {
-	// 简单的实现，实际应该检查过期时间
-	return nil
-}
-
-// 占位符缩略图生成器实现
-type placeholderThumbnailGenerator struct{}
-
-func (g *placeholderThumbnailGenerator) GenerateThumbnail(ctx context.Context, sourcePath, targetPath string, width, height int, quality int) error {
-	// 占位符实现，实际应该生成缩略图
-	return nil
-}
-
-func (g *placeholderThumbnailGenerator) GenerateThumbnails(ctx context.Context, sourcePath string, config *attachment.ThumbnailConfig) (map[string]string, error) {
-	// 占位符实现，实际应该生成多种尺寸的缩略图
-	return make(map[string]string), nil
-}
-
-func (g *placeholderThumbnailGenerator) IsSupported(mimeType string) bool {
-	// 支持常见的图片格式
-	return mimeType == "image/jpeg" || mimeType == "image/png" || mimeType == "image/gif"
-}
