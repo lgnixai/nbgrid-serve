@@ -28,14 +28,16 @@ func NewRecordService(
 	recordRepo record.Repository,
 	tableService table.Service,
 	permissionSvc permission.Service,
+	changeRepo ChangeRepository,
+	versionRepo VersionRepository,
 ) *RecordService {
 	return &RecordService{
 		recordRepo:     recordRepo,
 		tableService:   tableService,
 		permissionSvc:  permissionSvc,
-		changeTracker:  NewRecordChangeTracker(),
+		changeTracker:  NewRecordChangeTracker(changeRepo),
 		validator:      NewRecordValidator(tableService),
-		versionManager: NewRecordVersionManager(recordRepo),
+		versionManager: NewRecordVersionManager(recordRepo, versionRepo),
 	}
 }
 

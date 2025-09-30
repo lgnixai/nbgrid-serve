@@ -18,13 +18,10 @@ type RecordVersionManager struct {
 }
 
 // NewRecordVersionManager 创建记录版本管理器
-func NewRecordVersionManager(recordRepo record.Repository) *RecordVersionManager {
+func NewRecordVersionManager(recordRepo record.Repository, versionRepo VersionRepository) *RecordVersionManager {
 	return &RecordVersionManager{
-		recordRepo: recordRepo,
-		// TODO: 注入实际的版本仓储实现
-		versionRepo: &InMemoryVersionRepository{
-			versions: make(map[string][]*RecordVersion),
-		},
+		recordRepo:  recordRepo,
+		versionRepo: versionRepo,
 	}
 }
 

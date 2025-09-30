@@ -16,12 +16,9 @@ type RecordChangeTracker struct {
 }
 
 // NewRecordChangeTracker 创建记录变更追踪器
-func NewRecordChangeTracker() *RecordChangeTracker {
+func NewRecordChangeTracker(changeRepo ChangeRepository) *RecordChangeTracker {
 	return &RecordChangeTracker{
-		// TODO: 注入实际的变更仓储实现
-		changeRepo: &InMemoryChangeRepository{
-			changes: make(map[string][]*record.RecordChangeEvent),
-		},
+		changeRepo: changeRepo,
 	}
 }
 
