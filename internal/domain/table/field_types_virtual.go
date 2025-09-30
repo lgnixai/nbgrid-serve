@@ -225,9 +225,6 @@ type VirtualFieldCalculator interface {
 	// Calculate computes the value for a virtual field
 	Calculate(ctx CalculationContext) (interface{}, error)
 
-	// ValidateOptions validates the field options
-	ValidateOptions() error
-
 	// GetDependencies returns field IDs this virtual field depends on
 	GetDependencies() []string
 }

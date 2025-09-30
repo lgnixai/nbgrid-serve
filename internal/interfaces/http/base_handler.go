@@ -11,6 +11,21 @@ import (
 	"teable-go-backend/pkg/logger"
 )
 
+// APIResponse 统一响应结构（本地定义，兼容已有调用）
+type APIResponse struct {
+	Success bool        `json:"success"`
+	Data    interface{} `json:"data,omitempty"`
+	Error   *APIError   `json:"error,omitempty"`
+	TraceID string      `json:"trace_id,omitempty"`
+}
+
+// APIError 错误结构（本地定义，兼容已有调用）
+type APIError struct {
+	Message string      `json:"message"`
+	Code    string      `json:"code"`
+	Details interface{} `json:"details,omitempty"`
+}
+
 // BaseHandler 基础表处理器
 type BaseHandler struct {
 	baseService base.Service
@@ -44,7 +59,8 @@ func (h *BaseHandler) CreateBase(c *gin.Context) {
 			Message: "请求参数错误",
 			Code:    "INVALID_REQUEST",
 			Details: err.Error(),
-		}))
+		},
+		})
 		return
 	}
 
@@ -53,8 +69,8 @@ func (h *BaseHandler) CreateBase(c *gin.Context) {
 	if !exists {
 		c.JSON(http.StatusUnauthorized, APIResponse{Success: false, Error: &APIError{
 			Message: "未授权",
-			Code:  "UNAUTHORIZED",
-		}))
+			Code:    "UNAUTHORIZED",
+		}})
 		return
 	}
 	req.CreatedBy = userID.(string)
@@ -85,8 +101,8 @@ func (h *BaseHandler) GetBase(c *gin.Context) {
 	if id == "" {
 		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: &APIError{
 			Message: "基础表ID不能为空",
-			Code:  "INVALID_REQUEST",
-		}))
+			Code:    "INVALID_REQUEST",
+		}})
 		return
 	}
 
@@ -119,8 +135,8 @@ func (h *BaseHandler) UpdateBase(c *gin.Context) {
 	if id == "" {
 		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: &APIError{
 			Message: "基础表ID不能为空",
-			Code:  "INVALID_REQUEST",
-		}))
+			Code:    "INVALID_REQUEST",
+		}})
 		return
 	}
 
@@ -130,7 +146,7 @@ func (h *BaseHandler) UpdateBase(c *gin.Context) {
 			Message: "请求参数错误",
 			Code:    "INVALID_REQUEST",
 			Details: err.Error(),
-		}))
+		}})
 		return
 	}
 
@@ -160,8 +176,8 @@ func (h *BaseHandler) DeleteBase(c *gin.Context) {
 	if id == "" {
 		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: &APIError{
 			Message: "基础表ID不能为空",
-			Code:  "INVALID_REQUEST",
-		}))
+			Code:    "INVALID_REQUEST",
+		}})
 		return
 	}
 
@@ -274,7 +290,7 @@ func (h *BaseHandler) BulkUpdateBases(c *gin.Context) {
 			Message: "请求参数错误",
 			Code:    "INVALID_REQUEST",
 			Details: err.Error(),
-		}))
+		}})
 		return
 	}
 
@@ -307,7 +323,7 @@ func (h *BaseHandler) BulkDeleteBases(c *gin.Context) {
 			Message: "请求参数错误",
 			Code:    "INVALID_REQUEST",
 			Details: err.Error(),
-		}))
+		}})
 		return
 	}
 
@@ -340,8 +356,8 @@ func (h *BaseHandler) CheckUserPermission(c *gin.Context) {
 	if baseID == "" {
 		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: &APIError{
 			Message: "基础表ID不能为空",
-			Code:  "MISSING_BASE_ID",
-		}))
+			Code:    "MISSING_BASE_ID",
+		}})
 		return
 	}
 
@@ -349,8 +365,8 @@ func (h *BaseHandler) CheckUserPermission(c *gin.Context) {
 	if userID == "" {
 		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: &APIError{
 			Message: "用户ID不能为空",
-			Code:  "MISSING_USER_ID",
-		}))
+			Code:    "MISSING_USER_ID",
+		}})
 		return
 	}
 
@@ -358,8 +374,8 @@ func (h *BaseHandler) CheckUserPermission(c *gin.Context) {
 	if permission == "" {
 		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: &APIError{
 			Message: "权限类型不能为空",
-			Code:  "MISSING_PERMISSION",
-		}))
+			Code:    "MISSING_PERMISSION",
+		}})
 		return
 	}
 
@@ -394,8 +410,8 @@ func (h *BaseHandler) GetBaseStats(c *gin.Context) {
 	if baseID == "" {
 		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: &APIError{
 			Message: "基础表ID不能为空",
-			Code:  "MISSING_BASE_ID",
-		}))
+			Code:    "MISSING_BASE_ID",
+		}})
 		return
 	}
 
@@ -425,8 +441,8 @@ func (h *BaseHandler) GetSpaceBaseStats(c *gin.Context) {
 	if spaceID == "" {
 		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: &APIError{
 			Message: "空间ID不能为空",
-			Code:  "MISSING_SPACE_ID",
-		}))
+			Code:    "MISSING_SPACE_ID",
+		}})
 		return
 	}
 
@@ -496,7 +512,7 @@ func (h *BaseHandler) ImportBases(c *gin.Context) {
 			Message: "请求参数错误",
 			Code:    "INVALID_REQUEST",
 			Details: err.Error(),
-		}))
+		}})
 		return
 	}
 
@@ -505,8 +521,8 @@ func (h *BaseHandler) ImportBases(c *gin.Context) {
 	if !exists {
 		c.JSON(http.StatusUnauthorized, APIResponse{Success: false, Error: &APIError{
 			Message: "未授权",
-			Code:  "UNAUTHORIZED",
-		}))
+			Code:    "UNAUTHORIZED",
+		}})
 		return
 	}
 
@@ -550,5 +566,5 @@ func (h *BaseHandler) handleError(c *gin.Context, err error) {
 	c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: &APIError{
 		Message: "服务器内部错误",
 		Code:    "INTERNAL_SERVER_ERROR",
-	}, TraceID: traceID}))
+	}, TraceID: traceID})
 }
