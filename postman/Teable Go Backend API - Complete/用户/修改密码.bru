@@ -1,0 +1,28 @@
+meta {
+  name: 修改密码
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/api/users/change-password
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{access_token}}
+}
+
+body:json {
+  {
+    "current_password": "TestPassword123!",
+    "new_password": "NewPassword456!",
+    "confirm_password": "NewPassword456!"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

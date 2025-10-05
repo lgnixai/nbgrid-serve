@@ -1,0 +1,23 @@
+meta {
+  name: 字段列表
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/api/fields?table_id={{table_id}}
+  body: none
+  auth: inherit
+}
+
+params:query {
+  table_id: {{table_id}}
+}
+
+headers {
+  Authorization: Bearer {{access_token}}
+}
+
+settings {
+  encodeUrl: true
+}

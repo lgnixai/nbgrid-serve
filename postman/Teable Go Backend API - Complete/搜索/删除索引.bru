@@ -1,0 +1,19 @@
+meta {
+  name: 删除索引
+  type: http
+  seq: 2
+}
+
+delete {
+  url: {{base_url}}/api/search/indexes/{{table_id}}
+  body: none
+  auth: inherit
+}
+
+headers {
+  Authorization: Bearer {{access_token}}
+}
+
+settings {
+  encodeUrl: true
+}

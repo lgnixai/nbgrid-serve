@@ -1,0 +1,19 @@
+meta {
+  name: 删除基础表
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{base_url}}/api/bases/{{base_id}}
+  body: none
+  auth: inherit
+}
+
+headers {
+  Authorization: Bearer {{access_token}}
+}
+
+settings {
+  encodeUrl: true
+}

@@ -1,0 +1,19 @@
+meta {
+  name: 删除空间
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{base_url}}/api/spaces/{{space_id}}
+  body: none
+  auth: inherit
+}
+
+headers {
+  Authorization: Bearer {{access_token}}
+}
+
+settings {
+  encodeUrl: true
+}

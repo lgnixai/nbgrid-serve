@@ -1,0 +1,19 @@
+meta {
+  name: 移除协作者
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{base_url}}/api/spaces/{{space_id}}/collaborators/{{user_id}}
+  body: none
+  auth: inherit
+}
+
+headers {
+  Authorization: Bearer {{access_token}}
+}
+
+settings {
+  encodeUrl: true
+}

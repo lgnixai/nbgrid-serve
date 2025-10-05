@@ -1,0 +1,31 @@
+meta {
+  name: Teable Go Backend API - Complete
+}
+
+auth {
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+vars:pre-request {
+  base_url: http://localhost:3000
+  access_token: 
+  refresh_token: 
+  user_id: 
+  space_id: 
+  base_id: 
+  table_id: 
+  record_id: 
+  view_id: 
+  field_id: 
+  attachment_id: 
+  notification_id: 
+  template_id: 
+}
+
+docs {
+  Teable Go Backend API 完整测试集合，覆盖主要端点。
+}

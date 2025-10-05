@@ -1,0 +1,35 @@
+meta {
+  name: 创建字段
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/api/fields
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{access_token}}
+}
+
+body:json {
+  {
+    "table_id": "{{table_id}}",
+    "name": "项目名称",
+    "type": "text"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    const r = res.getBody();
+    bru.setEnvVar('field_id', r.data.id);
+  }
+}
+
+settings {
+  encodeUrl: true
+}

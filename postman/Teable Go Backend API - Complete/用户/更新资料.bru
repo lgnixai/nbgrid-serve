@@ -1,0 +1,26 @@
+meta {
+  name: 更新资料
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{base_url}}/api/users/profile
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{access_token}}
+}
+
+body:json {
+  {
+    "name": "更新后的姓名"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

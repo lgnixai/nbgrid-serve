@@ -9,6 +9,7 @@ import (
 	"teable-go-backend/internal/domain/base"
 	"teable-go-backend/pkg/errors"
 	"teable-go-backend/pkg/logger"
+	"teable-go-backend/pkg/response"
 )
 
 // APIResponse 统一响应结构（本地定义，兼容已有调用）
@@ -261,14 +262,22 @@ func (h *BaseHandler) ListBases(c *gin.Context) {
 		return
 	}
 
-	result := base.PaginatedResult{
-		Data:   bases,
-		Total:  total,
-		Limit:  filter.Limit,
-		Offset: filter.Offset,
+	// 统一分页响应
+	page := 1
+	if filter.Limit > 0 {
+		page = filter.Offset/filter.Limit + 1
+	}
+	totalPages := 1
+	if filter.Limit > 0 {
+		totalPages = int((total + int64(filter.Limit) - 1) / int64(filter.Limit))
 	}
 
-	c.JSON(http.StatusOK, result)
+	response.PaginatedSuccess(c, bases, response.Pagination{
+		Page:       page,
+		Limit:      filter.Limit,
+		Total:      int(total),
+		TotalPages: totalPages,
+	}, "")
 }
 
 // BulkUpdateBases 批量更新基础表

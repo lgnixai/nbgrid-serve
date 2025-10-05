@@ -1,0 +1,34 @@
+meta {
+  name: 创建基础表
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/api/bases
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{access_token}}
+}
+
+body:json {
+  {
+    "name": "测试基础表",
+    "space_id": "{{space_id}}"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    const r = res.getBody();
+    bru.setEnvVar('base_id', r.data.id);
+  }
+}
+
+settings {
+  encodeUrl: true
+}

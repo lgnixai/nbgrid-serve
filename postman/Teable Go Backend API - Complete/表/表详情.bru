@@ -1,0 +1,19 @@
+meta {
+  name: 表详情
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}/api/tables/{{table_id}}
+  body: none
+  auth: inherit
+}
+
+headers {
+  Authorization: Bearer {{access_token}}
+}
+
+settings {
+  encodeUrl: true
+}

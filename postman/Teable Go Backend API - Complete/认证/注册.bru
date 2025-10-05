@@ -1,0 +1,36 @@
+meta {
+  name: 注册
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/api/auth/register
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "test@example.com",
+    "password": "TestPassword123!",
+    "name": "测试用户"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    const r = res.getBody();
+    bru.setEnvVar('access_token', r.data.access_token);
+    bru.setEnvVar('refresh_token', r.data.refresh_token);
+    bru.setEnvVar('user_id', r.data.user.id);
+  }
+}
+
+settings {
+  encodeUrl: true
+}

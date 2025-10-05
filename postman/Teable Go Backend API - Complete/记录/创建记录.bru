@@ -1,0 +1,36 @@
+meta {
+  name: 创建记录
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/api/records
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{access_token}}
+}
+
+body:json {
+  {
+    "table_id": "{{table_id}}",
+    "data": {
+      "title": "测试记录"
+    }
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    const r = res.getBody();
+    bru.setEnvVar('record_id', r.data.id);
+  }
+}
+
+settings {
+  encodeUrl: true
+}

@@ -1,0 +1,19 @@
+meta {
+  name: 协作者列表
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{base_url}}/api/spaces/{{space_id}}/collaborators
+  body: none
+  auth: inherit
+}
+
+headers {
+  Authorization: Bearer {{access_token}}
+}
+
+settings {
+  encodeUrl: true
+}

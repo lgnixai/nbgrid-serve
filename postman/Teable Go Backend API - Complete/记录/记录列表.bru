@@ -1,0 +1,25 @@
+meta {
+  name: 记录列表
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/api/records?table_id={{table_id}}&limit=20&offset=0
+  body: none
+  auth: inherit
+}
+
+params:query {
+  table_id: {{table_id}}
+  limit: 20
+  offset: 0
+}
+
+headers {
+  Authorization: Bearer {{access_token}}
+}
+
+settings {
+  encodeUrl: true
+}

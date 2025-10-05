@@ -1,0 +1,24 @@
+meta {
+  name: 基础搜索
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/api/search?q=测试&limit=20
+  body: none
+  auth: inherit
+}
+
+params:query {
+  q: 测试
+  limit: 20
+}
+
+headers {
+  Authorization: Bearer {{access_token}}
+}
+
+settings {
+  encodeUrl: true
+}

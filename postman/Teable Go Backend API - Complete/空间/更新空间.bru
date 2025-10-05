@@ -1,0 +1,26 @@
+meta {
+  name: 更新空间
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{base_url}}/api/spaces/{{space_id}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{access_token}}
+}
+
+body:json {
+  {
+    "name": "更新后的工作空间"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

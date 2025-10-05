@@ -1,0 +1,19 @@
+meta {
+  name: 删除字段
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{base_url}}/api/fields/{{field_id}}
+  body: none
+  auth: inherit
+}
+
+headers {
+  Authorization: Bearer {{access_token}}
+}
+
+settings {
+  encodeUrl: true
+}

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -30,6 +31,11 @@ func NewPermissionMiddleware(permissionService *application.PermissionService) *
 // RequirePermission 要求特定权限
 func (m *PermissionMiddleware) RequirePermission(resourceType string, action permission.Action) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Dev bypass: allow all when PERMISSIONS_DISABLED=1
+		if os.Getenv("PERMISSIONS_DISABLED") == "1" {
+			c.Next()
+			return
+		}
 		userID, err := GetCurrentUserID(c)
 		if err != nil {
 			response.Error(c, errors.ErrUnauthorized.WithDetails("Authentication required"))
@@ -84,6 +90,10 @@ func (m *PermissionMiddleware) RequirePermission(resourceType string, action per
 // RequireAnyPermission 要求任意一个权限
 func (m *PermissionMiddleware) RequireAnyPermission(resourceType string, actions ...permission.Action) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if os.Getenv("PERMISSIONS_DISABLED") == "1" {
+			c.Next()
+			return
+		}
 		userID, err := GetCurrentUserID(c)
 		if err != nil {
 			response.Error(c, errors.ErrUnauthorized.WithDetails("Authentication required"))
@@ -152,6 +162,10 @@ func (m *PermissionMiddleware) RequireAnyPermission(resourceType string, actions
 // RequireAllPermissions 要求所有权限
 func (m *PermissionMiddleware) RequireAllPermissions(resourceType string, actions ...permission.Action) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if os.Getenv("PERMISSIONS_DISABLED") == "1" {
+			c.Next()
+			return
+		}
 		userID, err := GetCurrentUserID(c)
 		if err != nil {
 			response.Error(c, errors.ErrUnauthorized.WithDetails("Authentication required"))
@@ -204,6 +218,10 @@ func (m *PermissionMiddleware) RequireAllPermissions(resourceType string, action
 // RequireRole 要求特定角色
 func (m *PermissionMiddleware) RequireRole(resourceType string, roles ...permission.Role) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if os.Getenv("PERMISSIONS_DISABLED") == "1" {
+			c.Next()
+			return
+		}
 		userID, err := GetCurrentUserID(c)
 		if err != nil {
 			response.Error(c, errors.ErrUnauthorized.WithDetails("Authentication required"))

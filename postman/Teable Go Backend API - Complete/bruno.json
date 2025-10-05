@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "Teable Go Backend API - Complete",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

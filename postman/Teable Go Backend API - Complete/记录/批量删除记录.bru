@@ -1,0 +1,26 @@
+meta {
+  name: 批量删除记录
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{base_url}}/api/records/bulk
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{access_token}}
+}
+
+body:json {
+  {
+    "ids": ["{{record_id}}"]
+  }
+}
+
+settings {
+  encodeUrl: true
+}

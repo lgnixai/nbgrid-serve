@@ -1,0 +1,36 @@
+meta {
+  name: 登录
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/auth/login
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "test@example.com",
+    "password": "TestPassword123!"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    const r = res.getBody();
+    console.log(r.data)
+    bru.setEnvVar('access_token', r.data.access_token);
+    bru.setEnvVar('refresh_token', r.data.refresh_token);
+    bru.setEnvVar('user_id', r.data.user.id);
+  }
+}
+
+settings {
+  encodeUrl: true
+}

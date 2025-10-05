@@ -1,0 +1,26 @@
+meta {
+  name: 更新表
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{base_url}}/api/tables/{{table_id}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{access_token}}
+}
+
+body:json {
+  {
+    "name": "更新后的表"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

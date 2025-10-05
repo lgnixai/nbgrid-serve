@@ -1,0 +1,32 @@
+meta {
+  name: 刷新Token
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/api/auth/refresh
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "refresh_token": "{{refresh_token}}"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    const r = res.getBody();
+    bru.setEnvVar('access_token', r.data.access_token);
+  }
+}
+
+settings {
+  encodeUrl: true
+}

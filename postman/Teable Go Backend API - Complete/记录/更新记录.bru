@@ -1,0 +1,28 @@
+meta {
+  name: 更新记录
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{base_url}}/api/records/{{record_id}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{access_token}}
+}
+
+body:json {
+  {
+    "data": {
+      "title": "更新后的记录"
+    }
+  }
+}
+
+settings {
+  encodeUrl: true
+}

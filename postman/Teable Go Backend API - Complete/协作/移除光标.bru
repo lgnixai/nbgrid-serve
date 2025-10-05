@@ -1,0 +1,19 @@
+meta {
+  name: 移除光标
+  type: http
+  seq: 2
+}
+
+delete {
+  url: {{base_url}}/api/collaboration/cursor
+  body: none
+  auth: inherit
+}
+
+headers {
+  Authorization: Bearer {{access_token}}
+}
+
+settings {
+  encodeUrl: true
+}

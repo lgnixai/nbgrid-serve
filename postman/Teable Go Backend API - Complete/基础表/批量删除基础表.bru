@@ -1,0 +1,26 @@
+meta {
+  name: 批量删除基础表
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{base_url}}/api/bases/bulk-delete
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{access_token}}
+}
+
+body:json {
+  {
+    "ids": ["{{base_id}}"]
+  }
+}
+
+settings {
+  encodeUrl: true
+}

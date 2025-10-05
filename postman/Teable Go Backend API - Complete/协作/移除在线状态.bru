@@ -1,0 +1,19 @@
+meta {
+  name: 移除在线状态
+  type: http
+  seq: 1
+}
+
+delete {
+  url: {{base_url}}/api/collaboration/presence
+  body: none
+  auth: inherit
+}
+
+headers {
+  Authorization: Bearer {{access_token}}
+}
+
+settings {
+  encodeUrl: true
+}
